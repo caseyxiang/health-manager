@@ -574,32 +574,8 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       const matchResult = findDictionaryMatch(item, dictionary);
       
       if (!matchResult) {
-        // 未匹配：添加为新条目
-        const newEntry = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          cnName: item.name || '',
-          cnAliases: [],
-          enName: '',
-          enAliases: [],
-          description: '',
-          unit: item.unit || '',
-          normalRange: item.refRange || '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        // 尝试分离中英文
-        const hasEnglish = /[A-Za-z]/.test(item.name);
-        if (hasEnglish) {
-          const matches = item.name.match(/([A-Za-z-]+)/);
-          if (matches) {
-            newEntry.enName = matches[1];
-            newEntry.cnName = item.name.replace(/[A-Za-z-]+/g, '').trim();
-          }
-        }
-        
-        dictionary.push(newEntry);
-        return { ...item, name: newEntry.cnName || item.name, dictionaryId: newEntry.id };
+        // 未匹配：返回原始数据，不添加到词典
+        return { ...item };
       }
       
       const { match, matchType } = matchResult;
@@ -628,28 +604,6 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       
       standardizedItem.dictionaryId = match.id;
       standardizedItem.description = match.description;
-      
-      // 步骤4-5：更新词典（双向补充）
-      let needUpdate = false;
-      const hasEnInItem = /[A-Za-z]/.test(item.name);
-      const enFromItem = hasEnInItem ? (item.name.match(/([A-Za-z-]+)/) || [])[1] : '';
-      const cnFromItem = item.name.replace(/[A-Za-z-]+/g, '').trim();
-      
-      // 如果词典缺英文而新数据有英文
-      if (!match.enName && enFromItem) {
-        match.enName = enFromItem;
-        needUpdate = true;
-      }
-      
-      // 如果词典缺中文而新数据有中文
-      if (!match.cnName && cnFromItem) {
-        match.cnName = cnFromItem;
-        needUpdate = true;
-      }
-      
-      if (needUpdate) {
-        match.updatedAt = new Date().toISOString();
-      }
       
       return standardizedItem;
     }
