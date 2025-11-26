@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.55</title>
+  <title>健康管家 Pro v15.56</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -35,16 +35,34 @@
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
-    /* 防止 iOS 橡皮筋效果 */
-    html, body { 
-      overflow: hidden; 
-      height: 100%; 
-      position: fixed;
-      width: 100%;
+    /* 防止 iOS 橡皮筋效果 - Safari兼容 */
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+    body { 
+      margin: 0;
+      height: 100vh;
+      height: 100dvh; /* 动态视口高度，更现代的方式 */
+      overflow: hidden;
+      overscroll-behavior: none; /* 防止橡皮筋效果 */
     }
     #root {
       height: 100%;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Safari 特定修复 */
+    .is-safari #root > div {
+      min-height: -webkit-fill-available;
+    }
+    
+    /* 确保在所有浏览器中正确填充 */
+    #root > div {
+      min-height: 100vh;
+      min-height: 100dvh;
     }
   </style>
 </head>
@@ -104,7 +122,7 @@
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.55";
+    const VERSION = "v15.56";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -2018,7 +2036,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
       // 已登录，显示主界面
       return (
-        <div className="w-full max-w-md mx-auto bg-slate-50 h-screen flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
+        <div className="w-full max-w-md mx-auto bg-slate-50 h-full flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
           {/* Header */}
           <header className="bg-indigo-700 text-white p-4 pt-6 pb-4 shadow-lg shrink-0 z-10 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -3247,6 +3265,21 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+  <script>
+    // Safari 兼容性和错误监控
+    window.addEventListener('error', function(e) {
+      console.error('Global error:', e.error);
+      // 在Safari中显示错误（开发时）
+      if (window.location.hostname === 'localhost' || window.location.hostname.includes('vercel')) {
+        document.body.innerHTML = '<div style="color:white;padding:20px;background:#dc2626;"><h3>加载错误</h3><p>' + e.message + '</p><p>请检查浏览器控制台</p></div>';
+      }
+    });
+    
+    // 检测Safari并添加标记
+    if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+      document.documentElement.classList.add('is-safari');
+    }
   </script>
 </body>
 </html>
