@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.60</title>
+  <title>健康管家 Pro v15.61</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.60";
+    const VERSION = "v15.61";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -343,6 +343,41 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     const DEFAULT_MEMBER = { id: 'default', name: '我', relation: '本人', color: 'indigo' };
     const DEFAULT_MEMBERS = [DEFAULT_MEMBER];
     const TIME_PERIODS = ['早餐', '午餐', '晚餐', '睡前'];
+    
+    // 医学指标词典 - 默认数据
+    const DEFAULT_MEDICAL_DICTIONARY = [
+      { id: '1', cnName: '白细胞计数', cnAliases: ['白细胞', 'WBC计数'], enName: 'WBC', enAliases: ['White Blood Cell'], description: '评估免疫系统功能，升高常见于感染、炎症', unit: '10^9/L', normalRange: '4.0-10.0' },
+      { id: '2', cnName: '红细胞计数', cnAliases: ['红细胞', 'RBC计数'], enName: 'RBC', enAliases: ['Red Blood Cell'], description: '评估携氧能力，偏低提示贫血', unit: '10^12/L', normalRange: '男4.0-5.5，女3.5-5.0' },
+      { id: '3', cnName: '血红蛋白', cnAliases: ['血红蛋白浓度'], enName: 'HGB', enAliases: ['Hemoglobin', 'Hb'], description: '诊断贫血的主要指标', unit: 'g/L', normalRange: '男120-160，女110-150' },
+      { id: '4', cnName: '血小板计数', cnAliases: ['血小板', 'PLT计数'], enName: 'PLT', enAliases: ['Platelet'], description: '评估凝血功能', unit: '10^9/L', normalRange: '100-300' },
+      { id: '5', cnName: '中性粒细胞百分比', cnAliases: ['中性粒细胞%'], enName: 'NEUT%', enAliases: ['Neutrophil%'], description: '细菌感染时升高', unit: '%', normalRange: '50-70' },
+      { id: '6', cnName: '淋巴细胞百分比', cnAliases: ['淋巴细胞%'], enName: 'LYMPH%', enAliases: ['Lymphocyte%'], description: '病毒感染时升高', unit: '%', normalRange: '20-40' },
+      { id: '7', cnName: '丙氨酸氨基转移酶', cnAliases: ['谷丙转氨酶'], enName: 'ALT', enAliases: ['GPT', 'SGPT'], description: '肝功能指标，升高提示肝损伤', unit: 'U/L', normalRange: '0-40' },
+      { id: '8', cnName: '天门冬氨酸氨基转移酶', cnAliases: ['谷草转氨酶'], enName: 'AST', enAliases: ['GOT', 'SGOT'], description: '肝功能指标，心肌损伤时也升高', unit: 'U/L', normalRange: '0-40' },
+      { id: '9', cnName: '总胆红素', cnAliases: ['胆红素'], enName: 'TBIL', enAliases: ['Total Bilirubin'], description: '肝功能指标，升高出现黄疸', unit: 'μmol/L', normalRange: '3.4-20.5' },
+      { id: '10', cnName: '直接胆红素', cnAliases: ['结合胆红素'], enName: 'DBIL', enAliases: ['Direct Bilirubin'], description: '胆道梗阻时升高', unit: 'μmol/L', normalRange: '0-6.8' },
+      { id: '11', cnName: '总蛋白', cnAliases: ['血清总蛋白'], enName: 'TP', enAliases: ['Total Protein'], description: '营养状态和肝功能指标', unit: 'g/L', normalRange: '60-80' },
+      { id: '12', cnName: '白蛋白', cnAliases: ['血清白蛋白'], enName: 'ALB', enAliases: ['Albumin'], description: '肝脏合成功能指标', unit: 'g/L', normalRange: '35-55' },
+      { id: '13', cnName: '球蛋白', cnAliases: ['血清球蛋白'], enName: 'GLO', enAliases: ['Globulin'], description: '免疫球蛋白', unit: 'g/L', normalRange: '20-35' },
+      { id: '14', cnName: '尿素氮', cnAliases: ['尿素'], enName: 'BUN', enAliases: ['Blood Urea Nitrogen'], description: '肾功能指标', unit: 'mmol/L', normalRange: '2.9-8.2' },
+      { id: '15', cnName: '肌酐', cnAliases: ['血清肌酐'], enName: 'Cr', enAliases: ['Creatinine'], description: '肾功能重要指标', unit: 'μmol/L', normalRange: '男53-106，女44-97' },
+      { id: '16', cnName: '尿酸', cnAliases: ['血尿酸'], enName: 'UA', enAliases: ['Uric Acid'], description: '痛风诊断指标', unit: 'μmol/L', normalRange: '男208-428，女155-357' },
+      { id: '17', cnName: '葡萄糖', cnAliases: ['血糖', '空腹血糖'], enName: 'GLU', enAliases: ['Glucose', 'FPG'], description: '糖尿病诊断指标', unit: 'mmol/L', normalRange: '3.9-6.1（空腹）' },
+      { id: '18', cnName: '甘油三酯', cnAliases: ['三酰甘油'], enName: 'TG', enAliases: ['Triglyceride'], description: '血脂指标', unit: 'mmol/L', normalRange: '<1.7' },
+      { id: '19', cnName: '总胆固醇', cnAliases: ['胆固醇'], enName: 'TC', enAliases: ['Total Cholesterol'], description: '血脂指标', unit: 'mmol/L', normalRange: '<5.2' },
+      { id: '20', cnName: '高密度脂蛋白胆固醇', cnAliases: ['高密度脂蛋白', '好胆固醇'], enName: 'HDL-C', enAliases: ['HDL'], description: '保护性胆固醇', unit: 'mmol/L', normalRange: '>1.0' },
+      { id: '21', cnName: '低密度脂蛋白胆固醇', cnAliases: ['低密度脂蛋白', '坏胆固醇'], enName: 'LDL-C', enAliases: ['LDL'], description: '致动脉硬化胆固醇', unit: 'mmol/L', normalRange: '<3.4' },
+      { id: '22', cnName: '钾', cnAliases: ['血清钾'], enName: 'K', enAliases: ['Potassium'], description: '电解质，影响心脏功能', unit: 'mmol/L', normalRange: '3.5-5.5' },
+      { id: '23', cnName: '钠', cnAliases: ['血清钠'], enName: 'Na', enAliases: ['Sodium'], description: '电解质，维持渗透压', unit: 'mmol/L', normalRange: '135-145' },
+      { id: '24', cnName: '氯', cnAliases: ['血清氯'], enName: 'Cl', enAliases: ['Chloride'], description: '电解质', unit: 'mmol/L', normalRange: '96-108' },
+      { id: '25', cnName: '钙', cnAliases: ['血清钙'], enName: 'Ca', enAliases: ['Calcium'], description: '骨骼健康指标', unit: 'mmol/L', normalRange: '2.1-2.7' },
+      { id: '26', cnName: '糖化血红蛋白', cnAliases: ['糖化血红蛋白A1c'], enName: 'HbA1c', enAliases: ['Glycated Hemoglobin', 'A1C'], description: '反映近3个月血糖控制', unit: '%', normalRange: '<6.5' },
+      { id: '27', cnName: '促甲状腺激素', cnAliases: ['促甲状腺素'], enName: 'TSH', enAliases: ['Thyroid Stimulating Hormone'], description: '甲状腺功能筛查', unit: 'mIU/L', normalRange: '0.27-4.2' },
+      { id: '28', cnName: '游离甲状腺素', cnAliases: ['游离T4'], enName: 'FT4', enAliases: ['Free T4'], description: '甲状腺功能指标', unit: 'pmol/L', normalRange: '12-22' },
+      { id: '29', cnName: '游离三碘甲状腺原氨酸', cnAliases: ['游离T3'], enName: 'FT3', enAliases: ['Free T3'], description: '甲状腺功能指标', unit: 'pmol/L', normalRange: '3.1-6.8' },
+      { id: '30', cnName: 'C反应蛋白', cnAliases: ['超敏C反应蛋白'], enName: 'CRP', enAliases: ['C-Reactive Protein', 'hs-CRP'], description: '炎症指标', unit: 'mg/L', normalRange: '<10' },
+    ];
+
     const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
     // 健康指标类型定义
@@ -474,6 +509,161 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         return 'Normal';
       }
       return 'Normal';
+    }
+
+    
+    // 医学指标词典匹配和管理函数
+    
+    // 标准化指标名称：去除空格、括号内容等
+    function normalizeIndicatorName(name) {
+      if (!name) return '';
+      return name.trim()
+        .replace(/\s+/g, '')  // 移除所有空格
+        .replace(/\([^)]*\)/g, '')  // 移除括号及内容
+        .toLowerCase();  // 转小写（用于英文匹配）
+    }
+    
+    // 在词典中查找匹配项
+    function findDictionaryMatch(newItem, dictionary) {
+      const newCn = newItem.name || '';
+      const newEn = (newItem.name.match(/[A-Za-z]/g) || []).join('');  // 提取英文部分
+      
+      // 步骤1: 如果新数据有英文，优先匹配英文
+      if (newEn) {
+        const normalizedNewEn = normalizeIndicatorName(newEn);
+        for (const entry of dictionary) {
+          // 检查主名称
+          if (entry.enName && normalizeIndicatorName(entry.enName) === normalizedNewEn) {
+            return { match: entry, matchType: 'en-main' };
+          }
+          // 检查别称
+          if (entry.enAliases) {
+            for (const alias of entry.enAliases) {
+              if (normalizeIndicatorName(alias) === normalizedNewEn) {
+                return { match: entry, matchType: 'en-alias' };
+              }
+            }
+          }
+        }
+      }
+      
+      // 步骤2: 英文未匹配，尝试匹配中文
+      if (newCn) {
+        const normalizedNewCn = normalizeIndicatorName(newCn);
+        for (const entry of dictionary) {
+          // 检查主名称
+          if (entry.cnName && normalizeIndicatorName(entry.cnName) === normalizedNewCn) {
+            return { match: entry, matchType: 'cn-main' };
+          }
+          // 检查别称
+          if (entry.cnAliases) {
+            for (const alias of entry.cnAliases) {
+              if (normalizeIndicatorName(alias) === normalizedNewCn) {
+                return { match: entry, matchType: 'cn-alias' };
+              }
+            }
+          }
+        }
+      }
+      
+      return null;  // 未找到匹配
+    }
+    
+    // 应用词典标准化到检验报告项目
+    function applyDictionaryToLabItem(item, dictionary) {
+      const matchResult = findDictionaryMatch(item, dictionary);
+      
+      if (!matchResult) {
+        // 未匹配：添加为新条目
+        const newEntry = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          cnName: item.name || '',
+          cnAliases: [],
+          enName: '',
+          enAliases: [],
+          description: '',
+          unit: item.unit || '',
+          normalRange: item.refRange || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // 尝试分离中英文
+        const hasEnglish = /[A-Za-z]/.test(item.name);
+        if (hasEnglish) {
+          const matches = item.name.match(/([A-Za-z-]+)/);
+          if (matches) {
+            newEntry.enName = matches[1];
+            newEntry.cnName = item.name.replace(/[A-Za-z-]+/g, '').trim();
+          }
+        }
+        
+        dictionary.push(newEntry);
+        return { ...item, name: newEntry.cnName || item.name, dictionaryId: newEntry.id };
+      }
+      
+      const { match, matchType } = matchResult;
+      
+      // 根据匹配类型标准化名称
+      const standardizedItem = { ...item };
+      
+      if (matchType.startsWith('en-')) {
+        // 英文匹配：使用词典的中文名称
+        standardizedItem.name = match.cnName;
+      } else if (matchType.startsWith('cn-')) {
+        // 中文匹配：如果词典有英文，可以添加到显示中
+        standardizedItem.name = match.cnName;
+        if (match.enName) {
+          standardizedItem.displayName = `${match.cnName} (${match.enName})`;
+        }
+      }
+      
+      // 补充单位和参考范围（如果词典有而原数据没有）
+      if (!standardizedItem.unit && match.unit) {
+        standardizedItem.unit = match.unit;
+      }
+      if (!standardizedItem.refRange && match.normalRange) {
+        standardizedItem.refRange = match.normalRange;
+      }
+      
+      standardizedItem.dictionaryId = match.id;
+      standardizedItem.description = match.description;
+      
+      // 步骤4-5：更新词典（双向补充）
+      let needUpdate = false;
+      const hasEnInItem = /[A-Za-z]/.test(item.name);
+      const enFromItem = hasEnInItem ? (item.name.match(/([A-Za-z-]+)/) || [])[1] : '';
+      const cnFromItem = item.name.replace(/[A-Za-z-]+/g, '').trim();
+      
+      // 如果词典缺英文而新数据有英文
+      if (!match.enName && enFromItem) {
+        match.enName = enFromItem;
+        needUpdate = true;
+      }
+      
+      // 如果词典缺中文而新数据有中文
+      if (!match.cnName && cnFromItem) {
+        match.cnName = cnFromItem;
+        needUpdate = true;
+      }
+      
+      if (needUpdate) {
+        match.updatedAt = new Date().toISOString();
+      }
+      
+      return standardizedItem;
+    }
+    
+    // 批量应用词典到检验报告
+    function applyDictionaryToLabReport(report, dictionary) {
+      const processedItems = report.items.map(item => 
+        applyDictionaryToLabItem(item, dictionary)
+      );
+      
+      return {
+        ...report,
+        items: processedItems
+      };
     }
 
     async function analyzeMedicalImage(base64Data, mimeType, mode, setDebug) {
@@ -867,6 +1057,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [imagingReports, setImagingReports] = useState(() => loadMemberData(currentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
       const [vitals, setVitals] = useState(() => loadMemberData(currentMemberId, 'vitals', DEFAULT_VITALS));
       
+      // 医学指标词典状态
+      const [medicalDictionary, setMedicalDictionary] = useState(() => loadData('health_pro_medical_dictionary', DEFAULT_MEDICAL_DICTIONARY));
+      const [showDictionaryModal, setShowDictionaryModal] = useState(false);
+      const [dictionarySearch, setDictionarySearch] = useState('');
+      const [editingDictEntry, setEditingDictEntry] = useState(null);
+      const [dictEntryInput, setDictEntryInput] = useState({
+        cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: ''
+      });
+
+      
       // 用户登录
       const handleLogin = async () => {
         if (!loginForm.username.trim() || !loginForm.password) {
@@ -1011,6 +1211,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             members,
             memberData,
             apiSettings,
+            medicalDictionary,
             lastUpdated: new Date().toISOString()
           });
           setSyncStatus('synced');
@@ -1032,6 +1233,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       useEffect(() => { saveMemberData(currentMemberId, 'labReports', labReports); }, [labReports, currentMemberId]);
       useEffect(() => { saveMemberData(currentMemberId, 'imagingReports', imagingReports); }, [imagingReports, currentMemberId]);
       useEffect(() => { saveMemberData(currentMemberId, 'vitals', vitals); }, [vitals, currentMemberId]);
+      
+      // 词典持久化
+      useEffect(() => { 
+        localStorage.setItem('health_pro_medical_dictionary', JSON.stringify(medicalDictionary)); 
+      }, [medicalDictionary]);
+
       
       // 自动云同步（防抖3秒）
       useEffect(() => {
@@ -1118,6 +1325,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           Object.keys(cloudData.apiSettings).forEach(key => {
             localStorage.setItem(key, cloudData.apiSettings[key]);
           });
+        }
+        // 恢复医学指标词典
+        if (cloudData.medicalDictionary) {
+          setMedicalDictionary(cloudData.medicalDictionary);
         }
         // 重新加载当前成员数据
         setMeds(loadMemberData(currentMemberId, 'meds', DEFAULT_MEDS));
@@ -1422,7 +1633,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           members: members,
           currentMemberId: currentMemberId,
           // 所有成员的完整数据
-          membersData: allMembersData
+          membersData: allMembersData,
+          // 医学指标词典
+          medicalDictionary: medicalDictionary
         };
         const dataStr = JSON.stringify(backupData, null, 2);
         setBackupDataStr(dataStr);
@@ -1621,6 +1834,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 saveApiKeyFor(provider, data.settings.apiKey);
                 setApiKeyInput(data.settings.apiKey);
               }
+            }
+            
+            // 恢复医学指标词典
+            if (data.medicalDictionary) {
+              setMedicalDictionary(data.medicalDictionary);
             }
             
             setShowRestoreModal(false);
@@ -2226,6 +2444,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               <div className="border-t"></div>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 备份到本地</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> 从本地恢复</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDictionaryModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-t"><Icons.Library size={16}/> 医学指标词典</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Settings size={16}/> 设置</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> 退出登录</button>
             </div>
@@ -2963,8 +3182,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   <button onClick={() => {
                     if (scanType === 'lab') {
                       const itemsWithFlags = scanEditData.items.map(item => ({ ...item, flag: calculateFlag(item.result, item.refRange) }));
-                      if (editingId) setLabReports(labReports.map(r => r.id === editingId ? {...scanEditData, items: itemsWithFlags, id: editingId} : r));
-                      else setLabReports([...labReports, {...scanEditData, items: itemsWithFlags, id: Date.now().toString()}]);
+                      // 应用词典标准化
+                      const standardizedReport = applyDictionaryToLabReport(
+                        {...scanEditData, items: itemsWithFlags}, 
+                        medicalDictionary
+                      );
+                      
+                      if (editingId) setLabReports(labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r));
+                      else setLabReports([...labReports, {...standardizedReport, id: Date.now().toString()}]);
                     } else {
                       if (editingId) setImagingReports(imagingReports.map(r => r.id === editingId ? {...scanEditData, id: editingId} : r));
                       else setImagingReports([...imagingReports, {...scanEditData, id: Date.now().toString()}]);
@@ -3155,6 +3380,274 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               </div>
             </div>
           )}
+
+          {/* 医学指标词典管理界面 */}
+          {showDictionaryModal && (
+            <div className="absolute inset-0 z-[100] bg-white flex flex-col">
+              {/* 头部 */}
+              <div className="p-4 border-b flex justify-between items-center bg-indigo-50">
+                <button onClick={() => { setShowDictionaryModal(false); setDictionarySearch(''); setEditingDictEntry(null); }} className="p-2 bg-white rounded-full shadow">
+                  <Icons.X size={20}/>
+                </button>
+                <div className="text-center flex-1">
+                  <h3 className="font-bold text-lg">医学指标词典</h3>
+                  <p className="text-xs text-gray-500">{medicalDictionary.length} 个指标</p>
+                </div>
+                <button onClick={() => { 
+                  setEditingDictEntry(null); 
+                  setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' });
+                }} className="p-2 bg-indigo-600 text-white rounded-full shadow">
+                  <Icons.Plus size={20}/>
+                </button>
+              </div>
+
+              {/* 搜索栏 */}
+              <div className="p-4 border-b bg-gray-50">
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={dictionarySearch} 
+                    onChange={e => setDictionarySearch(e.target.value)} 
+                    placeholder="搜索指标名称..." 
+                    className="w-full p-3 pl-10 border rounded-xl bg-white"
+                  />
+                  <Icons.FileSpreadsheet size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+                </div>
+              </div>
+
+              {/* 词典列表 */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {(() => {
+                  const filtered = medicalDictionary.filter(entry => {
+                    if (!dictionarySearch) return true;
+                    const search = dictionarySearch.toLowerCase();
+                    return (
+                      (entry.cnName && entry.cnName.toLowerCase().includes(search)) ||
+                      (entry.enName && entry.enName.toLowerCase().includes(search)) ||
+                      (entry.cnAliases && entry.cnAliases.some(a => a.toLowerCase().includes(search))) ||
+                      (entry.enAliases && entry.enAliases.some(a => a.toLowerCase().includes(search)))
+                    );
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center text-gray-400 mt-8">
+                        <Icons.FileSpreadsheet size={48} className="mx-auto mb-2 opacity-20"/>
+                        <p>未找到匹配的指标</p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map(entry => (
+                    <div key={entry.id} className="bg-white rounded-xl shadow-sm border mb-3 overflow-hidden hover:shadow-md transition-all">
+                      <div onClick={() => { 
+                        setEditingDictEntry(entry); 
+                        setDictEntryInput({
+                          cnName: entry.cnName || '',
+                          cnAliases: (entry.cnAliases || []).join(', '),
+                          enName: entry.enName || '',
+                          enAliases: (entry.enAliases || []).join(', '),
+                          description: entry.description || '',
+                          unit: entry.unit || '',
+                          normalRange: entry.normalRange || ''
+                        });
+                      }} className="p-4 cursor-pointer">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <div className="font-bold text-base text-gray-800 mb-1">
+                              {entry.cnName || '未命名'}
+                              {entry.enName && <span className="ml-2 text-sm text-indigo-600">({entry.enName})</span>}
+                            </div>
+                            {(entry.cnAliases && entry.cnAliases.length > 0) && (
+                              <div className="text-xs text-gray-500 mb-1">
+                                别称: {entry.cnAliases.join('、')}
+                              </div>
+                            )}
+                            {(entry.enAliases && entry.enAliases.length > 0) && (
+                              <div className="text-xs text-gray-500 mb-1">
+                                英文别称: {entry.enAliases.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                          <Icons.ChevronRight size={20} className="text-gray-300"/>
+                        </div>
+                        
+                        {entry.description && (
+                          <div className="text-sm text-gray-600 mb-2 bg-blue-50 p-2 rounded">
+                            💡 {entry.description}
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-3 text-xs">
+                          {entry.unit && (
+                            <span className="bg-gray-100 px-2 py-1 rounded">
+                              单位: {entry.unit}
+                            </span>
+                          )}
+                          {entry.normalRange && (
+                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
+                              参考: {entry.normalRange}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* 编辑/添加表单 */}
+              {(editingDictEntry !== null || dictEntryInput.cnName || dictEntryInput.enName) && (
+                <div className="absolute inset-0 bg-white z-10 flex flex-col">
+                  <div className="p-4 border-b flex justify-between items-center">
+                    <button onClick={() => { setEditingDictEntry(null); setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' }); }} className="p-2 bg-gray-100 rounded-full">
+                      <Icons.X size={20}/>
+                    </button>
+                    <h3 className="font-bold">{editingDictEntry ? '编辑指标' : '新增指标'}</h3>
+                    <button onClick={() => {
+                      if (!dictEntryInput.cnName && !dictEntryInput.enName) {
+                        alert('请至少填写中文名称或英文名称');
+                        return;
+                      }
+                      
+                      const aliases = dictEntryInput.cnAliases ? dictEntryInput.cnAliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean) : [];
+                      const enAliases = dictEntryInput.enAliases ? dictEntryInput.enAliases.split(/[,，]/).map(s => s.trim()).filter(Boolean) : [];
+                      
+                      if (editingDictEntry) {
+                        // 编辑
+                        setMedicalDictionary(medicalDictionary.map(e => e.id === editingDictEntry.id ? {
+                          ...e,
+                          cnName: dictEntryInput.cnName,
+                          cnAliases: aliases,
+                          enName: dictEntryInput.enName,
+                          enAliases: enAliases,
+                          description: dictEntryInput.description,
+                          unit: dictEntryInput.unit,
+                          normalRange: dictEntryInput.normalRange,
+                          updatedAt: new Date().toISOString()
+                        } : e));
+                      } else {
+                        // 新增
+                        setMedicalDictionary([...medicalDictionary, {
+                          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                          cnName: dictEntryInput.cnName,
+                          cnAliases: aliases,
+                          enName: dictEntryInput.enName,
+                          enAliases: enAliases,
+                          description: dictEntryInput.description,
+                          unit: dictEntryInput.unit,
+                          normalRange: dictEntryInput.normalRange,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                        }]);
+                      }
+                      
+                      setEditingDictEntry(null);
+                      setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' });
+                    }} className="p-2 bg-indigo-600 text-white rounded-full">
+                      <Icons.Save size={20}/>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-5">
+                    <div className="space-y-4">
+                      {/* 中文名称 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">中文名称 *</label>
+                        <input 
+                          value={dictEntryInput.cnName} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, cnName: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="如：白细胞计数"
+                        />
+                      </div>
+
+                      {/* 中文别称 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">中文别称（可选）</label>
+                        <input 
+                          value={dictEntryInput.cnAliases} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, cnAliases: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="用逗号分隔，如：白细胞,WBC计数"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">多个别称用逗号、顿号或分号分隔</p>
+                      </div>
+
+                      {/* 英文名称 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">英文名称</label>
+                        <input 
+                          value={dictEntryInput.enName} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, enName: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="如：WBC"
+                        />
+                      </div>
+
+                      {/* 英文别称 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">英文别称（可选）</label>
+                        <input 
+                          value={dictEntryInput.enAliases} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, enAliases: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="用逗号分隔，如：White Blood Cell,Leukocyte"
+                        />
+                      </div>
+
+                      {/* 单位 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">单位</label>
+                        <input 
+                          value={dictEntryInput.unit} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, unit: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="如：10^9/L"
+                        />
+                      </div>
+
+                      {/* 参考范围 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">参考范围</label>
+                        <input 
+                          value={dictEntryInput.normalRange} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, normalRange: e.target.value})} 
+                          className="w-full p-3 border rounded-xl" 
+                          placeholder="如：4.0-10.0"
+                        />
+                      </div>
+
+                      {/* 说明 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">临床意义说明</label>
+                        <textarea 
+                          value={dictEntryInput.description} 
+                          onChange={e => setDictEntryInput({...dictEntryInput, description: e.target.value})} 
+                          className="w-full p-3 border rounded-xl h-24" 
+                          placeholder="简要说明该指标的临床意义..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* 删除按钮 */}
+                    {editingDictEntry && (
+                      <button onClick={() => {
+                        if (confirm(`确定要删除「${editingDictEntry.cnName}」吗？`)) {
+                          setMedicalDictionary(medicalDictionary.filter(e => e.id !== editingDictEntry.id));
+                          setEditingDictEntry(null);
+                          setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' });
+                        }
+                      }} className="w-full mt-4 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2">
+                        <Icons.Trash2 size={16}/> 删除此指标
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
 
           {/* Settings Modal */}
           {showSettingsModal && (
