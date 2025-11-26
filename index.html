@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.54</title>
+  <title>健康管家 Pro v15.55</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -104,7 +104,7 @@
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.54";
+    const VERSION = "v15.55";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1083,7 +1083,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [debugInfo, setDebugInfo] = useState('');
       const scanFileRef = React.useRef(null);
 
-      const [medInput, setMedInput] = useState({ name: '', startTime: '', endTime: '', frequency: '1', dosagePerTime: '1', relation: 'æ— å…³', timePeriods: [], isLongTerm: true, cycleEnabled: false, cycleDays: '', cycleRestDays: '' });
+      const [medInput, setMedInput] = useState({ name: '', startTime: '', endTime: '', frequency: '1', dosagePerTime: '1', relation: '无关', timePeriods: [], isLongTerm: true, cycleEnabled: false, cycleDays: '', cycleRestDays: '' });
       const [catalogInput, setCatalogInput] = useState({ name: '', brand: '', dosageForm: '片剂', price: '', strength: '', unit: 'mg', packageSize: '' });
       const [checkupInput, setCheckupInput] = useState({ date: '', items: '', notes: '' });
       const [vitalsInput, setVitalsInput] = useState({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' });
@@ -1188,7 +1188,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         if (!medInput.name) return;
         let methodStr = `每日 ${medInput.frequency} 次,每次 ${medInput.dosagePerTime}`;
         if (medInput.timePeriods && medInput.timePeriods.length > 0) methodStr += ` [${medInput.timePeriods.join('/')}]`;
-        if (medInput.relation !== 'æ— å…³') methodStr += ` (${medInput.relation})`;
+        if (medInput.relation !== '无关') methodStr += ` (${medInput.relation})`;
         if (medInput.cycleEnabled && medInput.cycleDays && medInput.cycleRestDays) methodStr += ` 循环:服${medInput.cycleDays}天停${medInput.cycleRestDays}天`;
         const finalEndTime = medInput.isLongTerm ? '' : medInput.endTime;
         const newMed = { ...medInput, id: editingId || Date.now().toString(), method: methodStr, endTime: finalEndTime };
@@ -2061,7 +2061,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </button>
               )}
               {activeTab === 'plan' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
-              {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'æ— å…³',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'appointment' && <button onClick={() => { setEditingId(null); setCheckupInput({date:'',items:'',notes:''}); setShowCheckupForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'catalog' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
               {activeTab === 'catalog' && <button onClick={() => { setEditingId(null); setCatalogInput({name:'',brand:'',dosageForm:'片剂',price:'',strength:'',unit:'mg',packageSize:''}); setShowCatalogForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
@@ -2403,7 +2403,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       <div className="font-bold text-base mb-1">{i.name}</div>
                       {i.brand && <div className="text-xs text-indigo-600 mb-1">{i.brand}</div>}
                       <div className="text-sm text-gray-500">{i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{i.dosageForm}</span>}{i.strength}{i.unit}{i.packageSize && <span className="text-gray-400"> ×{i.packageSize}</span>}</div>
-                      {i.price && <div className="text-sm font-bold text-green-600 mt-1">Â¥{i.price}</div>}
+                      {i.price && <div className="text-sm font-bold text-green-600 mt-1">¥{i.price}</div>}
                       <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
                     </div>
                   ))}
@@ -2420,7 +2420,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                           <span>{i.strength}{i.unit}{i.packageSize && ` ×${i.packageSize}`}</span>
                         </div>
                       </div>
-                      {i.price && <div className="text-base font-bold text-green-600">Â¥{i.price}</div>}
+                      {i.price && <div className="text-base font-bold text-green-600">¥{i.price}</div>}
                     </div>
                     <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-4 right-4 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
                   </div>
@@ -2599,7 +2599,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     <input type="date" value={vitalsInput.date} onChange={e => setVitalsInput({...vitalsInput, date: e.target.value})} className="w-full p-3 border rounded-xl"/>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">æ—¶é—´</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">时间</label>
                     <input type="time" value={vitalsInput.time} onChange={e => setVitalsInput({...vitalsInput, time: e.target.value})} className="w-full p-3 border rounded-xl"/>
                   </div>
                 </div>
