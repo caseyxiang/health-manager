@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.52</title>
+  <title>健康管家 Pro v15.53</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -104,7 +104,7 @@
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.52";
+    const VERSION = "v15.53";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -790,9 +790,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         localStorage.removeItem('health_pro_session');
         setSyncStatus('');
         setLastSyncTime(null);
-        // 显示登录界面
-        setShowLoginModal(true);
-        setIsLoginMode(true);
+        // 清空登录表单
+        setLoginForm({ username: '', password: '', confirmPassword: '' });
+        setLoginError('');
       };
       
       // 从云端加载数据
@@ -1881,6 +1881,140 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return IconComponent ? <IconComponent size={size} style={{ color }} /> : null;
       };
 
+      // 如果未登录，显示登录/注册页面
+      if (!currentUser) {
+        return (
+          <div className="w-full max-w-md mx-auto bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 h-screen flex flex-col font-sans overflow-hidden relative shadow-2xl">
+            {/* 背景装饰 */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-white/5 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-purple-500/10 rounded-full blur-3xl"></div>
+            </div>
+            
+            <div className="relative z-10 flex-1 flex flex-col justify-center p-6">
+              {/* Logo 和标题 */}
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                  <Icons.Activity size={40} className="text-white"/>
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">健康管家</h1>
+                <p className="text-white/70 text-sm">您的私人健康数据管理助手</p>
+              </div>
+              
+              {/* 登录/注册表单 */}
+              <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+                <div className="flex mb-6">
+                  <button 
+                    onClick={() => { setIsLoginMode(true); setLoginError(''); }}
+                    className={`flex-1 py-2 text-center font-bold rounded-l-xl transition-all ${isLoginMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    登录
+                  </button>
+                  <button 
+                    onClick={() => { setIsLoginMode(false); setLoginError(''); }}
+                    className={`flex-1 py-2 text-center font-bold rounded-r-xl transition-all ${!isLoginMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    注册
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">用户名</label>
+                    <input 
+                      type="text" 
+                      value={loginForm.username} 
+                      onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
+                      placeholder="请输入用户名"
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">密码</label>
+                    <input 
+                      type="password" 
+                      value={loginForm.password} 
+                      onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
+                      placeholder={isLoginMode ? "请输入密码" : "至少6位"}
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    {/* 密码强度指示器 - 仅注册时显示 */}
+                    {!isLoginMode && loginForm.password && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex gap-0.5">
+                            {[1,2,3,4,5].map(i => (
+                              <div key={i} className={`flex-1 rounded-full transition-all ${i <= getPasswordStrength(loginForm.password).level ? getPasswordStrength(loginForm.password).color : 'bg-gray-200'}`}/>
+                            ))}
+                          </div>
+                          <span className={`text-xs font-medium ${getPasswordStrength(loginForm.password).level <= 2 ? 'text-red-500' : getPasswordStrength(loginForm.password).level <= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {getPasswordStrength(loginForm.password).text}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {!isLoginMode && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 mb-1 block">确认密码</label>
+                      <input 
+                        type="password" 
+                        value={loginForm.confirmPassword} 
+                        onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
+                        placeholder="请再次输入密码"
+                        className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                      />
+                      {loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword && (
+                        <p className="text-xs text-red-500 mt-1">两次密码不一致</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {loginError && (
+                    <div className="text-red-500 text-sm bg-red-50 p-3 rounded-xl flex items-center gap-2">
+                      <Icons.AlertTriangle size={16}/> {loginError}
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={isLoginMode ? handleLogin : handleSignUp}
+                    disabled={loginLoading || (!isLoginMode && loginForm.password !== loginForm.confirmPassword)}
+                    className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                  >
+                    {loginLoading ? (
+                      <><span className="animate-spin">⏳</span> 处理中...</>
+                    ) : (
+                      <><Icons.LogIn size={18}/> {isLoginMode ? '登录' : '注册'}</>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {/* 功能亮点 */}
+              <div className="flex justify-center gap-6 text-white/80 text-xs">
+                <div className="flex items-center gap-1">
+                  <Icons.Cloud size={14}/> 云端同步
+                </div>
+                <div className="flex items-center gap-1">
+                  <Icons.Users size={14}/> 多成员
+                </div>
+                <div className="flex items-center gap-1">
+                  <Icons.ScanLine size={14}/> AI识别
+                </div>
+              </div>
+            </div>
+            
+            {/* 版本号 */}
+            <div className="relative z-10 text-center py-4 text-white/40 text-xs">
+              健康管家 Pro {VERSION}
+            </div>
+          </div>
+        );
+      }
+
+      // 已登录，显示主界面
       return (
         <div className="w-full max-w-md mx-auto bg-slate-50 h-screen flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
           {/* Header */}
@@ -1889,15 +2023,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); setShowMemberMenu(false); }} className="bg-indigo-600 p-2 rounded-full border border-indigo-500"><Icons.Menu size={18}/></button>
               <h1 className="text-base font-bold flex items-center gap-1.5"><Icons.Activity size={18}/> 健康管家 <span className="text-xs font-normal opacity-70">{VERSION}</span></h1>
               {/* 云同步状态 */}
-              {currentUser && (
-                <button 
-                  onClick={() => saveToCloud()} 
-                  className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
-                  title={!isOnline ? '离线中' : syncStatus === 'synced' ? '已同步' : syncStatus === 'syncing' ? '同步中...' : syncStatus === 'error' ? '同步失败,点击重试' : '点击同步'}
-                >
-                  {!isOnline ? <Icons.CloudOff size={14} className="text-yellow-300"/> : syncStatus === 'error' ? <Icons.CloudOff size={14} className="text-red-300"/> : <Icons.Cloud size={14} className={syncStatus === 'synced' ? 'text-green-300' : 'text-white/60'}/>}
-                </button>
-              )}
+              <button 
+                onClick={() => saveToCloud()} 
+                className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
+                title={!isOnline ? '离线中' : syncStatus === 'synced' ? '已同步' : syncStatus === 'syncing' ? '同步中...' : syncStatus === 'error' ? '同步失败,点击重试' : '点击同步'}
+              >
+                {!isOnline ? <Icons.CloudOff size={14} className="text-yellow-300"/> : syncStatus === 'error' ? <Icons.CloudOff size={14} className="text-red-300"/> : <Icons.Cloud size={14} className={syncStatus === 'synced' ? 'text-green-300' : 'text-white/60'}/>}
+              </button>
             </div>
             <div className="flex items-center gap-2">
               {/* 成员切换按钮 */}
@@ -1941,25 +2073,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           {showMenu && (
             <div className="absolute left-4 top-20 w-48 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
               <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl">系统菜单</div>
-              {currentUser ? (
-                <>
-                  <div className="px-4 py-2 text-xs text-gray-500 border-b flex items-center gap-2">
-                    <Icons.User size={14}/> {currentUser.username}
-                    {syncStatus === 'synced' && <span className="text-green-500 text-[10px]">● 已同步</span>}
-                  </div>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 同步到云端</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); loadFromCloud(currentUser.objectId, sessionToken); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
-                </>
-              ) : (
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowLoginModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-indigo-600 font-medium"><Icons.LogIn size={16}/> 登录/注册</button>
-              )}
+              <div className="px-4 py-2 text-xs text-gray-500 border-b flex items-center gap-2">
+                <Icons.User size={14}/> {currentUser?.username}
+                {syncStatus === 'synced' && <span className="text-green-500 text-[10px]">● 已同步</span>}
+              </div>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 同步到云端</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); loadFromCloud(currentUser.objectId, sessionToken); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
               <div className="border-t"></div>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 备份到本地</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> 从本地恢复</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Settings size={16}/> 设置</button>
-              {currentUser && (
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> 退出登录</button>
-              )}
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> 退出登录</button>
             </div>
           )}
           
@@ -3024,171 +3148,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     disabled={!memberInput.name.trim()}
                   >
                     {editingMember ? '保存' : '添加'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Login Modal */}
-          {showLoginModal && (
-            <div className="absolute inset-0 z-[120] bg-black/50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold">{isLoginMode ? '登录' : '注册'}</h3>
-                  <button onClick={() => { setShowLoginModal(false); setLoginError(''); setLoginForm({ username: '', password: '', confirmPassword: '' }); }} className="p-1 bg-gray-100 rounded-full"><Icons.X size={18}/></button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">用户名</label>
-                    <input 
-                      type="text" 
-                      value={loginForm.username} 
-                      onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
-                      placeholder="请输入用户名（英文或数字）"
-                      className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">密码</label>
-                    <input 
-                      type="password" 
-                      value={loginForm.password} 
-                      onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
-                      placeholder={isLoginMode ? "请输入密码" : "至少6位，含字母数字更安全"}
-                      className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    {/* 密码强度指示器 - 仅注册时显示 */}
-                    {!isLoginMode && loginForm.password && (
-                      <div className="mt-2">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex gap-0.5">
-                            {[1,2,3,4,5].map(i => (
-                              <div key={i} className={`flex-1 rounded-full transition-all ${i <= getPasswordStrength(loginForm.password).level ? getPasswordStrength(loginForm.password).color : 'bg-gray-200'}`}/>
-                            ))}
-                          </div>
-                          <span className={`text-xs font-medium ${getPasswordStrength(loginForm.password).level <= 2 ? 'text-red-500' : getPasswordStrength(loginForm.password).level <= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {getPasswordStrength(loginForm.password).text}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-1">提示：混合大小写字母、数字、符号可提高安全性</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {!isLoginMode && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600 mb-1 block">确认密码</label>
-                      <input 
-                        type="password" 
-                        value={loginForm.confirmPassword} 
-                        onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
-                        placeholder="请再次输入密码"
-                        className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword ? 'border-red-300 bg-red-50' : ''}`}
-                      />
-                      {loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword && (
-                        <p className="text-xs text-red-500 mt-1">两次密码不一致</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {loginError && (
-                    <div className="text-red-500 text-sm bg-red-50 p-3 rounded-xl">{loginError}</div>
-                  )}
-                  
-                  <button 
-                    onClick={isLoginMode ? handleLogin : handleSignUp}
-                    disabled={loginLoading || (!isLoginMode && loginForm.password !== loginForm.confirmPassword)}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {loginLoading ? (
-                      <><span className="animate-spin">⏳</span> 处理中...</>
-                    ) : (
-                      <><Icons.LogIn size={18}/> {isLoginMode ? '登录' : '注册'}</>
-                    )}
-                  </button>
-                  
-                  <div className="text-center text-sm text-gray-500">
-                    {isLoginMode ? '没有账号？' : '已有账号？'}
-                    <button 
-                      onClick={() => { setIsLoginMode(!isLoginMode); setLoginError(''); setLoginForm({ username: '', password: '', confirmPassword: '' }); }}
-                      className="text-indigo-600 font-medium ml-1"
-                    >
-                      {isLoginMode ? '立即注册' : '去登录'}
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="mt-6 pt-4 border-t text-xs text-gray-400 text-center">
-                  <Icons.Cloud size={14} className="inline mr-1"/>
-                  登录后数据自动云端同步，换设备也不丢失
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Welcome Guide Modal - 首次使用引导 */}
-          {showWelcomeGuide && (
-            <div className="absolute inset-0 z-[130] bg-black/60 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-                <div className="text-center mb-6">
-                  <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icons.Activity size={40} className="text-indigo-600"/>
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">欢迎使用健康管家</h2>
-                  <p className="text-gray-500 text-sm">您的私人健康数据管理助手</p>
-                </div>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
-                      <Icons.Cloud size={16} className="text-indigo-600"/>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">云端同步</h4>
-                      <p className="text-xs text-gray-500">登录后数据自动同步，换设备也不丢</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                      <Icons.Users size={16} className="text-green-600"/>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">多成员管理</h4>
-                      <p className="text-xs text-gray-500">为家人创建独立的健康档案</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
-                      <Icons.ScanLine size={16} className="text-purple-600"/>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">AI识别报告</h4>
-                      <p className="text-xs text-gray-500">拍照上传，智能提取检验数据</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <button 
-                    onClick={() => { dismissWelcomeGuide(); setShowLoginModal(true); setIsLoginMode(false); }}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
-                  >
-                    <Icons.UserPlus size={18}/> 注册账号开始使用
-                  </button>
-                  <button 
-                    onClick={() => { dismissWelcomeGuide(); setShowLoginModal(true); setIsLoginMode(true); }}
-                    className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold"
-                  >
-                    已有账号，去登录
-                  </button>
-                  <button 
-                    onClick={dismissWelcomeGuide}
-                    className="w-full py-2 text-gray-400 text-sm"
-                  >
-                    暂不登录，先体验一下
                   </button>
                 </div>
               </div>
