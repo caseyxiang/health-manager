@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.56</title>
+  <title>健康管家 Pro v15.60</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -65,8 +65,132 @@
       min-height: 100dvh;
     }
   </style>
+
+  <script>
+    // 移动Safari CDN加载检测
+    (function() {
+      const requiredLibs = ['React', 'ReactDOM', 'Babel'];
+      const loadStatus = {};
+      
+      // 检测函数
+      function checkLibs() {
+        loadStatus.React = typeof React !== 'undefined';
+        loadStatus.ReactDOM = typeof ReactDOM !== 'undefined';  
+        loadStatus.Babel = typeof Babel !== 'undefined';
+        
+        const allLoaded = loadStatus.React && loadStatus.ReactDOM && loadStatus.Babel;
+        
+        if (!allLoaded) {
+          console.error('CDN加载失败:', loadStatus);
+          // 显示友好错误
+          document.body.innerHTML = `
+            <div style="padding:20px;background:#dc2626;color:white;font-family:sans-serif;">
+              <h3>⚠️ 库加载失败</h3>
+              <p>可能的原因：</p>
+              <ul style="text-align:left;font-size:14px;">
+                <li>网络连接问题</li>
+                <li>CDN被拦截</li>
+                <li>浏览器版本过低</li>
+              </ul>
+              <pre style="background:rgba(0,0,0,0.3);padding:10px;border-radius:5px;font-size:12px;overflow-x:auto;">
+React: ${loadStatus.React ? '✓' : '✗'}
+ReactDOM: ${loadStatus.ReactDOM ? '✓' : '✗'}
+Babel: ${loadStatus.Babel ? '✓' : '✗'}
+              </pre>
+              <p style="font-size:12px;margin-top:15px;">浏览器: ${navigator.userAgent}</p>
+            </div>
+          `;
+        }
+      }
+      
+      // 延迟检测，给CDN一些加载时间
+      setTimeout(checkLibs, 1500);
+    })();
+  </script>
 </head>
 <body>
+  <!-- PWA模式检测和引导 -->
+  <div id="pwa-prompt" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:99999;font-family:-apple-system,sans-serif;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:340px;width:90%;text-align:center;color:white;">
+      <div style="font-size:64px;margin-bottom:20px;">💊</div>
+      <h2 style="font-size:24px;font-weight:bold;margin-bottom:10px;color:white;">健康管家 Pro</h2>
+      <p style="font-size:15px;line-height:1.6;color:#94a3b8;margin-bottom:30px;">
+        检测到您正在使用Safari浏览器访问。<br>
+        <strong style="color:#fbbf24;">为获得最佳体验，请将应用添加到主屏幕。</strong>
+      </p>
+      
+      <div style="background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-radius:16px;padding:20px;margin-bottom:20px;text-align:left;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:15px;color:#fbbf24;">📱 添加步骤：</div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+          <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">1</div>
+          <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
+            点击底部 <strong style="color:white;">分享</strong> 按钮
+            <div style="margin-top:4px;font-size:32px;">⬆️</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+          <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">2</div>
+          <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
+            选择 <strong style="color:white;">"添加到主屏幕"</strong>
+            <div style="margin-top:4px;">➕ 📱</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">3</div>
+          <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
+            从主屏幕图标启动应用
+          </div>
+        </div>
+      </div>
+      
+      <div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:12px;margin-bottom:20px;">
+        <div style="font-size:13px;color:#86efac;line-height:1.5;">
+          ✅ <strong>已验证</strong>：添加到主屏幕后完全正常工作
+        </div>
+      </div>
+      
+      <button onclick="document.getElementById('pwa-prompt').style.display='none'" style="background:#4f46e5;color:white;border:none;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:600;width:100%;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.3);">
+        我知道了，继续访问
+      </button>
+      
+      <div style="margin-top:15px;font-size:12px;color:#64748b;">
+        或在浏览器模式下可能显示不正常
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 检测是否在PWA模式(standalone)
+    (function() {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+        || window.navigator.standalone 
+        || document.referrer.includes('android-app://');
+      
+      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      
+      // 检查是否已经显示过提示
+      const hasSeenPrompt = sessionStorage.getItem('pwa-prompt-seen');
+      
+      if (!isStandalone && isSafari && isIOS && !hasSeenPrompt) {
+        // 不在PWA模式，且是iOS Safari，显示提示
+        setTimeout(function() {
+          const prompt = document.getElementById('pwa-prompt');
+          if (prompt) {
+            prompt.style.display = 'block';
+            sessionStorage.setItem('pwa-prompt-seen', 'true');
+          }
+        }, 1000);
+      }
+      
+      console.log('运行模式:', {
+        isStandalone: isStandalone,
+        isSafari: isSafari,
+        isIOS: isIOS,
+        userAgent: navigator.userAgent
+      });
+    })();
+  </script>
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
@@ -122,7 +246,7 @@
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.56";
+    const VERSION = "v15.60";
     
     // LeanCloud 配置
     const LC_CONFIG = {
