@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.50</title>
+  <title>健康管家 Pro v15.51</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -101,9 +101,10 @@
       LogOut: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
       Cloud: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>,
       CloudOff: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 8 5.07"/></svg>,
+      Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.50";
+    const VERSION = "v15.51";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -123,13 +124,25 @@
         };
         if (sessionToken) headers['X-LC-Session'] = sessionToken;
         
-        const options = { method, headers };
+        const options = { 
+          method, 
+          headers,
+          mode: 'cors'
+        };
         if (body) options.body = JSON.stringify(body);
         
-        const response = await fetch(`${LC_CONFIG.serverURL}/1.1${path}`, options);
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        return data;
+        try {
+          const response = await fetch(`${LC_CONFIG.serverURL}/1.1${path}`, options);
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
+          return data;
+        } catch (err) {
+          // 更详细的错误信息
+          if (err.message === 'Failed to fetch') {
+            throw new Error('网络连接失败，请检查网络或稍后重试');
+          }
+          throw err;
+        }
       },
       
       // 用户注册
@@ -660,6 +673,35 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
       
+      // 网络状态
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
+      
+      // 首次使用引导
+      const [showWelcomeGuide, setShowWelcomeGuide] = useState(() => {
+        return !localStorage.getItem('health_pro_welcomed');
+      });
+      
+      // 同步冲突处理
+      const [showSyncConflict, setShowSyncConflict] = useState(false);
+      const [conflictData, setConflictData] = useState(null);
+      
+      // 密码强度计算
+      const getPasswordStrength = (pwd) => {
+        if (!pwd) return { level: 0, text: '', color: '' };
+        let score = 0;
+        if (pwd.length >= 6) score++;
+        if (pwd.length >= 8) score++;
+        if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+        
+        if (score <= 1) return { level: 1, text: '弱', color: 'bg-red-500' };
+        if (score <= 2) return { level: 2, text: '较弱', color: 'bg-orange-500' };
+        if (score <= 3) return { level: 3, text: '中等', color: 'bg-yellow-500' };
+        if (score <= 4) return { level: 4, text: '强', color: 'bg-green-500' };
+        return { level: 5, text: '很强', color: 'bg-green-600' };
+      };
+      
       const [activeTab, setActiveTab] = useState('vitals');
       const [viewMode, setViewMode] = useState('list');
       
@@ -749,41 +791,36 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 从云端加载数据
-      const loadFromCloud = async (userId, token) => {
+      const loadFromCloud = async (userId, token, forceOverwrite = false) => {
+        if (!isOnline) {
+          setSyncStatus('error');
+          return;
+        }
         setSyncStatus('syncing');
         try {
           const cloudData = await LeanCloud.loadUserData(userId, token);
           if (cloudData) {
-            // 恢复成员列表
-            if (cloudData.members) {
-              setMembers(cloudData.members);
-              localStorage.setItem('health_pro_members', JSON.stringify(cloudData.members));
+            // 检查是否有本地数据
+            const hasLocalData = meds.length > 0 || catalog.length > 0 || labReports.length > 0 || imagingReports.length > 0 || vitals.length > 0;
+            
+            // 检查云端数据是否比本地更新
+            const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated) : null;
+            const localTime = lastSyncTime;
+            
+            // 如果有本地数据且云端有数据，检查冲突
+            if (hasLocalData && cloudData.memberData && !forceOverwrite && !lastSyncTime) {
+              // 首次登录时发现冲突，询问用户
+              setConflictData(cloudData);
+              setShowSyncConflict(true);
+              setSyncStatus('');
+              return;
             }
-            // 恢复所有成员数据
-            if (cloudData.memberData) {
-              Object.keys(cloudData.memberData).forEach(memberId => {
-                const data = cloudData.memberData[memberId];
-                if (data.meds) saveMemberData(memberId, 'meds', data.meds);
-                if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog);
-                if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups);
-                if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports);
-                if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports);
-                if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals);
-              });
-            }
-            // 重新加载当前成员数据
-            setMeds(loadMemberData(currentMemberId, 'meds', DEFAULT_MEDS));
-            setCatalog(loadMemberData(currentMemberId, 'catalog', DEFAULT_CATALOG));
-            setCheckups(loadMemberData(currentMemberId, 'checkups', DEFAULT_CHECKUPS));
-            setLabReports(loadMemberData(currentMemberId, 'labReports', DEFAULT_LAB_REPORTS));
-            setImagingReports(loadMemberData(currentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
-            setVitals(loadMemberData(currentMemberId, 'vitals', DEFAULT_VITALS));
-            // 恢复API设置
-            if (cloudData.apiSettings) {
-              Object.keys(cloudData.apiSettings).forEach(key => {
-                localStorage.setItem(key, cloudData.apiSettings[key]);
-              });
-            }
+            
+            // 应用云端数据
+            await applyCloudData(cloudData);
+          } else {
+            // 云端无数据，上传本地数据
+            await saveToCloud(userId, token);
           }
           setSyncStatus('synced');
           setLastSyncTime(new Date());
@@ -796,6 +833,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 保存数据到云端
       const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken) => {
         if (!userId || !token) return;
+        if (!isOnline) {
+          setSyncStatus('error');
+          return;
+        }
         setSyncStatus('syncing');
         try {
           // 收集所有成员数据
@@ -860,6 +901,87 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           loadFromCloud(currentUser.objectId, sessionToken);
         }
       }, [currentUser, sessionToken]);
+      
+      // 网络状态监听
+      useEffect(() => {
+        const handleOnline = () => {
+          setIsOnline(true);
+          // 恢复在线后自动重试同步
+          if (currentUser && sessionToken && syncStatus === 'error') {
+            saveToCloud();
+          }
+        };
+        const handleOffline = () => {
+          setIsOnline(false);
+          if (syncStatus === 'syncing') {
+            setSyncStatus('error');
+          }
+        };
+        
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }, [currentUser, sessionToken, syncStatus]);
+      
+      // 关闭首次引导
+      const dismissWelcomeGuide = () => {
+        localStorage.setItem('health_pro_welcomed', 'true');
+        setShowWelcomeGuide(false);
+      };
+      
+      // 处理同步冲突 - 使用云端数据
+      const resolveConflictWithCloud = async () => {
+        if (conflictData) {
+          await applyCloudData(conflictData);
+        }
+        setShowSyncConflict(false);
+        setConflictData(null);
+      };
+      
+      // 处理同步冲突 - 使用本地数据（覆盖云端）
+      const resolveConflictWithLocal = async () => {
+        setShowSyncConflict(false);
+        setConflictData(null);
+        await saveToCloud();
+      };
+      
+      // 应用云端数据到本地
+      const applyCloudData = async (cloudData) => {
+        if (cloudData.members) {
+          setMembers(cloudData.members);
+          localStorage.setItem('health_pro_members', JSON.stringify(cloudData.members));
+        }
+        if (cloudData.memberData) {
+          Object.keys(cloudData.memberData).forEach(memberId => {
+            const data = cloudData.memberData[memberId];
+            if (data.meds) saveMemberData(memberId, 'meds', data.meds);
+            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog);
+            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups);
+            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports);
+            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports);
+            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals);
+          });
+        }
+        // 恢复API设置
+        if (cloudData.apiSettings) {
+          Object.keys(cloudData.apiSettings).forEach(key => {
+            localStorage.setItem(key, cloudData.apiSettings[key]);
+          });
+        }
+        // 重新加载当前成员数据
+        setMeds(loadMemberData(currentMemberId, 'meds', DEFAULT_MEDS));
+        setCatalog(loadMemberData(currentMemberId, 'catalog', DEFAULT_CATALOG));
+        setCheckups(loadMemberData(currentMemberId, 'checkups', DEFAULT_CHECKUPS));
+        setLabReports(loadMemberData(currentMemberId, 'labReports', DEFAULT_LAB_REPORTS));
+        setImagingReports(loadMemberData(currentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
+        setVitals(loadMemberData(currentMemberId, 'vitals', DEFAULT_VITALS));
+        setSyncStatus('synced');
+        setLastSyncTime(new Date());
+      };
       
       // 切换成员
       const switchMember = (memberId) => {
@@ -1766,9 +1888,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 <button 
                   onClick={() => saveToCloud()} 
                   className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
-                  title={syncStatus === 'synced' ? '已同步' : syncStatus === 'syncing' ? '同步中...' : syncStatus === 'error' ? '同步失败,点击重试' : '点击同步'}
+                  title={!isOnline ? '离线中' : syncStatus === 'synced' ? '已同步' : syncStatus === 'syncing' ? '同步中...' : syncStatus === 'error' ? '同步失败,点击重试' : '点击同步'}
                 >
-                  {syncStatus === 'error' ? <Icons.CloudOff size={14} className="text-red-300"/> : <Icons.Cloud size={14} className={syncStatus === 'synced' ? 'text-green-300' : 'text-white/60'}/>}
+                  {!isOnline ? <Icons.CloudOff size={14} className="text-yellow-300"/> : syncStatus === 'error' ? <Icons.CloudOff size={14} className="text-red-300"/> : <Icons.Cloud size={14} className={syncStatus === 'synced' ? 'text-green-300' : 'text-white/60'}/>}
                 </button>
               )}
             </div>
@@ -2909,7 +3031,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-bold">{isLoginMode ? '登录' : '注册'}</h3>
-                  <button onClick={() => { setShowLoginModal(false); setLoginError(''); }} className="p-1 bg-gray-100 rounded-full"><Icons.X size={18}/></button>
+                  <button onClick={() => { setShowLoginModal(false); setLoginError(''); setLoginForm({ username: '', password: '', confirmPassword: '' }); }} className="p-1 bg-gray-100 rounded-full"><Icons.X size={18}/></button>
                 </div>
                 
                 <div className="space-y-4">
@@ -2919,7 +3041,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       type="text" 
                       value={loginForm.username} 
                       onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
-                      placeholder="请输入用户名"
+                      placeholder="请输入用户名（英文或数字）"
                       className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -2930,9 +3052,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       type="password" 
                       value={loginForm.password} 
                       onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
-                      placeholder="请输入密码"
+                      placeholder={isLoginMode ? "请输入密码" : "至少6位，含字母数字更安全"}
                       className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
+                    {/* 密码强度指示器 - 仅注册时显示 */}
+                    {!isLoginMode && loginForm.password && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex gap-0.5">
+                            {[1,2,3,4,5].map(i => (
+                              <div key={i} className={`flex-1 rounded-full transition-all ${i <= getPasswordStrength(loginForm.password).level ? getPasswordStrength(loginForm.password).color : 'bg-gray-200'}`}/>
+                            ))}
+                          </div>
+                          <span className={`text-xs font-medium ${getPasswordStrength(loginForm.password).level <= 2 ? 'text-red-500' : getPasswordStrength(loginForm.password).level <= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {getPasswordStrength(loginForm.password).text}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1">提示：混合大小写字母、数字、符号可提高安全性</p>
+                      </div>
+                    )}
                   </div>
                   
                   {!isLoginMode && (
@@ -2943,8 +3081,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                         value={loginForm.confirmPassword} 
                         onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
                         placeholder="请再次输入密码"
-                        className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword ? 'border-red-300 bg-red-50' : ''}`}
                       />
+                      {loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword && (
+                        <p className="text-xs text-red-500 mt-1">两次密码不一致</p>
+                      )}
                     </div>
                   )}
                   
@@ -2954,7 +3095,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   
                   <button 
                     onClick={isLoginMode ? handleLogin : handleSignUp}
-                    disabled={loginLoading}
+                    disabled={loginLoading || (!isLoginMode && loginForm.password !== loginForm.confirmPassword)}
                     className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loginLoading ? (
@@ -2967,7 +3108,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   <div className="text-center text-sm text-gray-500">
                     {isLoginMode ? '没有账号？' : '已有账号？'}
                     <button 
-                      onClick={() => { setIsLoginMode(!isLoginMode); setLoginError(''); }}
+                      onClick={() => { setIsLoginMode(!isLoginMode); setLoginError(''); setLoginForm({ username: '', password: '', confirmPassword: '' }); }}
                       className="text-indigo-600 font-medium ml-1"
                     >
                       {isLoginMode ? '立即注册' : '去登录'}
@@ -2980,6 +3121,133 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   登录后数据自动云端同步，换设备也不丢失
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Welcome Guide Modal - 首次使用引导 */}
+          {showWelcomeGuide && (
+            <div className="absolute inset-0 z-[130] bg-black/60 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Icons.Activity size={40} className="text-indigo-600"/>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-2">欢迎使用健康管家</h2>
+                  <p className="text-gray-500 text-sm">您的私人健康数据管理助手</p>
+                </div>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+                      <Icons.Cloud size={16} className="text-indigo-600"/>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">云端同步</h4>
+                      <p className="text-xs text-gray-500">登录后数据自动同步，换设备也不丢</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                      <Icons.Users size={16} className="text-green-600"/>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">多成员管理</h4>
+                      <p className="text-xs text-gray-500">为家人创建独立的健康档案</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                      <Icons.ScanLine size={16} className="text-purple-600"/>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">AI识别报告</h4>
+                      <p className="text-xs text-gray-500">拍照上传，智能提取检验数据</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => { dismissWelcomeGuide(); setShowLoginModal(true); setIsLoginMode(false); }}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                  >
+                    <Icons.UserPlus size={18}/> 注册账号开始使用
+                  </button>
+                  <button 
+                    onClick={() => { dismissWelcomeGuide(); setShowLoginModal(true); setIsLoginMode(true); }}
+                    className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold"
+                  >
+                    已有账号，去登录
+                  </button>
+                  <button 
+                    onClick={dismissWelcomeGuide}
+                    className="w-full py-2 text-gray-400 text-sm"
+                  >
+                    暂不登录，先体验一下
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sync Conflict Modal - 同步冲突对话框 */}
+          {showSyncConflict && (
+            <div className="absolute inset-0 z-[125] bg-black/60 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                <div className="text-center mb-4">
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Icons.AlertTriangle size={32} className="text-yellow-600"/>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800">发现数据冲突</h3>
+                  <p className="text-sm text-gray-500 mt-2">云端和本地都有数据，请选择保留哪一份</p>
+                </div>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="p-4 border-2 border-indigo-200 bg-indigo-50 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icons.Cloud size={16} className="text-indigo-600"/>
+                      <span className="font-medium text-indigo-700">云端数据</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {conflictData?.lastUpdated ? `最后更新: ${new Date(conflictData.lastUpdated).toLocaleString()}` : '有已保存的数据'}
+                    </p>
+                  </div>
+                  <div className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icons.Smartphone size={16} className="text-gray-600"/>
+                      <span className="font-medium text-gray-700">本地数据</span>
+                    </div>
+                    <p className="text-xs text-gray-600">当前设备上的数据</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <button 
+                    onClick={resolveConflictWithCloud}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                  >
+                    <Icons.Cloud size={16}/> 使用云端数据
+                  </button>
+                  <button 
+                    onClick={resolveConflictWithLocal}
+                    className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold flex items-center justify-center gap-2"
+                  >
+                    <Icons.Smartphone size={16}/> 使用本地数据
+                  </button>
+                </div>
+                
+                <p className="text-[10px] text-gray-400 text-center mt-4">
+                  选择后，另一份数据将被覆盖
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Offline Indicator - 离线提示条 */}
+          {!isOnline && (
+            <div className="absolute top-0 left-0 right-0 z-[140] bg-yellow-500 text-yellow-900 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
+              <Icons.CloudOff size={16}/>
+              网络已断开，数据将在恢复连接后同步
             </div>
           )}
 
