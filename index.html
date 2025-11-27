@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.86</title>
+  <title>健康管家 Pro v15.85</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.86";
+    const VERSION = "v15.85";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -990,7 +990,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [loginForm, setLoginForm] = useState({ username: '', password: '', confirmPassword: '' });
       const [loginError, setLoginError] = useState('');
       const [loginLoading, setLoginLoading] = useState(false);
-      const [logoutLoading, setLogoutLoading] = useState(false); // 退出登录loading状态
+      const [isLoadingUserData, setIsLoadingUserData] = useState(false); // 登录后加载用户数据
+      const [isLoggingOut, setIsLoggingOut] = useState(false); // 退出登录中
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
       
@@ -1065,31 +1066,22 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginError('');
         try {
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
-          
-          // 登录成功后，立即清空旧用户的state数据（防止显示旧数据）
-          console.log('🔄 [handleLogin] 登录成功，清空旧数据');
-          setMembers([]);
-          setMeds([]);
-          setCatalog([]);
-          setCheckups([]);
-          setLabReports([]);
-          setImagingReports([]);
-          setVitals([]);
-          setMedicalDictionary([]);
-          setDataLoaded(false); // 重置加载标志，等待云端数据
-          
-          // 设置新用户信息
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
+          
+          // 关键修改：等待云端数据加载完成
+          setIsLoadingUserData(true);
           setShowLoginModal(false);
+          await loadFromCloud(user.objectId, user.sessionToken);
+          setIsLoadingUserData(false);
+          
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          // 登录后由useEffect自动加载云端数据
         } catch (e) {
           setLoginError(e.message || '登录失败');
+          setLoginLoading(false);
         }
-        setLoginLoading(false);
       };
       
       // 用户注册
@@ -1114,57 +1106,65 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
+          
+          // 关键修改：显示loading，等待数据初始化
+          setIsLoadingUserData(true);
           setShowLoginModal(false);
-          setLoginForm({ username: '', password: '', confirmPassword: '' });
+          
           // 注册后保存当前本地数据到云端(如果有的话)
           const hasLocalData = localStorage.getItem('health_pro_members') !== null;
           if (hasLocalData) {
             await saveToCloud(user.objectId, user.sessionToken);
+          } else {
+            // 新用户，加载空数据
+            await loadFromCloud(user.objectId, user.sessionToken);
           }
+          
+          setIsLoadingUserData(false);
+          setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '注册失败');
+          setLoginLoading(false);
         }
-        setLoginLoading(false);
       };
       
       // 退出登录
       const handleLogout = async () => {
-        console.log('🚪 [handleLogout] 开始退出登录');
-        setLogoutLoading(true); // 显示退出loading遮罩
+        setIsLoggingOut(true);
         
-        // 立即清除界面状态（用户体验优先）
-        const userToLogout = currentUser;
-        const tokenToUse = sessionToken;
+        // 超时保护：3秒后强制退出
+        const forceLogoutTimer = setTimeout(() => {
+          console.warn('⚠️ [handleLogout] 同步超时，强制退出');
+          performLogout();
+        }, 3000);
         
+        // 退出前先同步到云端（关键：确保数据不丢失）
+        if (currentUser && sessionToken && currentUser.objectId !== 'dev' && isOnline) {
+          setSyncStatus('syncing');
+          try {
+            await saveToCloud(currentUser.objectId, sessionToken, false);
+            console.log('✅ [handleLogout] 退出前同步成功');
+          } catch (e) {
+            console.error('❌ [handleLogout] 退出前同步失败:', e);
+          }
+        }
+        
+        clearTimeout(forceLogoutTimer);
+        performLogout();
+      };
+      
+      // 执行退出操作
+      const performLogout = () => {
         setCurrentUser(null);
         setSessionToken(null);
+        localStorage.removeItem('health_pro_user');
+        localStorage.removeItem('health_pro_session');
         setSyncStatus('');
         setLastSyncTime(null);
         setDataLoaded(false);
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
-        
-        // 后台同步数据到云端（不阻塞退出）
-        if (userToLogout && tokenToUse && userToLogout.objectId !== 'dev' && isOnline) {
-          console.log('☁️ [handleLogout] 后台同步数据...');
-          
-          // 使用Promise.race实现超时机制（最多等待3秒）
-          const syncPromise = saveToCloud(userToLogout.objectId, tokenToUse, false);
-          const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
-          
-          try {
-            await Promise.race([syncPromise, timeoutPromise]);
-            console.log('✅ [handleLogout] 后台同步完成');
-          } catch (e) {
-            console.error('❌ [handleLogout] 后台同步失败:', e);
-          }
-        }
-        
-        // 清除localStorage中的用户信息
-        localStorage.removeItem('health_pro_user');
-        localStorage.removeItem('health_pro_session');
-        
-        setLogoutLoading(false);
+        setIsLoggingOut(false);
         console.log('✅ [handleLogout] 退出登录完成');
       };
       
@@ -1174,6 +1174,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         if (!isOnline) {
           console.log('❌ [loadFromCloud] 离线，跳过');
           setSyncStatus('error');
+          setLoginLoading(false); // 重要：确保结束loading
           return;
         }
         setSyncStatus('syncing');
@@ -1200,10 +1201,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }
           setSyncStatus('synced');
           setLastSyncTime(new Date());
+          setLoginLoading(false); // 重要：结束loading
           console.log('✅ [loadFromCloud] 完成');
         } catch (e) {
           console.error('❌ [loadFromCloud] 失败:', e);
           setSyncStatus('error');
+          setLoginLoading(false); // 重要：失败时也要结束loading
           // 即使失败也要设置dataLoaded，否则会一直等待
           setDataLoaded(true);
           // 失败后从localStorage加载本地数据作为后备
@@ -1346,16 +1349,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 自动云同步(防抖3秒,更可靠)
       useEffect(() => {
-        // 关键：只在数据已加载后才自动同步（防止登录清空数据时同步空数据）
-        if (!currentUser || !sessionToken || !isOnline || !dataLoaded) {
-          console.log('⏰ [自动同步] 跳过:', { 
-            hasUser: !!currentUser, 
-            hasToken: !!sessionToken, 
-            isOnline, 
-            dataLoaded 
-          });
-          return;
-        }
+        if (!currentUser || !sessionToken || !isOnline) return;
         
         const timer = setTimeout(() => {
           console.log('⏰ 防抖时间到,触发自动同步');
@@ -1366,22 +1360,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('⏰ 防抖计时器被清除');
           clearTimeout(timer);
         };
-      }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline, dataLoaded]);
+      }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline]);
       
-      // 登录后自动从云端加载
-      useEffect(() => {
-        console.log('🔄 [useEffect-login] 触发:', { currentUser: currentUser?.username, hasToken: !!sessionToken, lastSyncTime });
-        if (currentUser && sessionToken && !lastSyncTime) {
-          console.log('✅ [useEffect-login] 开始从云端加载');
-          loadFromCloud(currentUser.objectId, sessionToken);
-        } else {
-          console.log('⏭️  [useEffect-login] 跳过云端加载:', { 
-            hasUser: !!currentUser, 
-            hasToken: !!sessionToken, 
-            alreadySynced: !!lastSyncTime 
-          });
-        }
-      }, [currentUser, sessionToken]);
+      // 注释：登录/注册时已手动调用loadFromCloud，此useEffect已废弃
+      // useEffect(() => {
+      //   if (currentUser && sessionToken && !lastSyncTime) {
+      //     loadFromCloud(currentUser.objectId, sessionToken);
+      //   }
+      // }, [currentUser, sessionToken]);
       
       // 页面关闭前强制同步
       useEffect(() => {
@@ -2544,19 +2530,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return IconComponent ? <IconComponent size={size} style={{ color }} /> : null;
       };
 
-      // 退出登录loading遮罩
-      if (logoutLoading) {
+      // 登录/注册后加载用户数据中
+      if (isLoadingUserData) {
         return (
-          <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full flex items-center justify-center bg-slate-900">
+          <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
             <div className="text-center">
-              <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-white text-lg font-bold mb-2">正在退出...</p>
-              <p className="text-slate-400 text-sm">正在保存数据到云端</p>
+              <div className="w-20 h-20 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
+              <h3 className="text-2xl font-bold text-white mb-2">加载中...</h3>
+              <p className="text-white/70 text-sm">正在同步您的健康数据</p>
             </div>
           </div>
         );
       }
-
+      
       // 如果未登录,显示登录/注册页面
       if (!currentUser) {
         return (
@@ -4174,6 +4160,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             <div className="absolute top-0 left-0 right-0 z-[140] bg-yellow-500 text-yellow-900 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
               <Icons.CloudOff size={16}/>
               网络已断开,数据将在恢复连接后同步
+            </div>
+          )}
+          
+          {/* 退出登录Loading遮罩 */}
+          {isLoggingOut && (
+            <div className="absolute inset-0 z-[150] bg-black/60 flex items-center justify-center">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+                <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">退出登录中...</h3>
+                <p className="text-sm text-gray-500">正在同步数据到云端</p>
+                <p className="text-xs text-gray-400 mt-2">请稍候，最多3秒</p>
+              </div>
             </div>
           )}
 
