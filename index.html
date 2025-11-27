@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.74</title>
+  <title>健康管家 Pro v15.76</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.74";
+    const VERSION = "v15.76";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -422,10 +422,12 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     const DEFAULT_IMAGING_REPORTS = [];
     const DEFAULT_VITALS = [];
 
-    // 数据加载辅助函数
-    const loadData = (key, defaultData) => {
+    // 数据加载辅助函数（带用户隔离）
+    const loadData = (key, defaultData, userId = null) => {
       try {
-        const stored = localStorage.getItem(key);
+        // 添加userId前缀实现隔离
+        const finalKey = userId ? `health_pro_${userId}_${key}` : `health_pro_${key}`;
+        const stored = localStorage.getItem(finalKey);
         return stored ? JSON.parse(stored) : defaultData;
       } catch (e) {
         console.error("加载数据失败:", key, e);
@@ -433,39 +435,64 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       }
     };
     
-    // 加载成员特定数据
-    const loadMemberData = (memberId, dataType, defaultData) => {
-      const key = `health_pro_${memberId}_${dataType}`;
-      return loadData(key, defaultData);
+    // 保存数据辅助函数（带用户隔离）
+    const saveData = (key, data, userId = null) => {
+      const finalKey = userId ? `health_pro_${userId}_${key}` : `health_pro_${key}`;
+      localStorage.setItem(finalKey, JSON.stringify(data));
     };
     
-    // 保存成员特定数据
-    const saveMemberData = (memberId, dataType, data) => {
-      const key = `health_pro_${memberId}_${dataType}`;
-      localStorage.setItem(key, JSON.stringify(data));
-    };
-    
-    // 迁移旧数据到默认成员
-    const migrateOldData = () => {
-      const oldKeys = ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'];
-      const needMigration = oldKeys.some(k => localStorage.getItem(`health_pro_${k}`) !== null);
-      const alreadyMigrated = localStorage.getItem('health_pro_data_migrated');
-      
-      if (needMigration && !alreadyMigrated) {
-        oldKeys.forEach(dataType => {
-          const oldKey = `health_pro_${dataType}`;
-          const newKey = `health_pro_default_${dataType}`;
-          const oldData = localStorage.getItem(oldKey);
-          if (oldData && !localStorage.getItem(newKey)) {
-            localStorage.setItem(newKey, oldData);
-          }
-        });
-        localStorage.setItem('health_pro_data_migrated', 'true');
+    // 加载成员特定数据（带用户隔离）
+    const loadMemberData = (memberId, dataType, defaultData, userId = null) => {
+      const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
+      try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : defaultData;
+      } catch (e) {
+        console.error("加载成员数据失败:", key, e);
+        return defaultData;
       }
     };
     
+    // 保存成员特定数据（带用户隔离）
+    const saveMemberData = (memberId, dataType, data, userId = null) => {
+      const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
+      localStorage.setItem(key, JSON.stringify(data));
+    };
+    
+    // 迁移旧数据到开发模式（仅执行一次）
+    const migrateOldDataToDev = () => {
+      const migrationKey = 'health_pro_migration_v15_76_done';
+      if (localStorage.getItem(migrationKey)) return; // 已迁移
+      
+      const oldKeys = ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'];
+      const oldGlobalKeys = ['members', 'current_member', 'medical_dictionary'];
+      
+      // 迁移成员数据到dev
+      oldKeys.forEach(dataType => {
+        const oldKey = `health_pro_default_${dataType}`;
+        const newKey = `health_pro_dev_default_${dataType}`;
+        const oldData = localStorage.getItem(oldKey);
+        if (oldData && !localStorage.getItem(newKey)) {
+          localStorage.setItem(newKey, oldData);
+        }
+      });
+      
+      // 迁移全局数据到dev
+      oldGlobalKeys.forEach(dataType => {
+        const oldKey = `health_pro_${dataType}`;
+        const newKey = `health_pro_dev_${dataType}`;
+        const oldData = localStorage.getItem(oldKey);
+        if (oldData && !localStorage.getItem(newKey)) {
+          localStorage.setItem(newKey, oldData);
+        }
+      });
+      
+      localStorage.setItem(migrationKey, 'true');
+      console.log('✅ 数据已迁移到开发模式专用空间');
+    };
+    
     // 执行数据迁移
-    migrateOldData();
+    migrateOldDataToDev();
 
     // 计算指标异常状态的函数
     function cleanIndicatorName(name) {
@@ -946,11 +973,15 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
     function App() {
       // 用户认证状态
+      // 用户认证状态（全局，无需隔离）
       const [currentUser, setCurrentUser] = useState(() => {
         const saved = localStorage.getItem('health_pro_user');
         return saved ? JSON.parse(saved) : null;
       });
       const [sessionToken, setSessionToken] = useState(() => localStorage.getItem('health_pro_session') || null);
+      
+      // 获取当前用户ID（开发模式='dev'，注册用户=objectId）
+      const getUserId = () => currentUser?.objectId || 'dev';
       const [showLoginModal, setShowLoginModal] = useState(false);
       const [isLoginMode, setIsLoginMode] = useState(true);
       const [loginForm, setLoginForm] = useState({ username: '', password: '', confirmPassword: '' });
@@ -987,9 +1018,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [activeTab, setActiveTab] = useState('vitals');
       const [viewMode, setViewMode] = useState('list');
       
-      // 成员管理状态
-      const [members, setMembers] = useState(() => loadData('health_pro_members', DEFAULT_MEMBERS));
-      const [currentMemberId, setCurrentMemberId] = useState(() => loadData('health_pro_current_member', 'default'));
+      // 成员管理状态（动态加载）
+      const [members, setMembers] = useState([]);
+      const [currentMemberId, setCurrentMemberId] = useState('default');
       const [showMemberMenu, setShowMemberMenu] = useState(false);
       const [showMemberForm, setShowMemberForm] = useState(false);
       const [editingMember, setEditingMember] = useState(null);
@@ -999,16 +1030,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const currentMember = members.find(m => m.id === currentMemberId) || members[0] || DEFAULT_MEMBER;
       const currentMemberColor = MEMBER_COLORS.find(c => c.id === currentMember.color) || MEMBER_COLORS[0];
 
-      // 初始化 State:从当前成员的 LocalStorage 加载或使用默认值
-      const [meds, setMeds] = useState(() => loadMemberData(currentMemberId, 'meds', DEFAULT_MEDS));
-      const [catalog, setCatalog] = useState(() => loadMemberData(currentMemberId, 'catalog', DEFAULT_CATALOG));
-      const [checkups, setCheckups] = useState(() => loadMemberData(currentMemberId, 'checkups', DEFAULT_CHECKUPS));
-      const [labReports, setLabReports] = useState(() => loadMemberData(currentMemberId, 'labReports', DEFAULT_LAB_REPORTS));
-      const [imagingReports, setImagingReports] = useState(() => loadMemberData(currentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
-      const [vitals, setVitals] = useState(() => loadMemberData(currentMemberId, 'vitals', DEFAULT_VITALS));
+      // 数据state（动态加载）
+      const [meds, setMeds] = useState([]);
+      const [catalog, setCatalog] = useState([]);
+      const [checkups, setCheckups] = useState([]);
+      const [labReports, setLabReports] = useState([]);
+      const [imagingReports, setImagingReports] = useState([]);
+      const [vitals, setVitals] = useState([]);
       
-      // 医学指标词典状态
-      const [medicalDictionary, setMedicalDictionary] = useState(() => loadData('health_pro_medical_dictionary', DEFAULT_MEDICAL_DICTIONARY));
+      // 医学指标词典状态（动态加载）
+      const [medicalDictionary, setMedicalDictionary] = useState([]);
+      
+      // 数据加载标志
+      const [dataLoaded, setDataLoaded] = useState(false);
       const [showDictionaryModal, setShowDictionaryModal] = useState(false);
       const [dictionarySearch, setDictionarySearch] = useState('');
       const [editingDictEntry, setEditingDictEntry] = useState(null);
@@ -1114,7 +1148,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             // 直接应用云端数据（不检测冲突）
             await applyCloudData(cloudData);
           } else {
-            // 云端无数据,上传本地数据
+            // 云端无数据，初始化为空（新用户不上传localStorage）
+            console.log('🆕 新用户首次登录，初始化空数据');
+            await applyCloudData({
+              members: DEFAULT_MEMBERS,
+              currentMemberId: 'default',
+              memberData: {},
+              apiSettings: {},
+              medicalDictionary: DEFAULT_MEDICAL_DICTIONARY
+            });
+            // 立即保存到云端
             await saveToCloud(userId, token);
           }
           setSyncStatus('synced');
@@ -1138,23 +1181,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setSyncStatus('syncing');
         
         try {
-          // 直接从 localStorage 读取成员列表
-          const savedMembers = loadData('health_pro_members', DEFAULT_MEMBERS);
+          // 从当前用户的localStorage读取数据
+          const savedMembers = loadData('members', DEFAULT_MEMBERS, userId);
           
-          // 收集所有成员数据 - 直接从 localStorage 读取
+          // 收集所有成员数据
           const memberData = {};
           savedMembers.forEach(member => {
             memberData[member.id] = {
-              meds: loadMemberData(member.id, 'meds', []),
-              catalog: loadMemberData(member.id, 'catalog', []),
-              checkups: loadMemberData(member.id, 'checkups', []),
-              labReports: loadMemberData(member.id, 'labReports', []),
-              imagingReports: loadMemberData(member.id, 'imagingReports', []),
-              vitals: loadMemberData(member.id, 'vitals', [])
+              meds: loadMemberData(member.id, 'meds', [], userId),
+              catalog: loadMemberData(member.id, 'catalog', [], userId),
+              checkups: loadMemberData(member.id, 'checkups', [], userId),
+              labReports: loadMemberData(member.id, 'labReports', [], userId),
+              imagingReports: loadMemberData(member.id, 'imagingReports', [], userId),
+              vitals: loadMemberData(member.id, 'vitals', [], userId)
             };
           });
           
-          // 收集API设置
+          // 收集API设置（全局，无需隔离）
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
@@ -1163,13 +1206,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
           
-          // 直接从 localStorage 读取医学词典
-          const savedDictionary = loadData('health_pro_medical_dictionary', DEFAULT_MEDICAL_DICTIONARY);
+          // 读取医学词典
+          const savedDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
           
           // 真正执行保存
           const result = await LeanCloud.saveUserData(userId, token, {
             members: savedMembers,
-            currentMemberId: localStorage.getItem('health_pro_current_member') || 'default',
+            currentMemberId: loadData('current_member', 'default', userId),
             memberData,
             apiSettings,
             medicalDictionary: savedDictionary,
@@ -1202,22 +1245,53 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
       
-      // 成员列表持久化
-      useEffect(() => { localStorage.setItem('health_pro_members', JSON.stringify(members)); }, [members]);
-      useEffect(() => { localStorage.setItem('health_pro_current_member', JSON.stringify(currentMemberId)); }, [currentMemberId]);
-
-      // 数据持久化 Effect:监听数据变化并保存到当前成员
-      useEffect(() => { saveMemberData(currentMemberId, 'meds', meds); }, [meds, currentMemberId]);
-      useEffect(() => { saveMemberData(currentMemberId, 'catalog', catalog); }, [catalog, currentMemberId]);
-      useEffect(() => { saveMemberData(currentMemberId, 'checkups', checkups); }, [checkups, currentMemberId]);
-      useEffect(() => { saveMemberData(currentMemberId, 'labReports', labReports); }, [labReports, currentMemberId]);
-      useEffect(() => { saveMemberData(currentMemberId, 'imagingReports', imagingReports); }, [imagingReports, currentMemberId]);
-      useEffect(() => { saveMemberData(currentMemberId, 'vitals', vitals); }, [vitals, currentMemberId]);
-      
-      // 词典持久化
+      // 成员列表持久化（带用户隔离）
       useEffect(() => { 
-        localStorage.setItem('health_pro_medical_dictionary', JSON.stringify(medicalDictionary)); 
-      }, [medicalDictionary]);
+        if (!dataLoaded) return;
+        saveData('members', members, getUserId()); 
+      }, [members, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveData('current_member', currentMemberId, getUserId()); 
+      }, [currentMemberId, currentUser, dataLoaded]);
+
+      // 数据持久化 Effect（带用户隔离）
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'meds', meds, getUserId()); 
+      }, [meds, currentMemberId, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'catalog', catalog, getUserId()); 
+      }, [catalog, currentMemberId, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'checkups', checkups, getUserId()); 
+      }, [checkups, currentMemberId, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'labReports', labReports, getUserId()); 
+      }, [labReports, currentMemberId, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'imagingReports', imagingReports, getUserId()); 
+      }, [imagingReports, currentMemberId, currentUser, dataLoaded]);
+      
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveMemberData(currentMemberId, 'vitals', vitals, getUserId()); 
+      }, [vitals, currentMemberId, currentUser, dataLoaded]);
+      
+      // 词典持久化（带用户隔离）
+      useEffect(() => { 
+        if (!dataLoaded) return;
+        saveData('medical_dictionary', medicalDictionary, getUserId()); 
+      }, [medicalDictionary, currentUser, dataLoaded]);
 
       
       // 自动云同步(防抖3秒,更可靠)
@@ -1290,15 +1364,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 应用云端数据到本地
       const applyCloudData = async (cloudData) => {
+        const userId = getUserId();
+        
         // 1. 先恢复成员列表
         if (cloudData.members) {
           setMembers(cloudData.members);
-          localStorage.setItem('health_pro_members', JSON.stringify(cloudData.members));
+          saveData('members', cloudData.members, userId);
         }
         
-        // 2. 恢复当前成员ID（优先使用本地记忆的成员）
+        // 2. 恢复当前成员ID
         let targetMemberId = 'default';
-        const localMemberId = localStorage.getItem('health_pro_current_member');
+        const localMemberId = loadData('current_member', null, userId);
         
         // 获取云端恢复后的成员列表
         const restoredMembers = cloudData.members || [DEFAULT_MEMBER];
@@ -1322,18 +1398,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
         
         setCurrentMemberId(targetMemberId);
-        localStorage.setItem('health_pro_current_member', JSON.stringify(targetMemberId));
+        saveData('current_member', targetMemberId, userId);
         
-        // 3. 写入所有成员数据到 localStorage
+        // 3. 写入所有成员数据到 localStorage（带用户隔离）
         if (cloudData.memberData) {
           Object.keys(cloudData.memberData).forEach(memberId => {
             const data = cloudData.memberData[memberId];
-            if (data.meds) saveMemberData(memberId, 'meds', data.meds);
-            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog);
-            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups);
-            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports);
-            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports);
-            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals);
+            if (data.meds) saveMemberData(memberId, 'meds', data.meds, userId);
+            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog, userId);
+            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups, userId);
+            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports, userId);
+            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports, userId);
+            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals, userId);
           });
         }
         
@@ -1347,16 +1423,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         // 5. 恢复医学指标词典
         if (cloudData.medicalDictionary) {
           setMedicalDictionary(cloudData.medicalDictionary);
-          localStorage.setItem('health_pro_medical_dictionary', JSON.stringify(cloudData.medicalDictionary));
+          saveData('medical_dictionary', cloudData.medicalDictionary, userId);
         }
         
         // 6. 重新加载当前成员数据到 state
-        setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS));
-        setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG));
-        setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS));
-        setLabReports(loadMemberData(targetMemberId, 'labReports', DEFAULT_LAB_REPORTS));
-        setImagingReports(loadMemberData(targetMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
-        setVitals(loadMemberData(targetMemberId, 'vitals', DEFAULT_VITALS));
+        setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS, userId));
+        setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG, userId));
+        setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
+        setLabReports(loadMemberData(targetMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+        setImagingReports(loadMemberData(targetMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+        setVitals(loadMemberData(targetMemberId, 'vitals', DEFAULT_VITALS, userId));
         
         setSyncStatus('synced');
         setLastSyncTime(new Date());
@@ -1365,20 +1441,22 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 切换成员
       const switchMember = (memberId) => {
         if (memberId === currentMemberId) return;
+        const userId = getUserId();
         setCurrentMemberId(memberId);
-        // 加载新成员的数据
-        setMeds(loadMemberData(memberId, 'meds', DEFAULT_MEDS));
-        setCatalog(loadMemberData(memberId, 'catalog', DEFAULT_CATALOG));
-        setCheckups(loadMemberData(memberId, 'checkups', DEFAULT_CHECKUPS));
-        setLabReports(loadMemberData(memberId, 'labReports', DEFAULT_LAB_REPORTS));
-        setImagingReports(loadMemberData(memberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
-        setVitals(loadMemberData(memberId, 'vitals', DEFAULT_VITALS));
+        // 加载新成员的数据（带用户隔离）
+        setMeds(loadMemberData(memberId, 'meds', DEFAULT_MEDS, userId));
+        setCatalog(loadMemberData(memberId, 'catalog', DEFAULT_CATALOG, userId));
+        setCheckups(loadMemberData(memberId, 'checkups', DEFAULT_CHECKUPS, userId));
+        setLabReports(loadMemberData(memberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+        setImagingReports(loadMemberData(memberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+        setVitals(loadMemberData(memberId, 'vitals', DEFAULT_VITALS, userId));
         setShowMemberMenu(false);
       };
       
       // 添加成员
       const addMember = () => {
         if (!memberInput.name.trim()) return;
+        const userId = getUserId();
         const newMember = {
           id: Date.now().toString(),
           name: memberInput.name.trim(),
@@ -1386,9 +1464,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           color: memberInput.color
         };
         
-        // 先更新localStorage
+        // 先更新localStorage（带用户隔离）
         const updatedMembers = [...members, newMember];
-        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        saveData('members', updatedMembers, userId);
         
         // 再更新state
         setMembers(updatedMembers);
@@ -1406,15 +1484,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 编辑成员
       const updateMember = () => {
         if (!memberInput.name.trim() || !editingMember) return;
+        const userId = getUserId();
         
-        // 先更新localStorage
+        // 先更新localStorage（带用户隔离）
         const updatedMembers = members.map(m => m.id === editingMember.id ? {
           ...m,
           name: memberInput.name.trim(),
           relation: memberInput.relation.trim() || m.relation,
           color: memberInput.color
         } : m);
-        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        saveData('members', updatedMembers, userId);
         
         // 再更新state
         setMembers(updatedMembers);
@@ -1431,22 +1510,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 删除成员
       const deleteMember = (memberId) => {
         if (members.length <= 1) return; // 至少保留一个成员
+        const userId = getUserId();
+        
         if (memberId === currentMemberId) {
           // 如果删除当前成员,切换到第一个其他成员
           const otherMember = members.find(m => m.id !== memberId);
           if (otherMember) switchMember(otherMember.id);
         }
         
-        // 先更新localStorage（确保立即持久化）
+        // 先更新localStorage（带用户隔离）
         const updatedMembers = members.filter(m => m.id !== memberId);
-        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        saveData('members', updatedMembers, userId);
         
         // 再更新state
         setMembers(updatedMembers);
         
-        // 清理该成员的数据
+        // 清理该成员的数据（带用户隔离）
         ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'].forEach(dataType => {
-          localStorage.removeItem(`health_pro_${memberId}_${dataType}`);
+          const key = `health_pro_${userId}_${memberId}_${dataType}`;
+          localStorage.removeItem(key);
         });
         
         // 立即同步到云端（不等待防抖）
@@ -1470,6 +1552,32 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [showPrintPreview, setShowPrintPreview] = useState(false);
       const [printHtml, setPrintHtml] = useState('');
       const [apiKeyInput, setApiKeyInput] = useState(getApiKeyFor(CURRENT_API));
+      
+      // 初始化数据：根据当前用户加载localStorage
+      useEffect(() => {
+        const userId = getUserId();
+        console.log('🔄 加载用户数据:', userId);
+        
+        // 加载成员列表和当前成员
+        const loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+        const loadedCurrentMemberId = loadData('current_member', 'default', userId);
+        setMembers(loadedMembers);
+        setCurrentMemberId(loadedCurrentMemberId);
+        
+        // 加载当前成员的数据
+        setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
+        setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
+        setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
+        setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+        setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+        setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
+        
+        // 加载医学词典
+        setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
+        
+        setDataLoaded(true);
+        console.log('✅ 用户数据加载完成');
+      }, [currentUser]); // currentUser变化时重新加载
       const [apiProvider, setApiProvider] = useState(CURRENT_API);
       const [showApiKey, setShowApiKey] = useState(false);
       const [infoItem, setInfoItem] = useState(null);
@@ -1834,20 +1942,22 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             const data = JSON.parse(event.target.result);
             let counts = { meds: 0, catalog: 0, checkups: 0, labs: 0, imaging: 0, vitals: 0, members: 0 };
             
+            const userId = getUserId();
+            
             // 恢复成员列表和所有成员数据(新版本备份格式)
             if (data.members && data.membersData) {
               // 恢复成员列表
               setMembers(data.members);
               counts.members = data.members.length;
               
-              // 恢复每个成员的数据到 localStorage
+              // 恢复每个成员的数据到 localStorage（带用户隔离）
               Object.entries(data.membersData).forEach(([memberId, memberData]) => {
-                if (memberData.meds) { saveMemberData(memberId, 'meds', memberData.meds); counts.meds += memberData.meds.length; }
-                if (memberData.catalog) { saveMemberData(memberId, 'catalog', memberData.catalog); counts.catalog += memberData.catalog.length; }
-                if (memberData.checkups) { saveMemberData(memberId, 'checkups', memberData.checkups); counts.checkups += memberData.checkups.length; }
-                if (memberData.labReports) { saveMemberData(memberId, 'labReports', memberData.labReports); counts.labs += memberData.labReports.length; }
-                if (memberData.imagingReports) { saveMemberData(memberId, 'imagingReports', memberData.imagingReports); counts.imaging += memberData.imagingReports.length; }
-                if (memberData.vitals) { saveMemberData(memberId, 'vitals', memberData.vitals); counts.vitals += memberData.vitals.length; }
+                if (memberData.meds) { saveMemberData(memberId, 'meds', memberData.meds, userId); counts.meds += memberData.meds.length; }
+                if (memberData.catalog) { saveMemberData(memberId, 'catalog', memberData.catalog, userId); counts.catalog += memberData.catalog.length; }
+                if (memberData.checkups) { saveMemberData(memberId, 'checkups', memberData.checkups, userId); counts.checkups += memberData.checkups.length; }
+                if (memberData.labReports) { saveMemberData(memberId, 'labReports', memberData.labReports, userId); counts.labs += memberData.labReports.length; }
+                if (memberData.imagingReports) { saveMemberData(memberId, 'imagingReports', memberData.imagingReports, userId); counts.imaging += memberData.imagingReports.length; }
+                if (memberData.vitals) { saveMemberData(memberId, 'vitals', memberData.vitals, userId); counts.vitals += memberData.vitals.length; }
               });
               
               // 恢复当前成员ID并加载对应数据
@@ -2916,7 +3026,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                               <Icons.Check size={12}/>正常
                             </div>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setEditingId(report.id); setScanEditData({...report}); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                          <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
                             <Icons.Edit size={14}/>
                           </button>
                           <div className="text-gray-400">
@@ -2967,7 +3077,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                           <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setEditingId(report.id); setScanEditData({...report}); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
+                          <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
                           {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
                         </div>
                       </div>
@@ -3365,9 +3475,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                           return (
                             <div key={idx} className="p-3 border-b">
                               <div className="flex justify-between items-center gap-2 mb-2">
-                                <input value={item.name} onChange={e => { const n = [...scanEditData.items]; n[idx].name = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 font-medium outline-none text-sm" placeholder="指标名称"/>
+                                <input value={item.name} onChange={e => { const n = [...scanEditData.items]; n[idx] = {...n[idx], name: e.target.value}; setScanEditData({...scanEditData, items: n}); }} className="flex-1 font-medium outline-none text-sm" placeholder="指标名称"/>
                                 <div className="flex items-center gap-1">
-                                  <input value={item.result} onChange={e => { const n = [...scanEditData.items]; n[idx].result = e.target.value; setScanEditData({...scanEditData, items: n}); }} className={`w-20 text-right font-bold outline-none text-lg ${flagColor}`} placeholder="结果"/>
+                                  <input value={item.result} onChange={e => { const n = [...scanEditData.items]; n[idx] = {...n[idx], result: e.target.value}; setScanEditData({...scanEditData, items: n}); }} className={`w-20 text-right font-bold outline-none text-lg ${flagColor}`} placeholder="结果"/>
                                   {itemFlag === 'High' && <span className={`text-lg ${flagColor}`}>↑</span>}
                                   {itemFlag === 'Low' && <span className={`text-lg ${flagColor}`}>↓</span>}
                                 </div>
@@ -3375,8 +3485,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                               </div>
                               <div className="flex gap-2 items-center border-t border-dashed pt-2">
                                 <span className="text-[10px] text-gray-400">参考:</span>
-                                <input value={item.refRange} onChange={e => { const n = [...scanEditData.items]; n[idx].refRange = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 text-xs text-gray-500 outline-none bg-transparent" placeholder="参考范围"/>
-                                <input value={item.unit} onChange={e => { const n = [...scanEditData.items]; n[idx].unit = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="w-20 text-xs text-gray-500 outline-none bg-transparent text-right" placeholder="单位"/>
+                                <input value={item.refRange} onChange={e => { const n = [...scanEditData.items]; n[idx] = {...n[idx], refRange: e.target.value}; setScanEditData({...scanEditData, items: n}); }} className="flex-1 text-xs text-gray-500 outline-none bg-transparent" placeholder="参考范围"/>
+                                <input value={item.unit} onChange={e => { const n = [...scanEditData.items]; n[idx] = {...n[idx], unit: e.target.value}; setScanEditData({...scanEditData, items: n}); }} className="w-20 text-xs text-gray-500 outline-none bg-transparent text-right" placeholder="单位"/>
                               </div>
                             </div>
                           );
