@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.80</title>
+  <title>健康管家 Pro v15.81</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.80";
+    const VERSION = "v15.81";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -446,9 +446,11 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
       try {
         const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : defaultData;
+        const result = stored ? JSON.parse(stored) : defaultData;
+        console.log(`📖 [loadMemberData] ${key}:`, result.length || 0, '项');
+        return result;
       } catch (e) {
-        console.error("加载成员数据失败:", key, e);
+        console.error("❌ [loadMemberData] 失败:", key, e);
         return defaultData;
       }
     };
@@ -457,6 +459,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     const saveMemberData = (memberId, dataType, data, userId = null) => {
       const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
       localStorage.setItem(key, JSON.stringify(data));
+      console.log(`💾 [saveMemberData] ${key}:`, data.length || 0, '项');
     };
     
     // 迁移旧数据到开发模式（仅执行一次）
@@ -1265,51 +1268,43 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 成员列表持久化（带用户隔离）
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveData('members', members, getUserId()); 
-      }, [members, currentUser, dataLoaded]);
+      }, [members, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveData('current_member', currentMemberId, getUserId()); 
-      }, [currentMemberId, currentUser, dataLoaded]);
+      }, [currentMemberId, currentUser]);
 
       // 数据持久化 Effect（带用户隔离）
       useEffect(() => { 
-        if (!dataLoaded) return;
+        // 移除dataLoaded检查，云端加载期间也允许保存新数据
         saveMemberData(currentMemberId, 'meds', meds, getUserId()); 
-      }, [meds, currentMemberId, currentUser, dataLoaded]);
+      }, [meds, currentMemberId, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveMemberData(currentMemberId, 'catalog', catalog, getUserId()); 
-      }, [catalog, currentMemberId, currentUser, dataLoaded]);
+      }, [catalog, currentMemberId, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveMemberData(currentMemberId, 'checkups', checkups, getUserId()); 
-      }, [checkups, currentMemberId, currentUser, dataLoaded]);
+      }, [checkups, currentMemberId, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveMemberData(currentMemberId, 'labReports', labReports, getUserId()); 
-      }, [labReports, currentMemberId, currentUser, dataLoaded]);
+      }, [labReports, currentMemberId, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveMemberData(currentMemberId, 'imagingReports', imagingReports, getUserId()); 
-      }, [imagingReports, currentMemberId, currentUser, dataLoaded]);
+      }, [imagingReports, currentMemberId, currentUser]);
       
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveMemberData(currentMemberId, 'vitals', vitals, getUserId()); 
-      }, [vitals, currentMemberId, currentUser, dataLoaded]);
+      }, [vitals, currentMemberId, currentUser]);
       
       // 词典持久化（带用户隔离）
       useEffect(() => { 
-        if (!dataLoaded) return;
         saveData('medical_dictionary', medicalDictionary, getUserId()); 
-      }, [medicalDictionary, currentUser, dataLoaded]);
+      }, [medicalDictionary, currentUser]);
 
       
       // 自动云同步(防抖3秒,更可靠)
@@ -1427,9 +1422,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         saveData('current_member', targetMemberId, userId);
         
         // 3. 写入所有成员数据到 localStorage（带用户隔离）
+        console.log('📦 [applyCloudData] memberData:', cloudData.memberData ? Object.keys(cloudData.memberData) : 'null');
         if (cloudData.memberData) {
           Object.keys(cloudData.memberData).forEach(memberId => {
             const data = cloudData.memberData[memberId];
+            console.log(`📦 [applyCloudData] 成员 ${memberId} 数据:`, {
+              meds: data.meds?.length || 0,
+              catalog: data.catalog?.length || 0,
+              labReports: data.labReports?.length || 0,
+              imagingReports: data.imagingReports?.length || 0,
+              vitals: data.vitals?.length || 0
+            });
             if (data.meds) saveMemberData(memberId, 'meds', data.meds, userId);
             if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog, userId);
             if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups, userId);
@@ -1437,6 +1440,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports, userId);
             if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals, userId);
           });
+        } else {
+          console.warn('⚠️ [applyCloudData] 云端无memberData!');
         }
         
         // 4. 恢复API设置
