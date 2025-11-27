@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.85</title>
+  <title>健康管家 Pro v15.86</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.85";
+    const VERSION = "v15.86";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1081,6 +1081,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         } catch (e) {
           setLoginError(e.message || '登录失败');
           setLoginLoading(false);
+          setIsLoadingUserData(false); // 确保失败时也结束loading
         }
       };
       
@@ -1125,6 +1126,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         } catch (e) {
           setLoginError(e.message || '注册失败');
           setLoginLoading(false);
+          setIsLoadingUserData(false); // 确保失败时也结束loading
         }
       };
       
@@ -1155,26 +1157,77 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 执行退出操作
       const performLogout = () => {
-        setCurrentUser(null);
-        setSessionToken(null);
+        // 关键修复：清理当前用户的所有localStorage数据
+        const userId = getUserId();
+        console.log('🧹 [performLogout] 清理用户数据:', userId);
+        
+        // 收集所有需要删除的key
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          // 清理该用户的所有数据（包括成员数据、API设置等）
+          if (key && key.startsWith(`health_pro_${userId}_`)) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        // 批量删除
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log('  🗑️ 删除:', key);
+        });
+        console.log(`✅ [performLogout] 已清理 ${keysToRemove.length} 项数据`);
+        
+        // 清理用户凭证
         localStorage.removeItem('health_pro_user');
         localStorage.removeItem('health_pro_session');
+        
+        // 重置state
+        setCurrentUser(null);
+        setSessionToken(null);
         setSyncStatus('');
         setLastSyncTime(null);
         setDataLoaded(false);
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
         setIsLoggingOut(false);
-        console.log('✅ [handleLogout] 退出登录完成');
+        console.log('✅ [performLogout] 退出登录完成');
       };
       
       // 从云端加载数据
       const loadFromCloud = async (userId, token, forceOverwrite = false) => {
         console.log('📥 [loadFromCloud] 开始:', { userId, isOnline });
         if (!isOnline) {
-          console.log('❌ [loadFromCloud] 离线，跳过');
+          console.log('❌ [loadFromCloud] 离线，从localStorage加载');
           setSyncStatus('error');
-          setLoginLoading(false); // 重要：确保结束loading
+          setLoginLoading(false);
+          setDataLoaded(true);
+          
+          // 关键修复：离线时从localStorage加载数据
+          try {
+            let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+            const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
+            if (!hasDefaultMember) {
+              loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
+              saveData('members', loadedMembers, userId);
+            }
+            setMembers(loadedMembers);
+            
+            const loadedCurrentMemberId = loadData('current_member', 'default', userId);
+            setCurrentMemberId(loadedCurrentMemberId);
+            
+            setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
+            setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
+            setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
+            setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+            setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+            setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
+            setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
+            
+            console.log('✅ [loadFromCloud-offline] 离线数据加载完成');
+          } catch (err) {
+            console.error('❌ [loadFromCloud-offline] 加载失败:', err);
+          }
           return;
         }
         setSyncStatus('syncing');
@@ -1207,10 +1260,50 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.error('❌ [loadFromCloud] 失败:', e);
           setSyncStatus('error');
           setLoginLoading(false); // 重要：失败时也要结束loading
-          // 即使失败也要设置dataLoaded，否则会一直等待
           setDataLoaded(true);
-          // 失败后从localStorage加载本地数据作为后备
+          
+          // 关键修复：失败后从localStorage加载本地数据作为后备
           console.log('🔄 [loadFromCloud] 云端加载失败，从localStorage加载本地数据');
+          try {
+            // 加载成员列表
+            let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+            const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
+            if (!hasDefaultMember) {
+              console.log('⚠️ [loadFromCloud-fallback] 添加默认成员');
+              loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
+              saveData('members', loadedMembers, userId);
+            }
+            setMembers(loadedMembers);
+            
+            // 加载当前成员ID
+            const loadedCurrentMemberId = loadData('current_member', 'default', userId);
+            setCurrentMemberId(loadedCurrentMemberId);
+            
+            // 加载当前成员的数据到state
+            setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
+            setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
+            setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
+            setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+            setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+            setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
+            
+            // 加载医学词典
+            setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
+            
+            console.log('✅ [loadFromCloud-fallback] 本地数据加载完成');
+          } catch (fallbackError) {
+            console.error('❌ [loadFromCloud-fallback] 本地数据加载也失败:', fallbackError);
+            // 如果连本地加载都失败，至少初始化为空数据
+            setMembers(DEFAULT_MEMBERS);
+            setCurrentMemberId('default');
+            setMeds([]);
+            setCatalog([]);
+            setCheckups([]);
+            setLabReports([]);
+            setImagingReports([]);
+            setVitals([]);
+            setMedicalDictionary(DEFAULT_MEDICAL_DICTIONARY);
+          }
         }
       };
       
