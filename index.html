@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.69</title>
+  <title>健康管家 Pro v15.70</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.69";
+    const VERSION = "v15.70";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1037,8 +1037,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           localStorage.setItem('health_pro_session', user.sessionToken);
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          // 登录后先保存本地数据，再从云端加载（会询问冲突）
-          await saveToCloud(user.objectId, user.sessionToken);
+          // 登录后直接从云端加载（不先保存，避免空数据覆盖云端）
           await loadFromCloud(user.objectId, user.sessionToken);
         } catch (e) {
           setLoginError(e.message || '登录失败');
@@ -1070,8 +1069,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           localStorage.setItem('health_pro_session', user.sessionToken);
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          // 注册后保存当前本地数据到云端
-          await saveToCloud(user.objectId, user.sessionToken);
+          // 注册后保存当前本地数据到云端（如果有的话）
+          const hasLocalData = localStorage.getItem('health_pro_members') !== null;
+          if (hasLocalData) {
+            await saveToCloud(user.objectId, user.sessionToken);
+          }
         } catch (e) {
           setLoginError(e.message || '注册失败');
         }
