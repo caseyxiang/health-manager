@@ -1442,7 +1442,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 自动云同步(防抖3秒,更可靠)
       useEffect(() => {
-        if (!currentUser || !sessionToken || !isOnline) return;
+        // 关键修复：只有在数据已加载完成时才触发自动同步，防止空数据覆盖云端
+        if (!currentUser || !sessionToken || !isOnline || !dataLoaded) return;
         
         const timer = setTimeout(() => {
           console.log('⏰ 防抖时间到,触发自动同步');
@@ -1453,7 +1454,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('⏰ 防抖计时器被清除');
           clearTimeout(timer);
         };
-      }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline]);
+      }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline, dataLoaded]);
       
       // 注释：登录/注册时已手动调用loadFromCloud，此useEffect已废弃
       // useEffect(() => {
@@ -1462,18 +1463,34 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       //   }
       // }, [currentUser, sessionToken]);
       
-      // 页面关闭前强制同步
+      // 页面关闭前强制同步（改进版：多重保障）
       useEffect(() => {
-        if (!currentUser || !sessionToken || currentUser.objectId === 'dev') return;
+        if (!currentUser || !sessionToken || currentUser.objectId === 'dev' || !dataLoaded) return;
         
-        const handleBeforeUnload = (e) => {
-          // 同步执行保存(异步调用但不等待完成)
-          saveToCloud();
+        // 方案1：visibilitychange - 页面即将不可见时提前同步（更可靠）
+        const handleVisibilityChange = () => {
+          if (document.hidden && dataLoaded) {
+            console.log('📴 [visibilitychange] 页面隐藏，立即同步');
+            saveToCloud();
+          }
         };
         
+        // 方案2：beforeunload - 最后的保障
+        const handleBeforeUnload = (e) => {
+          if (dataLoaded) {
+            console.log('🚪 [beforeunload] 页面关闭，尝试同步');
+            saveToCloud();
+          }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-      }, [currentUser, sessionToken]);
+        
+        return () => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+      }, [currentUser, sessionToken, dataLoaded]);
       
       // 网络状态监听
       useEffect(() => {
@@ -1740,10 +1757,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         const userId = getUserId();
         console.log('🔄 [useEffect-init] 加载用户数据:', userId);
         
-        // 如果是云端用户且是首次加载，等待云端同步完成
-        if (currentUser && currentUser.objectId !== 'dev' && !dataLoaded) {
-          console.log('⏳ [useEffect-init] 云端用户首次加载，等待云端同步...');
-          // 不立即加载localStorage，等待loadFromCloud完成
+        // 如果是云端用户且是首次加载，主动从云端加载数据
+        if (currentUser && currentUser.objectId !== 'dev' && !dataLoaded && sessionToken) {
+          console.log('⏳ [useEffect-init] 云端用户首次加载，主动从云端加载数据...');
+          // 主动调用loadFromCloud
+          loadFromCloud(currentUser.objectId, sessionToken);
           return;
         }
         
