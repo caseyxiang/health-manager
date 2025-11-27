@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.72</title>
+  <title>健康管家 Pro v15.73</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.72";
+    const VERSION = "v15.73";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -967,10 +967,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return !localStorage.getItem('health_pro_welcomed');
       });
       
-      // 同步冲突处理
-      const [showSyncConflict, setShowSyncConflict] = useState(false);
-      const [conflictData, setConflictData] = useState(null);
-      
       // 密码强度计算
       const getPasswordStrength = (pwd) => {
         if (!pwd) return { level: 0, text: '', color: '' };
@@ -1104,23 +1100,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         try {
           const cloudData = await LeanCloud.loadUserData(userId, token);
           if (cloudData) {
-            // 检查是否有本地数据
-            const hasLocalData = meds.length > 0 || catalog.length > 0 || labReports.length > 0 || imagingReports.length > 0 || vitals.length > 0;
-            
-            // 检查云端数据是否比本地更新
-            const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated) : null;
-            const localTime = lastSyncTime;
-            
-            // 如果有本地数据且云端有数据,检查冲突
-            if (hasLocalData && cloudData.memberData && !forceOverwrite && !lastSyncTime) {
-              // 首次登录时发现冲突,询问用户
-              setConflictData(cloudData);
-              setShowSyncConflict(true);
-              setSyncStatus('');
-              return;
-            }
-            
-            // 应用云端数据
+            // 直接应用云端数据（不检测冲突）
             await applyCloudData(cloudData);
           } else {
             // 云端无数据,上传本地数据
@@ -1296,20 +1276,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 处理同步冲突 - 使用云端数据
-      const resolveConflictWithCloud = async () => {
-        if (conflictData) {
-          await applyCloudData(conflictData);
-        }
-        setShowSyncConflict(false);
-        setConflictData(null);
-      };
-      
-      // 处理同步冲突 - 使用本地数据(覆盖云端)
-      const resolveConflictWithLocal = async () => {
-        setShowSyncConflict(false);
-        setConflictData(null);
-        await saveToCloud();
-      };
       
       // 应用云端数据到本地
       const applyCloudData = async (cloudData) => {
@@ -3911,57 +3877,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           )}
 
           {/* Sync Conflict Modal - 同步冲突对话框 */}
-          {showSyncConflict && (
-            <div className="absolute inset-0 z-[125] bg-black/60 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Icons.AlertTriangle size={32} className="text-yellow-600"/>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800">发现数据冲突</h3>
-                  <p className="text-sm text-gray-500 mt-2">云端和本地都有数据,请选择保留哪一份</p>
-                </div>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="p-4 border-2 border-indigo-200 bg-indigo-50 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icons.Cloud size={16} className="text-indigo-600"/>
-                      <span className="font-medium text-indigo-700">云端数据</span>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      {conflictData?.lastUpdated ? `最后更新: ${new Date(conflictData.lastUpdated).toLocaleString()}` : '有已保存的数据'}
-                    </p>
-                  </div>
-                  <div className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icons.Smartphone size={16} className="text-gray-600"/>
-                      <span className="font-medium text-gray-700">本地数据</span>
-                    </div>
-                    <p className="text-xs text-gray-600">当前设备上的数据</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <button 
-                    onClick={resolveConflictWithCloud}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
-                  >
-                    <Icons.Cloud size={16}/> 使用云端数据
-                  </button>
-                  <button 
-                    onClick={resolveConflictWithLocal}
-                    className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold flex items-center justify-center gap-2"
-                  >
-                    <Icons.Smartphone size={16}/> 使用本地数据
-                  </button>
-                </div>
-                
-                <p className="text-[10px] text-gray-400 text-center mt-4">
-                  选择后,另一份数据将被覆盖
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Offline Indicator - 离线提示条 */}
           {!isOnline && (
