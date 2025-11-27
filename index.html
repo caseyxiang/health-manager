@@ -1,9 +1,9 @@
-﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.83</title>
+  <title>健康管家 Pro v15.84</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.83";
+    const VERSION = "v15.84";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1395,19 +1395,36 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const applyCloudData = async (cloudData) => {
         const userId = getUserId();
         
-        // 1. 先恢复成员列表
+        // 1. 先恢复成员列表 - 确保默认成员始终存在
+        let restoredMembers = [];
         if (cloudData.members) {
           console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
-          setMembers(cloudData.members);
-          saveData('members', cloudData.members, userId);
+          
+          // 检查是否包含默认成员
+          const hasDefaultMember = cloudData.members.some(m => m.id === 'default');
+          
+          if (!hasDefaultMember) {
+            // 云端数据缺少默认成员，自动添加
+            console.log('⚠️ [applyCloudData] 云端数据缺少默认成员，自动添加');
+            restoredMembers = [DEFAULT_MEMBER, ...cloudData.members];
+          } else {
+            restoredMembers = cloudData.members;
+          }
+        } else {
+          // 云端无成员数据，使用默认成员
+          console.log('📝 [applyCloudData] 云端无成员数据，使用默认成员');
+          restoredMembers = [DEFAULT_MEMBER];
         }
+        
+        console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
+        setMembers(restoredMembers);
+        saveData('members', restoredMembers, userId);
         
         // 2. 恢复当前成员ID
         let targetMemberId = 'default';
         const localMemberId = loadData('current_member', null, userId);
         
-        // 获取云端恢复后的成员列表
-        const restoredMembers = cloudData.members || [DEFAULT_MEMBER];
+        // 使用前面恢复的成员列表
         const memberIds = restoredMembers.map(m => m.id);
         
         // 优先使用本地记住的成员ID（如果该成员在恢复的列表中存在）
@@ -1616,8 +1633,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         // 开发模式或云端加载失败后，从localStorage加载
         console.log('💾 [useEffect-init] 从localStorage加载');
         
-        // 加载成员列表和当前成员
-        const loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+        // 加载成员列表和当前成员 - 确保默认成员始终存在
+        let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+        
+        // 检查是否包含默认成员
+        const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
+        if (!hasDefaultMember) {
+          console.log('⚠️ [useEffect-init] localStorage缺少默认成员，自动添加');
+          loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
+          saveData('members', loadedMembers, userId); // 修正localStorage
+        }
+        
+        console.log('📋 [useEffect-init] 加载成员列表:', loadedMembers.length, '个:', loadedMembers.map(m => m.name));
         const loadedCurrentMemberId = loadData('current_member', 'default', userId);
         setMembers(loadedMembers);
         setCurrentMemberId(loadedCurrentMemberId);
