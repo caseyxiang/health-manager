@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.73</title>
+  <title>健康管家 Pro v15.75</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -108,9 +108,9 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     })();
   </script>
   <!-- 工具函数和组件 -->
-  <script src="config.js"></script>
-  <script src="utils.js"></script>
-  <script src="components.js"></script>
+  <script src="config.js" defer></script>
+  <script src="utils.js" defer></script>
+  <script src="components.js" defer></script>
 </head>
 <body>
   <!-- PWA模式检测和引导 -->
@@ -196,11 +196,29 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     })();
   </script>
   <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+  <script type="text/babel" defer>
+    // 等待所有必需的全局变量加载完成
+    function waitForDependencies() {
+      return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (typeof Icons !== 'undefined' && 
+              typeof DEFAULT_MEMBERS !== 'undefined' && 
+              typeof LeanCloud !== 'undefined' &&
+              typeof TrendChart !== 'undefined' &&
+              typeof VitalMiniChart !== 'undefined') {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 50); // 每50ms检查一次
+      });
+    }
     
-    // 执行数据迁移
-    migrateOldData();
+    // 主应用初始化
+    waitForDependencies().then(() => {
+      const { useState, useEffect } = React;
+      
+      // 执行数据迁移
+      migrateOldData();
 
 
 
@@ -3200,7 +3218,19 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    }).catch(err => {
+      console.error('依赖加载失败:', err);
+      document.getElementById('root').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#1e293b;color:#fff;padding:2rem;text-align:center;">
+          <div>
+            <h2 style="color:#ef4444;margin-bottom:1rem;">⚠️ 加载失败</h2>
+            <p>应用资源加载失败，请刷新页面重试</p>
+            <button onclick="location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;background:#6366f1;color:#fff;border:none;border-radius:0.5rem;cursor:pointer;">刷新页面</button>
+          </div>
+        </div>
+      `;
+    });
   </script>
   <script>
     // Safari 兼容性和错误监控
