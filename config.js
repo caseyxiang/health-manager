@@ -1,7 +1,7 @@
 // 健康管家 Pro - 配置文件
-// Version: v15.72
+// Version: v15.73
 
-const VERSION = "v15.72";
+const VERSION = "v15.73";
 
 // Inline SVG Icons
 const Icons = {

@@ -1,5 +1,5 @@
 // 健康管家 Pro - 工具函数库
-// Version: v15.72
+// Version: v15.73
 
 // ========== LeanCloud REST API 封装 ==========
 const LeanCloud = {

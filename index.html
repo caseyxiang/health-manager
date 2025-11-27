@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>å¥åº·ç®¡å®¶ Pro v15.72</title>
+  <title>健康管家 Pro v15.73</title>
   
-  <!-- PWA æ”¯æŒ -->
+  <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="å¥åº·ç®¡å®¶">
+  <meta name="apple-mobile-web-app-title" content="健康管家">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#4f46e5">
-  <meta name="application-name" content="å¥åº·ç®¡å®¶ Pro">
+  <meta name="application-name" content="健康管家 Pro">
   
-  <!-- å›¾æ ‡ (ä½¿ç”¨ emoji ä½œä¸ºç®€æ˜“å›¾æ ‡) -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234f46e5' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' font-size='50'>ðŸ’Š</text></svg>">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>ðŸ’Š</text></svg>">
+  <!-- 图标 (使用 emoji 作为简易图标) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234f46e5' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' font-size='50'>💊</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
   
-  <!-- Manifest (å†…è”) -->
+  <!-- Manifest (内联) -->
   <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22%E5%81%A5%E5%BA%B7%E7%AE%A1%E5%AE%B6%20Pro%22%2C%22short_name%22%3A%22%E5%81%A5%E5%BA%B7%E7%AE%A1%E5%AE%B6%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231e293b%22%2C%22theme_color%22%3A%22%234f46e5%22%7D">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -29,13 +29,13 @@
       margin: 0; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
       background: #1e293b;
-      /* æ”¯æŒ iPhone åˆ˜æµ·å±å®‰å…¨åŒºåŸŸ */
+      /* 支持 iPhone 刘海屏安全区域 */
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
-    /* é˜²æ­¢ iOS æ©¡çš®ç­‹æ•ˆæžœ - Safariå…¼å®¹ */
+    /* 防止 iOS 橡皮筋效果 - Safari兼容 */
     html {
       height: 100%;
       overflow: hidden;
@@ -43,9 +43,9 @@
     body { 
       margin: 0;
       height: 100vh;
-      height: 100dvh; /* åŠ¨æ€è§†å£é«˜åº¦ï¼Œæ›´çŽ°ä»£çš„æ–¹å¼ */
+      height: 100dvh; /* 动态视口高度，更现代的方式 */
       overflow: hidden;
-      overscroll-behavior: none; /* é˜²æ­¢æ©¡çš®ç­‹æ•ˆæžœ */
+      overscroll-behavior: none; /* 防止橡皮筋效果 */
     }
     #root {
       height: 100%;
@@ -54,12 +54,12 @@
       flex-direction: column;
     }
     
-    /* Safari ç‰¹å®šä¿®å¤ */
+    /* Safari 特定修复 */
     .is-safari #root > div {
       min-height: -webkit-fill-available;
     }
     
-    /* ç¡®ä¿åœ¨æ‰€æœ‰æµè§ˆå™¨ä¸­æ­£ç¡®å¡«å…… */
+    /* 确保在所有浏览器中正确填充 */
     #root > div {
       min-height: 100vh;
       min-height: 100dvh;
@@ -67,12 +67,12 @@
   </style>
 
   <script>
-    // ç§»åŠ¨Safari CDNåŠ è½½æ£€æµ‹
+    // 移动Safari CDN加载检测
     (function() {
       const requiredLibs = ['React', 'ReactDOM', 'Babel'];
       const loadStatus = {};
       
-      // æ£€æµ‹å‡½æ•°
+      // 检测函数
       function checkLibs() {
         loadStatus.React = typeof React !== 'undefined';
         loadStatus.ReactDOM = typeof ReactDOM !== 'undefined';  
@@ -81,91 +81,90 @@
         const allLoaded = loadStatus.React && loadStatus.ReactDOM && loadStatus.Babel;
         
         if (!allLoaded) {
-          console.error('CDNåŠ è½½å¤±è´¥:', loadStatus);
-          // æ˜¾ç¤ºå‹å¥½é”™è¯¯
+          console.error('CDN加载失败:', loadStatus);
+          // 显示友好错误
           document.body.innerHTML = `
             <div style="padding:20px;background:#dc2626;color:white;font-family:sans-serif;">
-              <h3>âš ï¸ åº“åŠ è½½å¤±è´¥</h3>
-              <p>å¯èƒ½çš„åŽŸå› ï¼š</p>
+              <h3>⚠️ 库加载失败</h3>
+              <p>可能的原因：</p>
               <ul style="text-align:left;font-size:14px;">
-                <li>ç½‘ç»œè¿žæŽ¥é—®é¢˜</li>
-                <li>CDNè¢«æ‹¦æˆª</li>
-                <li>æµè§ˆå™¨ç‰ˆæœ¬è¿‡ä½Ž</li>
+                <li>网络连接问题</li>
+                <li>CDN被拦截</li>
+                <li>浏览器版本过低</li>
               </ul>
               <pre style="background:rgba(0,0,0,0.3);padding:10px;border-radius:5px;font-size:12px;overflow-x:auto;">
-React: ${loadStatus.React ? 'âœ“' : 'âœ—'}
-ReactDOM: ${loadStatus.ReactDOM ? 'âœ“' : 'âœ—'}
-Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
+React: ${loadStatus.React ? '✓' : '✗'}
+ReactDOM: ${loadStatus.ReactDOM ? '✓' : '✗'}
+Babel: ${loadStatus.Babel ? '✓' : '✗'}
               </pre>
-              <p style="font-size:12px;margin-top:15px;">æµè§ˆå™¨: ${navigator.userAgent}</p>
+              <p style="font-size:12px;margin-top:15px;">浏览器: ${navigator.userAgent}</p>
             </div>
           `;
         }
       }
       
-      // å»¶è¿Ÿæ£€æµ‹ï¼Œç»™CDNä¸€äº›åŠ è½½æ—¶é—´
+      // 延迟检测，给CDN一些加载时间
       setTimeout(checkLibs, 1500);
     })();
   </script>
-  
-  <!-- é…ç½®æ–‡ä»¶ -->
+  <!-- 工具函数和组件 -->
   <script src="config.js"></script>
   <script src="utils.js"></script>
   <script src="components.js"></script>
 </head>
 <body>
-  <!-- PWAæ¨¡å¼æ£€æµ‹å’Œå¼•å¯¼ -->
+  <!-- PWA模式检测和引导 -->
   <div id="pwa-prompt" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:99999;font-family:-apple-system,sans-serif;">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:340px;width:90%;text-align:center;color:white;">
-      <div style="font-size:64px;margin-bottom:20px;">ðŸ’Š</div>
-      <h2 style="font-size:24px;font-weight:bold;margin-bottom:10px;color:white;">å¥åº·ç®¡å®¶ Pro</h2>
+      <div style="font-size:64px;margin-bottom:20px;">💊</div>
+      <h2 style="font-size:24px;font-weight:bold;margin-bottom:10px;color:white;">健康管家 Pro</h2>
       <p style="font-size:15px;line-height:1.6;color:#94a3b8;margin-bottom:30px;">
-        æ£€æµ‹åˆ°æ‚¨æ­£åœ¨ä½¿ç”¨Safariæµè§ˆå™¨è®¿é—®ã€‚<br>
-        <strong style="color:#fbbf24;">ä¸ºèŽ·å¾—æœ€ä½³ä½“éªŒï¼Œè¯·å°†åº”ç”¨æ·»åŠ åˆ°ä¸»å±å¹•ã€‚</strong>
+        检测到您正在使用Safari浏览器访问。<br>
+        <strong style="color:#fbbf24;">为获得最佳体验，请将应用添加到主屏幕。</strong>
       </p>
       
       <div style="background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-radius:16px;padding:20px;margin-bottom:20px;text-align:left;">
-        <div style="font-size:14px;font-weight:600;margin-bottom:15px;color:#fbbf24;">ðŸ“± æ·»åŠ æ­¥éª¤ï¼š</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:15px;color:#fbbf24;">📱 添加步骤：</div>
         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
           <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">1</div>
           <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
-            ç‚¹å‡»åº•éƒ¨ <strong style="color:white;">åˆ†äº«</strong> æŒ‰é’®
-            <div style="margin-top:4px;font-size:32px;">â¬†ï¸</div>
+            点击底部 <strong style="color:white;">分享</strong> 按钮
+            <div style="margin-top:4px;font-size:32px;">⬆️</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
           <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">2</div>
           <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
-            é€‰æ‹© <strong style="color:white;">"æ·»åŠ åˆ°ä¸»å±å¹•"</strong>
-            <div style="margin-top:4px;">âž• ðŸ“±</div>
+            选择 <strong style="color:white;">"添加到主屏幕"</strong>
+            <div style="margin-top:4px;">➕ 📱</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:12px;">
           <div style="background:#4f46e5;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:bold;font-size:14px;">3</div>
           <div style="flex:1;font-size:14px;line-height:1.5;color:#e2e8f0;">
-            ä»Žä¸»å±å¹•å›¾æ ‡å¯åŠ¨åº”ç”¨
+            从主屏幕图标启动应用
           </div>
         </div>
       </div>
       
       <div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:12px;margin-bottom:20px;">
         <div style="font-size:13px;color:#86efac;line-height:1.5;">
-          âœ… <strong>å·²éªŒè¯</strong>ï¼šæ·»åŠ åˆ°ä¸»å±å¹•åŽå®Œå…¨æ­£å¸¸å·¥ä½œ
+          ✅ <strong>已验证</strong>：添加到主屏幕后完全正常工作
         </div>
       </div>
       
       <button onclick="document.getElementById('pwa-prompt').style.display='none'" style="background:#4f46e5;color:white;border:none;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:600;width:100%;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.3);">
-        æˆ‘çŸ¥é“äº†ï¼Œç»§ç»­è®¿é—®
+        我知道了，继续访问
       </button>
       
       <div style="margin-top:15px;font-size:12px;color:#64748b;">
-        æˆ–åœ¨æµè§ˆå™¨æ¨¡å¼ä¸‹å¯èƒ½æ˜¾ç¤ºä¸æ­£å¸¸
+        或在浏览器模式下可能显示不正常
       </div>
     </div>
   </div>
   
   <script>
-    // æ£€æµ‹æ˜¯å¦åœ¨PWAæ¨¡å¼(standalone)
+    // 检测是否在PWA模式(standalone)
     (function() {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
         || window.navigator.standalone 
@@ -174,11 +173,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
       const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
       
-      // æ£€æŸ¥æ˜¯å¦å·²ç»æ˜¾ç¤ºè¿‡æç¤º
+      // 检查是否已经显示过提示
       const hasSeenPrompt = sessionStorage.getItem('pwa-prompt-seen');
       
       if (!isStandalone && isSafari && isIOS && !hasSeenPrompt) {
-        // ä¸åœ¨PWAæ¨¡å¼ï¼Œä¸”æ˜¯iOS Safariï¼Œæ˜¾ç¤ºæç¤º
+        // 不在PWA模式，且是iOS Safari，显示提示
         setTimeout(function() {
           const prompt = document.getElementById('pwa-prompt');
           if (prompt) {
@@ -188,7 +187,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         }, 1000);
       }
       
-      console.log('è¿è¡Œæ¨¡å¼:', {
+      console.log('运行模式:', {
         isStandalone: isStandalone,
         isSafari: isSafari,
         isIOS: isIOS,
@@ -203,8 +202,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
     // 执行数据迁移
     migrateOldData();
 
+
+
     function App() {
-      // ç”¨æˆ·è®¤è¯çŠ¶æ€
+      // 用户认证状态
       const [currentUser, setCurrentUser] = useState(() => {
         const saved = localStorage.getItem('health_pro_user');
         return saved ? JSON.parse(saved) : null;
@@ -218,19 +219,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
       
-      // ç½‘ç»œçŠ¶æ€
+      // 网络状态
       const [isOnline, setIsOnline] = useState(navigator.onLine);
       
-      // é¦–æ¬¡ä½¿ç”¨å¼•å¯¼
+      // 首次使用引导
       const [showWelcomeGuide, setShowWelcomeGuide] = useState(() => {
         return !localStorage.getItem('health_pro_welcomed');
       });
       
-      // åŒæ­¥å†²çªå¤„ç†
+      // 同步冲突处理
       const [showSyncConflict, setShowSyncConflict] = useState(false);
       const [conflictData, setConflictData] = useState(null);
       
-      // å¯†ç å¼ºåº¦è®¡ç®—
+      // 密码强度计算
       const getPasswordStrength = (pwd) => {
         if (!pwd) return { level: 0, text: '', color: '' };
         let score = 0;
@@ -240,17 +241,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         if (/\d/.test(pwd)) score++;
         if (/[^a-zA-Z0-9]/.test(pwd)) score++;
         
-        if (score <= 1) return { level: 1, text: 'å¼±', color: 'bg-red-500' };
-        if (score <= 2) return { level: 2, text: 'è¾ƒå¼±', color: 'bg-orange-500' };
-        if (score <= 3) return { level: 3, text: 'ä¸­ç­‰', color: 'bg-yellow-500' };
-        if (score <= 4) return { level: 4, text: 'å¼º', color: 'bg-green-500' };
-        return { level: 5, text: 'å¾ˆå¼º', color: 'bg-green-600' };
+        if (score <= 1) return { level: 1, text: '弱', color: 'bg-red-500' };
+        if (score <= 2) return { level: 2, text: '较弱', color: 'bg-orange-500' };
+        if (score <= 3) return { level: 3, text: '中等', color: 'bg-yellow-500' };
+        if (score <= 4) return { level: 4, text: '强', color: 'bg-green-500' };
+        return { level: 5, text: '很强', color: 'bg-green-600' };
       };
       
       const [activeTab, setActiveTab] = useState('vitals');
       const [viewMode, setViewMode] = useState('list');
       
-      // æˆå‘˜ç®¡ç†çŠ¶æ€
+      // 成员管理状态
       const [members, setMembers] = useState(() => loadData('health_pro_members', DEFAULT_MEMBERS));
       const [currentMemberId, setCurrentMemberId] = useState(() => loadData('health_pro_current_member', 'default'));
       const [showMemberMenu, setShowMemberMenu] = useState(false);
@@ -258,11 +259,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const [editingMember, setEditingMember] = useState(null);
       const [memberInput, setMemberInput] = useState({ name: '', relation: '', color: 'indigo' });
       
-      // èŽ·å–å½“å‰æˆå‘˜ä¿¡æ¯
+      // 获取当前成员信息
       const currentMember = members.find(m => m.id === currentMemberId) || members[0] || DEFAULT_MEMBER;
       const currentMemberColor = MEMBER_COLORS.find(c => c.id === currentMember.color) || MEMBER_COLORS[0];
 
-      // åˆå§‹åŒ– State:ä»Žå½“å‰æˆå‘˜çš„ LocalStorage åŠ è½½æˆ–ä½¿ç”¨é»˜è®¤å€¼
+      // 初始化 State:从当前成员的 LocalStorage 加载或使用默认值
       const [meds, setMeds] = useState(() => loadMemberData(currentMemberId, 'meds', DEFAULT_MEDS));
       const [catalog, setCatalog] = useState(() => loadMemberData(currentMemberId, 'catalog', DEFAULT_CATALOG));
       const [checkups, setCheckups] = useState(() => loadMemberData(currentMemberId, 'checkups', DEFAULT_CHECKUPS));
@@ -270,7 +271,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const [imagingReports, setImagingReports] = useState(() => loadMemberData(currentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS));
       const [vitals, setVitals] = useState(() => loadMemberData(currentMemberId, 'vitals', DEFAULT_VITALS));
       
-      // åŒ»å­¦æŒ‡æ ‡è¯å…¸çŠ¶æ€
+      // 医学指标词典状态
       const [medicalDictionary, setMedicalDictionary] = useState(() => loadData('health_pro_medical_dictionary', DEFAULT_MEDICAL_DICTIONARY));
       const [showDictionaryModal, setShowDictionaryModal] = useState(false);
       const [dictionarySearch, setDictionarySearch] = useState('');
@@ -280,10 +281,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       });
 
       
-      // ç”¨æˆ·ç™»å½•
+      // 用户登录
       const handleLogin = async () => {
         if (!loginForm.username.trim() || !loginForm.password) {
-          setLoginError('è¯·è¾“å…¥ç”¨æˆ·åå’Œå¯†ç ');
+          setLoginError('请输入用户名和密码');
           return;
         }
         setLoginLoading(true);
@@ -296,26 +297,26 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           localStorage.setItem('health_pro_session', user.sessionToken);
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          // ç™»å½•åŽç›´æŽ¥ä»Žäº‘ç«¯åŠ è½½ï¼ˆä¸å…ˆä¿å­˜ï¼Œé¿å…ç©ºæ•°æ®è¦†ç›–äº‘ç«¯ï¼‰
+          // 登录后直接从云端加载（不先保存，避免空数据覆盖云端）
           await loadFromCloud(user.objectId, user.sessionToken);
         } catch (e) {
-          setLoginError(e.message || 'ç™»å½•å¤±è´¥');
+          setLoginError(e.message || '登录失败');
         }
         setLoginLoading(false);
       };
       
-      // ç”¨æˆ·æ³¨å†Œ
+      // 用户注册
       const handleSignUp = async () => {
         if (!loginForm.username.trim() || !loginForm.password) {
-          setLoginError('è¯·è¾“å…¥ç”¨æˆ·åå’Œå¯†ç ');
+          setLoginError('请输入用户名和密码');
           return;
         }
         if (loginForm.password.length < 6) {
-          setLoginError('å¯†ç è‡³å°‘6ä½');
+          setLoginError('密码至少6位');
           return;
         }
         if (loginForm.password !== loginForm.confirmPassword) {
-          setLoginError('ä¸¤æ¬¡å¯†ç ä¸ä¸€è‡´');
+          setLoginError('两次密码不一致');
           return;
         }
         setLoginLoading(true);
@@ -328,32 +329,32 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           localStorage.setItem('health_pro_session', user.sessionToken);
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          // æ³¨å†ŒåŽä¿å­˜å½“å‰æœ¬åœ°æ•°æ®åˆ°äº‘ç«¯ï¼ˆå¦‚æžœæœ‰çš„è¯ï¼‰
+          // 注册后保存当前本地数据到云端（如果有的话）
           const hasLocalData = localStorage.getItem('health_pro_members') !== null;
           if (hasLocalData) {
             await saveToCloud(user.objectId, user.sessionToken);
           }
         } catch (e) {
-          setLoginError(e.message || 'æ³¨å†Œå¤±è´¥');
+          setLoginError(e.message || '注册失败');
         }
         setLoginLoading(false);
       };
       
-      // é€€å‡ºç™»å½•
+      // 退出登录
       const handleLogout = () => {
-        // æ¸…é™¤ç”¨æˆ·çŠ¶æ€
+        // 清除用户状态
         setCurrentUser(null);
         setSessionToken(null);
         localStorage.removeItem('health_pro_user');
         localStorage.removeItem('health_pro_session');
         setSyncStatus('');
         setLastSyncTime(null);
-        // æ¸…ç©ºç™»å½•è¡¨å•
+        // 清空登录表单
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
       };
       
-      // ä»Žäº‘ç«¯åŠ è½½æ•°æ®
+      // 从云端加载数据
       const loadFromCloud = async (userId, token, forceOverwrite = false) => {
         if (!isOnline) {
           setSyncStatus('error');
@@ -363,49 +364,49 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         try {
           const cloudData = await LeanCloud.loadUserData(userId, token);
           if (cloudData) {
-            // æ£€æŸ¥æ˜¯å¦æœ‰æœ¬åœ°æ•°æ®
+            // 检查是否有本地数据
             const hasLocalData = meds.length > 0 || catalog.length > 0 || labReports.length > 0 || imagingReports.length > 0 || vitals.length > 0;
             
-            // æ£€æŸ¥äº‘ç«¯æ•°æ®æ˜¯å¦æ¯”æœ¬åœ°æ›´æ–°
+            // 检查云端数据是否比本地更新
             const cloudTime = cloudData.lastUpdated ? new Date(cloudData.lastUpdated) : null;
             const localTime = lastSyncTime;
             
-            // å¦‚æžœæœ‰æœ¬åœ°æ•°æ®ä¸”äº‘ç«¯æœ‰æ•°æ®ï¼Œæ£€æŸ¥å†²çª
+            // 如果有本地数据且云端有数据，检查冲突
             if (hasLocalData && cloudData.memberData && !forceOverwrite && !lastSyncTime) {
-              // é¦–æ¬¡ç™»å½•æ—¶å‘çŽ°å†²çªï¼Œè¯¢é—®ç”¨æˆ·
+              // 首次登录时发现冲突，询问用户
               setConflictData(cloudData);
               setShowSyncConflict(true);
               setSyncStatus('');
               return;
             }
             
-            // åº”ç”¨äº‘ç«¯æ•°æ®
+            // 应用云端数据
             await applyCloudData(cloudData);
           } else {
-            // äº‘ç«¯æ— æ•°æ®ï¼Œä¸Šä¼ æœ¬åœ°æ•°æ®
+            // 云端无数据，上传本地数据
             await saveToCloud(userId, token);
           }
           setSyncStatus('synced');
           setLastSyncTime(new Date());
         } catch (e) {
-          console.error('äº‘ç«¯åŠ è½½å¤±è´¥:', e);
+          console.error('云端加载失败:', e);
           setSyncStatus('error');
         }
       };
       
-      // ä¿å­˜æ•°æ®åˆ°äº‘ç«¯
+      // 保存数据到云端
       const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken) => {
-        if (!userId || !token || userId === 'dev') return; // å¼€å‘æ¨¡å¼è·³è¿‡
+        if (!userId || !token || userId === 'dev') return; // 开发模式跳过
         if (!isOnline) {
           setSyncStatus('error');
           return;
         }
         setSyncStatus('syncing');
         try {
-          // ç›´æŽ¥ä»Ž localStorage è¯»å–æˆå‘˜åˆ—è¡¨
+          // 直接从 localStorage 读取成员列表
           const savedMembers = loadData('health_pro_members', DEFAULT_MEMBERS);
           
-          // æ”¶é›†æ‰€æœ‰æˆå‘˜æ•°æ® - ç›´æŽ¥ä»Ž localStorage è¯»å–
+          // 收集所有成员数据 - 直接从 localStorage 读取
           const memberData = {};
           savedMembers.forEach(member => {
             memberData[member.id] = {
@@ -418,7 +419,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             };
           });
           
-          // æ”¶é›†APIè®¾ç½®
+          // 收集API设置
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
@@ -427,7 +428,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
           
-          // ç›´æŽ¥ä»Ž localStorage è¯»å–åŒ»å­¦è¯å…¸
+          // 直接从 localStorage 读取医学词典
           const savedDictionary = loadData('health_pro_medical_dictionary', DEFAULT_MEDICAL_DICTIONARY);
           
           await LeanCloud.saveUserData(userId, token, {
@@ -441,16 +442,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           setSyncStatus('synced');
           setLastSyncTime(new Date());
         } catch (e) {
-          console.error('äº‘ç«¯ä¿å­˜å¤±è´¥:', e);
+          console.error('云端保存失败:', e);
           setSyncStatus('error');
         }
       };
       
-      // æˆå‘˜åˆ—è¡¨æŒä¹…åŒ–
+      // 成员列表持久化
       useEffect(() => { localStorage.setItem('health_pro_members', JSON.stringify(members)); }, [members]);
       useEffect(() => { localStorage.setItem('health_pro_current_member', JSON.stringify(currentMemberId)); }, [currentMemberId]);
 
-      // æ•°æ®æŒä¹…åŒ– Effect:ç›‘å¬æ•°æ®å˜åŒ–å¹¶ä¿å­˜åˆ°å½“å‰æˆå‘˜
+      // 数据持久化 Effect:监听数据变化并保存到当前成员
       useEffect(() => { saveMemberData(currentMemberId, 'meds', meds); }, [meds, currentMemberId]);
       useEffect(() => { saveMemberData(currentMemberId, 'catalog', catalog); }, [catalog, currentMemberId]);
       useEffect(() => { saveMemberData(currentMemberId, 'checkups', checkups); }, [checkups, currentMemberId]);
@@ -458,13 +459,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       useEffect(() => { saveMemberData(currentMemberId, 'imagingReports', imagingReports); }, [imagingReports, currentMemberId]);
       useEffect(() => { saveMemberData(currentMemberId, 'vitals', vitals); }, [vitals, currentMemberId]);
       
-      // è¯å…¸æŒä¹…åŒ–
+      // 词典持久化
       useEffect(() => { 
         localStorage.setItem('health_pro_medical_dictionary', JSON.stringify(medicalDictionary)); 
       }, [medicalDictionary]);
 
       
-      // è‡ªåŠ¨äº‘åŒæ­¥ï¼ˆé˜²æŠ–1ç§’ï¼‰
+      // 自动云同步（防抖1秒）
       useEffect(() => {
         if (!currentUser || !sessionToken || !isOnline) return;
         const timer = setTimeout(() => {
@@ -473,19 +474,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         return () => clearTimeout(timer);
       }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline]);
       
-      // ç™»å½•åŽè‡ªåŠ¨ä»Žäº‘ç«¯åŠ è½½
+      // 登录后自动从云端加载
       useEffect(() => {
         if (currentUser && sessionToken && !lastSyncTime) {
           loadFromCloud(currentUser.objectId, sessionToken);
         }
       }, [currentUser, sessionToken]);
       
-      // é¡µé¢å…³é—­å‰å¼ºåˆ¶åŒæ­¥
+      // 页面关闭前强制同步
       useEffect(() => {
         if (!currentUser || !sessionToken || currentUser.objectId === 'dev') return;
         
         const handleBeforeUnload = (e) => {
-          // åŒæ­¥æ‰§è¡Œä¿å­˜ï¼ˆå¼‚æ­¥è°ƒç”¨ä½†ä¸ç­‰å¾…å®Œæˆï¼‰
+          // 同步执行保存（异步调用但不等待完成）
           saveToCloud();
         };
         
@@ -493,11 +494,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
       }, [currentUser, sessionToken]);
       
-      // ç½‘ç»œçŠ¶æ€ç›‘å¬
+      // 网络状态监听
       useEffect(() => {
         const handleOnline = () => {
           setIsOnline(true);
-          // æ¢å¤åœ¨çº¿åŽè‡ªåŠ¨é‡è¯•åŒæ­¥
+          // 恢复在线后自动重试同步
           if (currentUser && sessionToken && syncStatus === 'error') {
             saveToCloud();
           }
@@ -518,13 +519,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         };
       }, [currentUser, sessionToken, syncStatus]);
       
-      // å…³é—­é¦–æ¬¡å¼•å¯¼
+      // 关闭首次引导
       const dismissWelcomeGuide = () => {
         localStorage.setItem('health_pro_welcomed', 'true');
         setShowWelcomeGuide(false);
       };
       
-      // å¤„ç†åŒæ­¥å†²çª - ä½¿ç”¨äº‘ç«¯æ•°æ®
+      // 处理同步冲突 - 使用云端数据
       const resolveConflictWithCloud = async () => {
         if (conflictData) {
           await applyCloudData(conflictData);
@@ -533,22 +534,22 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setConflictData(null);
       };
       
-      // å¤„ç†åŒæ­¥å†²çª - ä½¿ç”¨æœ¬åœ°æ•°æ®ï¼ˆè¦†ç›–äº‘ç«¯ï¼‰
+      // 处理同步冲突 - 使用本地数据（覆盖云端）
       const resolveConflictWithLocal = async () => {
         setShowSyncConflict(false);
         setConflictData(null);
         await saveToCloud();
       };
       
-      // åº”ç”¨äº‘ç«¯æ•°æ®åˆ°æœ¬åœ°
+      // 应用云端数据到本地
       const applyCloudData = async (cloudData) => {
-        // 1. å…ˆæ¢å¤æˆå‘˜åˆ—è¡¨
+        // 1. 先恢复成员列表
         if (cloudData.members) {
           setMembers(cloudData.members);
           localStorage.setItem('health_pro_members', JSON.stringify(cloudData.members));
         }
         
-        // 2. æ¢å¤å½“å‰æˆå‘˜ID
+        // 2. 恢复当前成员ID
         let targetMemberId = 'default';
         if (cloudData.currentMemberId) {
           targetMemberId = cloudData.currentMemberId;
@@ -556,7 +557,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           localStorage.setItem('health_pro_current_member', JSON.stringify(targetMemberId));
         }
         
-        // 3. å†™å…¥æ‰€æœ‰æˆå‘˜æ•°æ®åˆ° localStorage
+        // 3. 写入所有成员数据到 localStorage
         if (cloudData.memberData) {
           Object.keys(cloudData.memberData).forEach(memberId => {
             const data = cloudData.memberData[memberId];
@@ -569,20 +570,20 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           });
         }
         
-        // 4. æ¢å¤APIè®¾ç½®
+        // 4. 恢复API设置
         if (cloudData.apiSettings) {
           Object.keys(cloudData.apiSettings).forEach(key => {
             localStorage.setItem(key, cloudData.apiSettings[key]);
           });
         }
         
-        // 5. æ¢å¤åŒ»å­¦æŒ‡æ ‡è¯å…¸
+        // 5. 恢复医学指标词典
         if (cloudData.medicalDictionary) {
           setMedicalDictionary(cloudData.medicalDictionary);
           localStorage.setItem('health_pro_medical_dictionary', JSON.stringify(cloudData.medicalDictionary));
         }
         
-        // 6. é‡æ–°åŠ è½½å½“å‰æˆå‘˜æ•°æ®åˆ° state
+        // 6. 重新加载当前成员数据到 state
         setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS));
         setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG));
         setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS));
@@ -594,11 +595,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setLastSyncTime(new Date());
       };
       
-      // åˆ‡æ¢æˆå‘˜
+      // 切换成员
       const switchMember = (memberId) => {
         if (memberId === currentMemberId) return;
         setCurrentMemberId(memberId);
-        // åŠ è½½æ–°æˆå‘˜çš„æ•°æ®
+        // 加载新成员的数据
         setMeds(loadMemberData(memberId, 'meds', DEFAULT_MEDS));
         setCatalog(loadMemberData(memberId, 'catalog', DEFAULT_CATALOG));
         setCheckups(loadMemberData(memberId, 'checkups', DEFAULT_CHECKUPS));
@@ -608,13 +609,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setShowMemberMenu(false);
       };
       
-      // æ·»åŠ æˆå‘˜
+      // 添加成员
       const addMember = () => {
         if (!memberInput.name.trim()) return;
         const newMember = {
           id: Date.now().toString(),
           name: memberInput.name.trim(),
-          relation: memberInput.relation.trim() || 'å®¶äºº',
+          relation: memberInput.relation.trim() || '家人',
           color: memberInput.color
         };
         setMembers([...members, newMember]);
@@ -622,7 +623,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setShowMemberForm(false);
       };
       
-      // ç¼–è¾‘æˆå‘˜
+      // 编辑成员
       const updateMember = () => {
         if (!memberInput.name.trim() || !editingMember) return;
         setMembers(members.map(m => m.id === editingMember.id ? {
@@ -636,16 +637,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setShowMemberForm(false);
       };
       
-      // åˆ é™¤æˆå‘˜
+      // 删除成员
       const deleteMember = (memberId) => {
-        if (members.length <= 1) return; // è‡³å°‘ä¿ç•™ä¸€ä¸ªæˆå‘˜
+        if (members.length <= 1) return; // 至少保留一个成员
         if (memberId === currentMemberId) {
-          // å¦‚æžœåˆ é™¤å½“å‰æˆå‘˜ï¼Œåˆ‡æ¢åˆ°ç¬¬ä¸€ä¸ªå…¶ä»–æˆå‘˜
+          // 如果删除当前成员，切换到第一个其他成员
           const otherMember = members.find(m => m.id !== memberId);
           if (otherMember) switchMember(otherMember.id);
         }
         setMembers(members.filter(m => m.id !== memberId));
-        // æ¸…ç†è¯¥æˆå‘˜çš„æ•°æ®ï¼ˆå¯é€‰ï¼‰
+        // 清理该成员的数据（可选）
         ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'].forEach(dataType => {
           localStorage.removeItem(`health_pro_${memberId}_${dataType}`);
         });
@@ -689,17 +690,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const [debugInfo, setDebugInfo] = useState('');
       const scanFileRef = React.useRef(null);
 
-      const [medInput, setMedInput] = useState({ name: '', startTime: '', endTime: '', frequency: '1', dosagePerTime: '1', relation: 'æ— å…³', timePeriods: [], isLongTerm: true, cycleEnabled: false, cycleDays: '', cycleRestDays: '' });
-      const [catalogInput, setCatalogInput] = useState({ name: '', brand: '', dosageForm: 'ç‰‡å‰‚', price: '', strength: '', unit: 'mg', packageSize: '' });
+      const [medInput, setMedInput] = useState({ name: '', startTime: '', endTime: '', frequency: '1', dosagePerTime: '1', relation: '无关', timePeriods: [], isLongTerm: true, cycleEnabled: false, cycleDays: '', cycleRestDays: '' });
+      const [catalogInput, setCatalogInput] = useState({ name: '', brand: '', dosageForm: '片剂', price: '', strength: '', unit: 'mg', packageSize: '' });
       const [checkupInput, setCheckupInput] = useState({ date: '', items: '', notes: '' });
       const [vitalsInput, setVitalsInput] = useState({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' });
-      const [selectedVitalType, setSelectedVitalType] = useState(null); // ç”¨äºŽç­›é€‰æ˜¾ç¤ºçš„æŒ‡æ ‡ç±»åž‹
+      const [selectedVitalType, setSelectedVitalType] = useState(null); // 用于筛选显示的指标类型
 
       const isActiveMed = (m) => !m.endTime || new Date(m.endTime) >= new Date();
       const activeMeds = meds.filter(isActiveMed).sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
       const endedMeds = meds.filter(m => !isActiveMed(m));
 
-      // èŽ·å–æŸç±»åž‹æŒ‡æ ‡çš„æœ€æ–°è®°å½•
+      // 获取某类型指标的最新记录
       const getLatestVital = (type) => {
         const filtered = vitals.filter(v => v.type === type).sort((a, b) => {
           const dateA = `${a.date} ${a.time}`;
@@ -709,7 +710,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         return filtered[0] || null;
       };
 
-      // èŽ·å–æŸç±»åž‹æŒ‡æ ‡çš„åŽ†å²æ•°æ®(ç”¨äºŽè¿·ä½ å›¾è¡¨)
+      // 获取某类型指标的历史数据(用于迷你图表)
       const getVitalHistory = (type) => {
         return vitals.filter(v => v.type === type).sort((a, b) => {
           const dateA = `${a.date} ${a.time}`;
@@ -787,15 +788,15 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         e.stopPropagation();
         const cleanName = itemName.split('(')[0].trim();
         const matchedKey = Object.keys(MEDICAL_GLOSSARY).find(k => cleanName.includes(k));
-        setInfoItem({ title: itemName, desc: matchedKey ? MEDICAL_GLOSSARY[matchedKey] : 'æš‚æ— è¯¦ç»†è§£é‡Šã€‚' });
+        setInfoItem({ title: itemName, desc: matchedKey ? MEDICAL_GLOSSARY[matchedKey] : '暂无详细解释。' });
       };
 
       const saveMedPlan = () => {
         if (!medInput.name) return;
-        let methodStr = `æ¯æ—¥ ${medInput.frequency} æ¬¡,æ¯æ¬¡ ${medInput.dosagePerTime}`;
+        let methodStr = `每日 ${medInput.frequency} 次,每次 ${medInput.dosagePerTime}`;
         if (medInput.timePeriods && medInput.timePeriods.length > 0) methodStr += ` [${medInput.timePeriods.join('/')}]`;
-        if (medInput.relation !== 'æ— å…³') methodStr += ` (${medInput.relation})`;
-        if (medInput.cycleEnabled && medInput.cycleDays && medInput.cycleRestDays) methodStr += ` å¾ªçŽ¯:æœ${medInput.cycleDays}å¤©åœ${medInput.cycleRestDays}å¤©`;
+        if (medInput.relation !== '无关') methodStr += ` (${medInput.relation})`;
+        if (medInput.cycleEnabled && medInput.cycleDays && medInput.cycleRestDays) methodStr += ` 循环:服${medInput.cycleDays}天停${medInput.cycleRestDays}天`;
         const finalEndTime = medInput.isLongTerm ? '' : medInput.endTime;
         const newMed = { ...medInput, id: editingId || Date.now().toString(), method: methodStr, endTime: finalEndTime };
         if (editingId) setMeds(meds.map(m => m.id === editingId ? newMed : m));
@@ -848,7 +849,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       const [backupStats, setBackupStats] = useState({ size: 0, meds: 0, catalog: 0, labs: 0 });
       
       const handleBackup = () => {
-        // æ”¶é›†æ‰€æœ‰æˆå‘˜çš„æ•°æ®
+        // 收集所有成员的数据
         const allMembersData = {};
         members.forEach(member => {
           allMembersData[member.id] = {
@@ -864,14 +865,14 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         const backupData = {
           version: VERSION,
           exportDate: new Date().toISOString(),
-          // å½“å‰æˆå‘˜æ•°æ®ï¼ˆå…¼å®¹æ—§ç‰ˆæœ¬å¯¼å…¥ï¼‰
+          // 当前成员数据（兼容旧版本导入）
           meds: meds,
           catalog: catalog,
           checkups: checkups,
           labReports: labReports,
           imagingReports: imagingReports,
           vitals: vitals,
-          // ç³»ç»Ÿè®¾ç½®
+          // 系统设置
           settings: {
             apiProvider: localStorage.getItem('ai_api_provider') || 'qwen',
             apiKeys: {
@@ -882,19 +883,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               siliconflow: getApiKeyFor('siliconflow')
             }
           },
-          // æˆå‘˜ç®¡ç†
+          // 成员管理
           members: members,
           currentMemberId: currentMemberId,
-          // æ‰€æœ‰æˆå‘˜çš„å®Œæ•´æ•°æ®
+          // 所有成员的完整数据
           membersData: allMembersData,
-          // åŒ»å­¦æŒ‡æ ‡è¯å…¸
+          // 医学指标词典
           medicalDictionary: medicalDictionary
         };
         const dataStr = JSON.stringify(backupData, null, 2);
         setBackupDataStr(dataStr);
         setBackupFileName(`HealthManager_${getLocalDateStr(new Date())}.json`);
         
-        // ç»Ÿè®¡æ‰€æœ‰æˆå‘˜çš„æ•°æ®é‡
+        // 统计所有成员的数据量
         let totalMeds = 0, totalCatalog = 0, totalLabs = 0, totalImaging = 0, totalVitals = 0;
         Object.values(allMembersData).forEach(data => {
           totalMeds += data.meds?.length || 0;
@@ -917,7 +918,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
       
       const downloadBackupFile = async () => {
         try {
-          // æ–¹æ³•1: ä½¿ç”¨ File System Access API (çŽ°ä»£æ¡Œé¢æµè§ˆå™¨)
+          // 方法1: 使用 File System Access API (现代桌面浏览器)
           if (window.showSaveFilePicker) {
             try {
               const handle = await window.showSaveFilePicker({
@@ -930,35 +931,35 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               const writable = await handle.createWritable();
               await writable.write(backupDataStr);
               await writable.close();
-              alert('å¤‡ä»½æˆåŠŸ!');
+              alert('备份成功!');
               setShowBackupModal(false);
               return;
             } catch (e) {
-              if (e.name === 'AbortError') return; // ç”¨æˆ·å–æ¶ˆ
-              // ç»§ç»­å°è¯•å…¶ä»–æ–¹æ³•
+              if (e.name === 'AbortError') return; // 用户取消
+              // 继续尝试其他方法
             }
           }
           
-          // æ–¹æ³•2: Web Share API (ç§»åŠ¨ç«¯åˆ†äº«)
+          // 方法2: Web Share API (移动端分享)
           if (navigator.share && navigator.canShare) {
             const file = new File([backupDataStr], backupFileName, { type: 'application/json' });
             if (navigator.canShare({ files: [file] })) {
               try {
                 await navigator.share({
                   files: [file],
-                  title: 'å¥åº·ç®¡å®¶å¤‡ä»½',
-                  text: 'å¥åº·ç®¡å®¶æ•°æ®å¤‡ä»½æ–‡ä»¶'
+                  title: '健康管家备份',
+                  text: '健康管家数据备份文件'
                 });
                 setShowBackupModal(false);
                 return;
               } catch (e) {
                 if (e.name === 'AbortError') return;
-                // ç»§ç»­å°è¯•å…¶ä»–æ–¹æ³•
+                // 继续尝试其他方法
               }
             }
           }
           
-          // æ–¹æ³•3: ä¼ ç»Ÿä¸‹è½½æ–¹å¼
+          // 方法3: 传统下载方式
           const blob = new Blob([backupDataStr], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -967,17 +968,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           link.style.display = 'none';
           document.body.appendChild(link);
           
-          // æ¨¡æ‹Ÿç‚¹å‡»
+          // 模拟点击
           if (typeof link.click === 'function') {
             link.click();
           } else {
-            // å…¼å®¹æ—§æµè§ˆå™¨
+            // 兼容旧浏览器
             const evt = document.createEvent('MouseEvents');
             evt.initEvent('click', true, true);
             link.dispatchEvent(evt);
           }
           
-          // å»¶è¿Ÿæ¸…ç†
+          // 延迟清理
           setTimeout(() => {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
@@ -985,15 +986,15 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           
           setShowBackupModal(false);
         } catch (err) {
-          console.error('ä¸‹è½½å¤±è´¥:', err);
-          alert('ä¸‹è½½å‡ºé”™,è¯·å°è¯•"å¤åˆ¶æ•°æ®"æ–¹å¼ä¿å­˜');
+          console.error('下载失败:', err);
+          alert('下载出错,请尝试"复制数据"方式保存');
         }
       };
       
       const copyBackupData = () => {
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(backupDataStr).then(() => {
-            alert('æ•°æ®å·²å¤åˆ¶åˆ°å‰ªè´´æ¿!\n\nè¯·ç²˜è´´åˆ°ã€Œå¤‡å¿˜å½•ã€æˆ–ã€Œæ–‡ä»¶ã€ä¸­ä¿å­˜ã€‚');
+            alert('数据已复制到剪贴板!\n\n请粘贴到「备忘录」或「文件」中保存。');
           }).catch(() => {
             fallbackCopy();
           });
@@ -1012,9 +1013,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         textArea.select();
         try {
           document.execCommand('copy');
-          alert('æ•°æ®å·²å¤åˆ¶åˆ°å‰ªè´´æ¿!\n\nè¯·ç²˜è´´åˆ°ã€Œå¤‡å¿˜å½•ã€æˆ–ã€Œæ–‡ä»¶ã€ä¸­ä¿å­˜ã€‚');
+          alert('数据已复制到剪贴板!\n\n请粘贴到「备忘录」或「文件」中保存。');
         } catch (err) {
-          alert('å¤åˆ¶å¤±è´¥,è¯·æ‰‹åŠ¨é€‰æ‹©æ–‡æœ¬');
+          alert('复制失败,请手动选择文本');
         }
         document.body.removeChild(textArea);
       };
@@ -1030,13 +1031,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             const data = JSON.parse(event.target.result);
             let counts = { meds: 0, catalog: 0, checkups: 0, labs: 0, imaging: 0, vitals: 0, members: 0 };
             
-            // æ¢å¤æˆå‘˜åˆ—è¡¨å’Œæ‰€æœ‰æˆå‘˜æ•°æ®ï¼ˆæ–°ç‰ˆæœ¬å¤‡ä»½æ ¼å¼ï¼‰
+            // 恢复成员列表和所有成员数据（新版本备份格式）
             if (data.members && data.membersData) {
-              // æ¢å¤æˆå‘˜åˆ—è¡¨
+              // 恢复成员列表
               setMembers(data.members);
               counts.members = data.members.length;
               
-              // æ¢å¤æ¯ä¸ªæˆå‘˜çš„æ•°æ®åˆ° localStorage
+              // 恢复每个成员的数据到 localStorage
               Object.entries(data.membersData).forEach(([memberId, memberData]) => {
                 if (memberData.meds) { saveMemberData(memberId, 'meds', memberData.meds); counts.meds += memberData.meds.length; }
                 if (memberData.catalog) { saveMemberData(memberId, 'catalog', memberData.catalog); counts.catalog += memberData.catalog.length; }
@@ -1046,7 +1047,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 if (memberData.vitals) { saveMemberData(memberId, 'vitals', memberData.vitals); counts.vitals += memberData.vitals.length; }
               });
               
-              // æ¢å¤å½“å‰æˆå‘˜IDå¹¶åŠ è½½å¯¹åº”æ•°æ®
+              // 恢复当前成员ID并加载对应数据
               const targetMemberId = data.currentMemberId || data.members[0]?.id || 'default';
               setCurrentMemberId(targetMemberId);
               const targetData = data.membersData[targetMemberId] || {};
@@ -1057,7 +1058,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               setImagingReports(targetData.imagingReports || []);
               setVitals(targetData.vitals || []);
             } else {
-              // å…¼å®¹æ—§ç‰ˆæœ¬å¤‡ä»½æ ¼å¼ï¼ˆåªæœ‰å½“å‰æˆå‘˜æ•°æ®ï¼‰
+              // 兼容旧版本备份格式（只有当前成员数据）
               if (data.meds) { setMeds(data.meds.map(m => ({...m, id: m.id || Date.now() + Math.random().toString()}))); counts.meds = data.meds.length; }
               if (data.catalog) { setCatalog(data.catalog.map(c => ({...c, id: c.id || Date.now() + Math.random().toString()}))); counts.catalog = data.catalog.length; }
               if (data.checkups) { setCheckups(data.checkups.map(c => ({...c, id: c.id || Date.now() + Math.random().toString()}))); counts.checkups = data.checkups.length; }
@@ -1067,21 +1068,21 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               if (Array.isArray(data) && data[0]?.items) { setLabReports(data.map(r => ({...r, id: r.id || Date.now() + Math.random().toString()}))); counts.labs = data.length; }
             }
             
-            // æ¢å¤è®¾ç½®
+            // 恢复设置
             if (data.settings) {
               if (data.settings.apiProvider) { 
                 localStorage.setItem('ai_api_provider', data.settings.apiProvider); 
                 CURRENT_API = data.settings.apiProvider; 
                 setApiProvider(data.settings.apiProvider); 
               }
-              // æ–°ç‰ˆæœ¬æ ¼å¼ï¼šæ¢å¤æ‰€æœ‰æœåŠ¡å•†çš„API Key
+              // 新版本格式：恢复所有服务商的API Key
               if (data.settings.apiKeys) {
                 Object.entries(data.settings.apiKeys).forEach(function(entry) {
                   if (entry[1]) saveApiKeyFor(entry[0], entry[1]);
                 });
                 setApiKeyInput(getApiKeyFor(data.settings.apiProvider || 'qwen'));
               }
-              // å…¼å®¹æ—§ç‰ˆæœ¬æ ¼å¼ï¼šå•ä¸ªAPI Key
+              // 兼容旧版本格式：单个API Key
               else if (data.settings.apiKey) {
                 var provider = data.settings.apiProvider || 'qwen';
                 saveApiKeyFor(provider, data.settings.apiKey);
@@ -1089,17 +1090,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               }
             }
             
-            // æ¢å¤åŒ»å­¦æŒ‡æ ‡è¯å…¸
+            // 恢复医学指标词典
             if (data.medicalDictionary) {
               setMedicalDictionary(data.medicalDictionary);
             }
             
             setShowRestoreModal(false);
-            const membersInfo = counts.members > 0 ? `\nâ€¢ å®¶åº­æˆå‘˜: ${counts.members}äºº` : '';
-            alert(`æ•°æ®å·²å¯¼å…¥å¹¶è¦†ç›–åŽŸæœ‰æ•°æ®!${membersInfo}\nâ€¢ æœè¯è®¡åˆ’: ${counts.meds}æ¡\nâ€¢ è¯å“ç›®å½•: ${counts.catalog}æ¡\nâ€¢ é¢„çº¦æ£€æŸ¥: ${counts.checkups}æ¡\nâ€¢ æ£€æµ‹æŠ¥å‘Š: ${counts.labs}æ¡\nâ€¢ å½±åƒæŠ¥å‘Š: ${counts.imaging}æ¡\nâ€¢ å¥åº·æŒ‡æ ‡: ${counts.vitals}æ¡`);
+            const membersInfo = counts.members > 0 ? `\n• 家庭成员: ${counts.members}人` : '';
+            alert(`数据已导入并覆盖原有数据!${membersInfo}\n• 服药计划: ${counts.meds}条\n• 药品目录: ${counts.catalog}条\n• 预约检查: ${counts.checkups}条\n• 检测报告: ${counts.labs}条\n• 影像报告: ${counts.imaging}条\n• 健康指标: ${counts.vitals}条`);
           } catch (err) {
-            console.error('æ¢å¤å¤±è´¥:', err);
-            alert('æ–‡ä»¶æ ¼å¼é”™è¯¯,è¯·é€‰æ‹©æœ‰æ•ˆçš„JSONå¤‡ä»½æ–‡ä»¶');
+            console.error('恢复失败:', err);
+            alert('文件格式错误,请选择有效的JSON备份文件');
           }
         };
         reader.readAsText(file);
@@ -1121,16 +1122,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         setVitals(DEFAULT_VITALS);
         setShowResetConfirm(false);
         setShowSettingsModal(false);
-        alert('æ•°æ®å·²é‡ç½®ä¸ºåˆå§‹çŠ¶æ€ã€‚');
+        alert('数据已重置为初始状态。');
       };
 
       const handlePrintTrend = () => {
         if (!trendRange.start || !trendRange.end || selectedTrendItems.length === 0) {
-          alert('è¯·å…ˆé€‰æ‹©æŒ‡æ ‡å’Œæ—¶é—´èŒƒå›´');
+          alert('请先选择指标和时间范围');
           return;
         }
         
-        // ç­›é€‰æ—¶é—´æ®µå†…çš„ç”¨è¯
+        // 筛选时间段内的用药
         const rangeStartTs = new Date(trendRange.start).getTime();
         const rangeEndTs = new Date(trendRange.end).getTime();
         const filteredMedsForPrint = meds.filter(function(med) {
@@ -1141,10 +1142,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           return selectedMeds.includes(med.id);
         });
 
-        // ç»Ÿä¸€å°ºå¯¸å¸¸é‡
+        // 统一尺寸常量
         var CHART_W = 320, CHART_PL = 40, CHART_PR = 15;
 
-        // ç”Ÿæˆè¶‹åŠ¿å›¾SVG
+        // 生成趋势图SVG
         var trendSvg = '';
         if (trendDatasets && trendDatasets.length > 0) {
           var allPoints = [];
@@ -1223,7 +1224,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 var isAbnormal = p.original.flag === 'High' || p.original.flag === 'Low';
                 var dotColor = isAbnormal ? (p.original.flag === 'High' ? '#f97316' : '#fb923c') : color;
                 trendSvg += '<circle cx="' + getX(p.dateStr) + '" cy="' + getY(p.val) + '" r="3" fill="' + dotColor + '"/>';
-                var arrow = p.original.flag === 'High' ? 'â†‘' : (p.original.flag === 'Low' ? 'â†“' : '');
+                var arrow = p.original.flag === 'High' ? '↑' : (p.original.flag === 'Low' ? '↓' : '');
                 trendSvg += '<text x="' + getX(p.dateStr) + '" y="' + (getY(p.val) - 6) + '" text-anchor="middle" font-size="9" font-weight="bold" fill="' + dotColor + '">' + p.val + arrow + '</text>';
               });
             });
@@ -1236,10 +1237,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           }
         }
         if (!trendSvg) {
-          trendSvg = '<p style="color:#999;text-align:center;padding:20px;font-size:12px;">æ— è¶‹åŠ¿æ•°æ®</p>';
+          trendSvg = '<p style="color:#999;text-align:center;padding:20px;font-size:12px;">无趋势数据</p>';
         }
 
-        // ç”Ÿæˆç”¨è¯ç”˜ç‰¹å›¾SVG
+        // 生成用药甘特图SVG
         var ganttSvg = '';
         if (filteredMedsForPrint.length > 0) {
           var W = CHART_W, ROW_H = 28, PAD_L = CHART_PL, PAD_R = CHART_PR, PAD_T = 10;
@@ -1273,10 +1274,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           }
         }
         if (!ganttSvg) {
-          ganttSvg = '<p style="color:#999;text-align:center;padding:20px;font-size:12px;">è¯¥æ—¶é—´æ®µå†…æ— ç”¨è¯è®°å½•</p>';
+          ganttSvg = '<p style="color:#999;text-align:center;padding:20px;font-size:12px;">该时间段内无用药记录</p>';
         }
 
-        // ç”Ÿæˆè¶‹åŠ¿æ•°æ®è¡¨æ ¼
+        // 生成趋势数据表格
         var trendTableRows = '';
         if (trendDatasets && trendDatasets.length > 0) {
           var tableData = [];
@@ -1296,13 +1297,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           });
           tableData.sort(function(a, b) { return a.date.localeCompare(b.date); });
           tableData.forEach(function(item) {
-            var flag = item.flag === 'High' ? ' â†‘' : (item.flag === 'Low' ? ' â†“' : '');
+            var flag = item.flag === 'High' ? ' ↑' : (item.flag === 'Low' ? ' ↓' : '');
             var flagColor = item.flag === 'High' ? 'color:#dc2626;' : (item.flag === 'Low' ? 'color:#ea580c;' : '');
             trendTableRows += '<tr><td style="border:1px solid #e2e8f0;padding:6px;">' + item.date + '</td><td style="border:1px solid #e2e8f0;padding:6px;">' + item.name + '</td><td style="border:1px solid #e2e8f0;padding:6px;' + flagColor + 'font-weight:bold;">' + item.val + flag + '</td><td style="border:1px solid #e2e8f0;padding:6px;">' + item.unit + '</td><td style="border:1px solid #e2e8f0;padding:6px;">' + item.refRange + '</td></tr>';
           });
         }
 
-        // ç”Ÿæˆç”¨è¯è®°å½•æ˜Žç»†è¡¨æ ¼
+        // 生成用药记录明细表格
         var medsTableRows = '';
         if (filteredMedsForPrint.length > 0) {
           var sortedMeds = filteredMedsForPrint.slice().sort(function(a, b) { 
@@ -1310,9 +1311,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           });
           sortedMeds.forEach(function(m) {
             var isActive = !m.endTime || new Date(m.endTime) >= new Date();
-            var statusText = isActive ? 'è¿›è¡Œä¸­' : 'å·²ç»“æŸ';
+            var statusText = isActive ? '进行中' : '已结束';
             var statusStyle = isActive ? 'color:#10b981;' : 'color:#94a3b8;';
-            var endTimeText = m.endTime || 'è‡³ä»Š';
+            var endTimeText = m.endTime || '至今';
             medsTableRows += '<tr>';
             medsTableRows += '<td style="border:1px solid #e2e8f0;padding:6px;font-weight:500;">' + m.name + '</td>';
             medsTableRows += '<td style="border:1px solid #e2e8f0;padding:6px;">' + m.startTime + '</td>';
@@ -1323,47 +1324,47 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           });
         }
 
-        // åˆ›å»ºæŠ¥å‘Šå†…å®¹
+        // 创建报告内容
         var reportContent = '';
         reportContent += '<div style="text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #e2e8f0;">';
-        reportContent += '<h1 style="font-size:18px;color:#4f46e5;margin:0 0 6px 0;">ðŸ“Š å¥åº·è¶‹åŠ¿åˆ†æžæŠ¥å‘Š</h1>';
-        reportContent += '<p style="font-size:11px;color:#64748b;margin:0;">ç”Ÿæˆæ—¶é—´:' + new Date().toLocaleString('zh-CN') + '</p>';
+        reportContent += '<h1 style="font-size:18px;color:#4f46e5;margin:0 0 6px 0;">📊 健康趋势分析报告</h1>';
+        reportContent += '<p style="font-size:11px;color:#64748b;margin:0;">生成时间:' + new Date().toLocaleString('zh-CN') + '</p>';
         reportContent += '</div>';
         
         reportContent += '<div style="background:#f8fafc;padding:10px;border-radius:8px;margin-bottom:16px;font-size:11px;">';
-        reportContent += '<div style="margin-bottom:4px;"><span style="color:#64748b;">åˆ†æžæ—¶é—´æ®µ:</span><strong>' + trendRange.start + ' è‡³ ' + trendRange.end + '</strong></div>';
-        reportContent += '<div><span style="color:#64748b;">é€‰ä¸­æŒ‡æ ‡:</span><strong>' + selectedTrendItems.join('ã€') + '</strong></div>';
+        reportContent += '<div style="margin-bottom:4px;"><span style="color:#64748b;">分析时间段:</span><strong>' + trendRange.start + ' 至 ' + trendRange.end + '</strong></div>';
+        reportContent += '<div><span style="color:#64748b;">选中指标:</span><strong>' + selectedTrendItems.join('、') + '</strong></div>';
         reportContent += '</div>';
         
         reportContent += '<div style="margin-bottom:20px;">';
-        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">ðŸ“ˆ æŒ‡æ ‡å˜åŒ–è¶‹åŠ¿</div>';
+        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">📈 指标变化趋势</div>';
         reportContent += '<div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">' + trendSvg + '</div>';
         reportContent += '</div>';
         
         reportContent += '<div style="margin-bottom:20px;">';
-        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">ðŸ’Š åŒæœŸç”¨è¯è®°å½• (' + filteredMedsForPrint.length + 'é¡¹)</div>';
+        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">💊 同期用药记录 (' + filteredMedsForPrint.length + '项)</div>';
         reportContent += '<div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">' + ganttSvg + '</div>';
         reportContent += '</div>';
         
         reportContent += '<div style="margin-bottom:20px;">';
-        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">ðŸ“‹ æ£€æµ‹æ•°æ®æ˜Žç»†</div>';
+        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">📋 检测数据明细</div>';
         if (trendTableRows) {
-          reportContent += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr style="background:#f8fafc;"><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">æ—¥æœŸ</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">æŒ‡æ ‡</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">ç»“æžœ</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">å•ä½</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">å‚è€ƒèŒƒå›´</th></tr></thead><tbody>' + trendTableRows + '</tbody></table>';
+          reportContent += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr style="background:#f8fafc;"><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">日期</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">指标</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">结果</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">单位</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">参考范围</th></tr></thead><tbody>' + trendTableRows + '</tbody></table>';
         } else {
-          reportContent += '<p style="color:#999;text-align:center;padding:16px;font-size:11px;">æ— æ•°æ®</p>';
+          reportContent += '<p style="color:#999;text-align:center;padding:16px;font-size:11px;">无数据</p>';
         }
         reportContent += '</div>';
         
         reportContent += '<div style="margin-bottom:20px;">';
-        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">ðŸ’Š ç”¨è¯è®°å½•æ˜Žç»†</div>';
+        reportContent += '<div style="font-size:13px;font-weight:bold;color:#334155;margin-bottom:10px;padding-left:10px;border-left:3px solid #6366f1;">💊 用药记录明细</div>';
         if (medsTableRows) {
-          reportContent += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr style="background:#f8fafc;"><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">è¯å“åç§°</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">å¼€å§‹æ—¥æœŸ</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">ç»“æŸæ—¥æœŸ</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">ç”¨æ³•</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">çŠ¶æ€</th></tr></thead><tbody>' + medsTableRows + '</tbody></table>';
+          reportContent += '<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr style="background:#f8fafc;"><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">药品名称</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">开始日期</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">结束日期</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">用法</th><th style="border:1px solid #e2e8f0;padding:6px;text-align:left;">状态</th></tr></thead><tbody>' + medsTableRows + '</tbody></table>';
         } else {
-          reportContent += '<p style="color:#999;text-align:center;padding:16px;font-size:11px;">è¯¥æ—¶é—´æ®µå†…æ— ç”¨è¯è®°å½•</p>';
+          reportContent += '<p style="color:#999;text-align:center;padding:16px;font-size:11px;">该时间段内无用药记录</p>';
         }
         reportContent += '</div>';
         
-        reportContent += '<div style="margin-top:20px;text-align:center;color:#94a3b8;font-size:10px;padding-top:14px;border-top:1px solid #e2e8f0;">å¥åº·ç®¡å®¶ Pro ' + VERSION + ' Â· æ­¤æŠ¥å‘Šä»…ä¾›å‚è€ƒ,å¦‚æœ‰ç–‘é—®è¯·å’¨è¯¢åŒ»ç”Ÿ</div>';
+        reportContent += '<div style="margin-top:20px;text-align:center;color:#94a3b8;font-size:10px;padding-top:14px;border-top:1px solid #e2e8f0;">健康管家 Pro ' + VERSION + ' · 此报告仅供参考,如有疑问请咨询医生</div>';
 
         setPrintHtml(reportContent);
         setShowPrintPreview(true);
@@ -1374,17 +1375,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
         if (files.length === 0) return;
         setUploadedFiles(files);
         setScanLoading(true);
-        setDebugInfo('å¼€å§‹å¤„ç†æ–‡ä»¶...');
+        setDebugInfo('开始处理文件...');
         
         if (!getApiKeyFor(CURRENT_API)) {
           setScanLoading(false);
-          setDebugInfo('é”™è¯¯: æœªé…ç½®API Key');
+          setDebugInfo('错误: 未配置API Key');
           if (scanType === 'lab') {
             setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', items: [{ name: '', result: '', unit: '', refRange: '', flag: 'Normal' }] });
           } else {
             setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' });
           }
-          alert(`å·²ä¸Šä¼  ${files.length} ä¸ªæ–‡ä»¶ã€‚\n\nâš ï¸ æœªé…ç½®AIè¯†åˆ«å¯†é’¥\nè¯·åœ¨èœå• â†‘ è®¾ç½®ä¸­é€‰æ‹©APIå¹¶é…ç½®å¯†é’¥ã€‚\n\nå½“å‰è¯·æ‰‹åŠ¨å¡«å†™æŠ¥å‘Šæ•°æ®ã€‚`);
+          alert(`已上传 ${files.length} 个文件。\n\n⚠️ 未配置AI识别密钥\n请在菜单 ↑ 设置中选择API并配置密钥。\n\n当前请手动填写报告数据。`);
           e.target.value = '';
           return;
         }
@@ -1409,7 +1410,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               const mimeMap = { 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'pdf': 'application/pdf' };
               mimeType = mimeMap[ext] || 'image/jpeg';
             }
-            setDebugInfo(`è¯»å–æ–‡ä»¶: ${file.name} (${mimeType})`);
+            setDebugInfo(`读取文件: ${file.name} (${mimeType})`);
             
             const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -1422,9 +1423,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               reader.readAsDataURL(file);
             });
             
-            setDebugInfo(prev => prev + `\næ–‡ä»¶å¤§å°: ${Math.round(base64.length/1024)}KB`);
+            setDebugInfo(prev => prev + `\n文件大小: ${Math.round(base64.length/1024)}KB`);
             const result = await analyzeMedicalImage(base64, mimeType, scanType, setDebugInfo);
-            console.log('AIåˆ†æžç»“æžœ:', result);
+            console.log('AI分析结果:', result);
             
             if (result && result.error) {
               hasError = true;
@@ -1448,7 +1449,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           setScanLoading(false);
           
           if (scanType === 'lab') {
-            // åŽ»é‡å¤„ç† - æ ¹æ®æ ‡å‡†åŒ–åŽçš„åç§°
+            // 去重处理 - 根据标准化后的名称
             const uniqueItems = [];
             const seenNames = new Set();
             
@@ -1473,9 +1474,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               hospital: detectedHospital || '',
               items: processedItems
             });
-            if (hasError && uniqueItems.length === 0) alert(`âš ï¸ AIè¯†åˆ«å¤±è´¥\n${errorDetail}\n\nè¯·æ‰‹åŠ¨å¡«å†™æ•°æ®ã€‚`);
-            else if (uniqueItems.length === 0) alert(`âš ï¸ æœªèƒ½è¯†åˆ«åˆ°æŒ‡æ ‡æ•°æ®,è¯·æ‰‹åŠ¨å¡«å†™ã€‚`);
-            else if (aggregatedItems.length > uniqueItems.length) alert(`âœ“ è¯†åˆ«å®Œæˆ\nå·²åŽ»é™¤ ${aggregatedItems.length - uniqueItems.length} ä¸ªé‡å¤æŒ‡æ ‡`);
+            if (hasError && uniqueItems.length === 0) alert(`⚠️ AI识别失败\n${errorDetail}\n\n请手动填写数据。`);
+            else if (uniqueItems.length === 0) alert(`⚠️ 未能识别到指标数据,请手动填写。`);
+            else if (aggregatedItems.length > uniqueItems.length) alert(`✓ 识别完成\n已去除 ${aggregatedItems.length - uniqueItems.length} 个重复指标`);
           } else {
             setScanEditData({
               date: detectedDate || getLocalDateStr(new Date()),
@@ -1486,88 +1487,88 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
               impression: detectedImpression || ''
             });
             if (!detectedFindings && !detectedImpression) {
-              if (hasError) alert(`âš ï¸ AIè¯†åˆ«å¤±è´¥\n${errorDetail}\n\nè¯·æ‰‹åŠ¨å¡«å†™æ•°æ®ã€‚`);
-              else alert(`âš ï¸ æœªèƒ½è¯†åˆ«åˆ°æŠ¥å‘Šå†…å®¹,è¯·æ‰‹åŠ¨å¡«å†™ã€‚`);
+              if (hasError) alert(`⚠️ AI识别失败\n${errorDetail}\n\n请手动填写数据。`);
+              else alert(`⚠️ 未能识别到报告内容,请手动填写。`);
             }
           }
         } catch (error) {
-          console.error('å¤„ç†æ–‡ä»¶å¤±è´¥:', error);
-          setDebugInfo(prev => prev + `\nå¤„ç†å¤±è´¥: ${error.message}`);
+          console.error('处理文件失败:', error);
+          setDebugInfo(prev => prev + `\n处理失败: ${error.message}`);
           setScanLoading(false);
           if (scanType === 'lab') { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', items: [{ name: '', result: '', unit: '', refRange: '', flag: 'Normal' }] }); } 
           else { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' }); }
-          alert('æ–‡ä»¶å¤„ç†å¤±è´¥: ' + error.message + '\nè¯·æ‰‹åŠ¨å¡«å†™æ•°æ®ã€‚');
+          alert('文件处理失败: ' + error.message + '\n请手动填写数据。');
         }
         e.target.value = '';
       };
 
-      // æ¸²æŸ“å¥åº·æŒ‡æ ‡å›¾æ ‡
+      // 渲染健康指标图标
       const renderVitalIcon = (iconName, size = 20, color = 'currentColor') => {
         const IconComponent = Icons[iconName];
         return IconComponent ? <IconComponent size={size} style={{ color }} /> : null;
       };
 
-      // å¦‚æžœæœªç™»å½•ï¼Œæ˜¾ç¤ºç™»å½•/æ³¨å†Œé¡µé¢
+      // 如果未登录，显示登录/注册页面
       if (!currentUser) {
         return (
           <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-y-auto" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
-            {/* èƒŒæ™¯è£…é¥° */}
+            {/* 背景装饰 */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className="absolute -top-1/2 -left-1/2 w-full h-full rounded-full blur-3xl" style={{backgroundColor: 'rgba(255,255,255,0.05)'}}></div>
               <div className="absolute -bottom-1/2 -right-1/2 w-full h-full rounded-full blur-3xl" style={{backgroundColor: 'rgba(147,51,234,0.1)'}}></div>
             </div>
             
             <div className="relative z-10 flex flex-col min-h-full justify-center p-6 py-12">
-              {/* Logo å’Œæ ‡é¢˜ */}
+              {/* Logo 和标题 */}
               <div className="text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
                   <Icons.Activity size={40} className="text-white"/>
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-2">å¥åº·ç®¡å®¶</h1>
-                <p className="text-sm" style={{color: 'rgba(255,255,255,0.7)'}}>æ‚¨çš„ç§äººå¥åº·æ•°æ®ç®¡ç†åŠ©æ‰‹</p>
+                <h1 className="text-3xl font-bold text-white mb-2">健康管家</h1>
+                <p className="text-sm" style={{color: 'rgba(255,255,255,0.7)'}}>您的私人健康数据管理助手</p>
               </div>
               
-              {/* ç™»å½•/æ³¨å†Œè¡¨å• */}
+              {/* 登录/注册表单 */}
               <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
                 <div className="flex mb-6">
                   <button 
                     onClick={() => { setIsLoginMode(true); setLoginError(''); }}
                     className={`flex-1 py-2 text-center font-bold rounded-l-xl transition-all ${isLoginMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}
                   >
-                    ç™»å½•
+                    登录
                   </button>
                   <button 
                     onClick={() => { setIsLoginMode(false); setLoginError(''); }}
                     className={`flex-1 py-2 text-center font-bold rounded-r-xl transition-all ${!isLoginMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}
                   >
-                    æ³¨å†Œ
+                    注册
                   </button>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">ç”¨æˆ·å</label>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">用户名</label>
                     <input 
                       type="text" 
                       value={loginForm.username} 
                       onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
-                      placeholder="è¯·è¾“å…¥ç”¨æˆ·å"
+                      placeholder="请输入用户名"
                       autoComplete="username"
                       className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">å¯†ç </label>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">密码</label>
                     <input 
                       type="password" 
                       value={loginForm.password} 
                       onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
-                      placeholder={isLoginMode ? "è¯·è¾“å…¥å¯†ç " : "è‡³å°‘6ä½"}
+                      placeholder={isLoginMode ? "请输入密码" : "至少6位"}
                       autoComplete={isLoginMode ? "current-password" : "new-password"}
                       className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
-                    {/* å¯†ç å¼ºåº¦æŒ‡ç¤ºå™¨ - ä»…æ³¨å†Œæ—¶æ˜¾ç¤º */}
+                    {/* 密码强度指示器 - 仅注册时显示 */}
                     {!isLoginMode && loginForm.password && (
                       <div className="mt-2">
                         <div className="flex items-center gap-2">
@@ -1586,16 +1587,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   
                   {!isLoginMode && (
                     <div>
-                      <label className="text-sm font-medium text-gray-600 mb-1 block">ç¡®è®¤å¯†ç </label>
+                      <label className="text-sm font-medium text-gray-600 mb-1 block">确认密码</label>
                       <input 
                         type="password" 
                         value={loginForm.confirmPassword} 
                         onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
-                        placeholder="è¯·å†æ¬¡è¾“å…¥å¯†ç "
+                        placeholder="请再次输入密码"
                         className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
                       />
                       {loginForm.confirmPassword && loginForm.password !== loginForm.confirmPassword && (
-                        <p className="text-xs text-red-500 mt-1">ä¸¤æ¬¡å¯†ç ä¸ä¸€è‡´</p>
+                        <p className="text-xs text-red-500 mt-1">两次密码不一致</p>
                       )}
                     </div>
                   )}
@@ -1612,48 +1613,48 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
                   >
                     {loginLoading ? (
-                      <><span className="animate-spin">â³</span> å¤„ç†ä¸­...</>
+                      <><span className="animate-spin">⏳</span> 处理中...</>
                     ) : (
-                      <><Icons.LogIn size={18}/> {isLoginMode ? 'ç™»å½•' : 'æ³¨å†Œ'}</>
+                      <><Icons.LogIn size={18}/> {isLoginMode ? '登录' : '注册'}</>
                     )}
                   </button>
                 </div>
               </div>
               
-              {/* åŠŸèƒ½äº®ç‚¹ */}
+              {/* 功能亮点 */}
               <div className="flex justify-center gap-6 text-xs" style={{color: 'rgba(255,255,255,0.8)'}}>
                 <div className="flex items-center gap-1">
-                  <Icons.Cloud size={14}/> äº‘ç«¯åŒæ­¥
+                  <Icons.Cloud size={14}/> 云端同步
                 </div>
                 <div className="flex items-center gap-1">
-                  <Icons.Users size={14}/> å¤šæˆå‘˜
+                  <Icons.Users size={14}/> 多成员
                 </div>
                 <div className="flex items-center gap-1">
-                  <Icons.ScanLine size={14}/> AIè¯†åˆ«
+                  <Icons.ScanLine size={14}/> AI识别
                 </div>
               </div>
               
-              {/* å¼€å‘æ¨¡å¼å…¥å£ - å°†æ¥åˆ é™¤æ­¤æŒ‰é’®å³å¯ç§»é™¤ */}
+              {/* 开发模式入口 - 将来删除此按钮即可移除 */}
               <button 
                 onClick={() => {
-                  setCurrentUser({ username: 'å¼€å‘æ¨¡å¼', objectId: 'dev' });
+                  setCurrentUser({ username: '开发模式', objectId: 'dev' });
                   setSessionToken(null);
                 }}
                 className="mt-4 text-xs text-white/40 hover:text-white/60 transition-colors"
               >
-                å¼€å‘æ¨¡å¼ â†’
+                开发模式 →
               </button>
               
-              {/* ç‰ˆæœ¬å· */}
+              {/* 版本号 */}
               <div className="text-center pt-6 text-xs" style={{color: 'rgba(255,255,255,0.4)'}}>
-                å¥åº·ç®¡å®¶ Pro {VERSION}
+                健康管家 Pro {VERSION}
               </div>
             </div>
           </div>
         );
       }
 
-      // å·²ç™»å½•ï¼Œæ˜¾ç¤ºä¸»ç•Œé¢
+      // 已登录，显示主界面
       return (
         <div className="w-full max-w-md mx-auto bg-slate-50 h-full flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
           {/* Header */}
@@ -1661,23 +1662,23 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="flex items-center gap-2">
               <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); setShowMemberMenu(false); }} className="bg-indigo-600 p-2 rounded-full border border-indigo-500"><Icons.Menu size={18}/></button>
               <h1 className="text-base font-bold flex items-center gap-1.5">
-                <Icons.Activity size={18}/> å¥åº·ç®¡å®¶ 
+                <Icons.Activity size={18}/> 健康管家 
                 <span className="text-xs font-normal opacity-70">{VERSION}</span>
-                {currentUser?.objectId === 'dev' && <span className="text-[10px] bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-bold">å¼€å‘</span>}
+                {currentUser?.objectId === 'dev' && <span className="text-[10px] bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-bold">开发</span>}
               </h1>
-              {/* äº‘åŒæ­¥çŠ¶æ€ */}
+              {/* 云同步状态 */}
               {currentUser?.objectId !== 'dev' && (
                 <button 
                   onClick={() => saveToCloud()} 
                   className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
-                  title={!isOnline ? 'ç¦»çº¿ä¸­' : syncStatus === 'synced' ? 'å·²åŒæ­¥' : syncStatus === 'syncing' ? 'åŒæ­¥ä¸­...' : syncStatus === 'error' ? 'åŒæ­¥å¤±è´¥,ç‚¹å‡»é‡è¯•' : 'ç‚¹å‡»åŒæ­¥'}
+                  title={!isOnline ? '离线中' : syncStatus === 'synced' ? '已同步' : syncStatus === 'syncing' ? '同步中...' : syncStatus === 'error' ? '同步失败,点击重试' : '点击同步'}
                 >
                   {!isOnline ? <Icons.CloudOff size={14} className="text-yellow-300"/> : syncStatus === 'error' ? <Icons.CloudOff size={14} className="text-red-300"/> : <Icons.Cloud size={14} className={syncStatus === 'synced' ? 'text-green-300' : 'text-white/60'}/>}
                 </button>
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* æˆå‘˜åˆ‡æ¢æŒ‰é’® */}
+              {/* 成员切换按钮 */}
               <button 
                 type="button" 
                 onClick={(e) => { e.stopPropagation(); setShowMemberMenu(!showMemberMenu); setShowMenu(false); }} 
@@ -1698,16 +1699,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     }
                   }} 
                   className={`p-2 rounded-full transition-all ${selectedTrendItems.length > 0 ? 'bg-white text-indigo-700 shadow-lg' : 'bg-indigo-500/50 text-indigo-300 cursor-not-allowed'}`}
-                  title={selectedTrendItems.length > 0 ? `æŸ¥çœ‹è¶‹åŠ¿åˆ†æž (å·²é€‰${selectedTrendItems.length}é¡¹)` : 'è¯·å…ˆé€‰æ‹©æŒ‡æ ‡'}
+                  title={selectedTrendItems.length > 0 ? `查看趋势分析 (已选${selectedTrendItems.length}项)` : '请先选择指标'}
                 >
                   <Icons.BarChart2 size={18}/>
                 </button>
               )}
               {activeTab === 'plan' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
-              {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'æ— å…³',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'appointment' && <button onClick={() => { setEditingId(null); setCheckupInput({date:'',items:'',notes:''}); setShowCheckupForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'catalog' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
-              {activeTab === 'catalog' && <button onClick={() => { setEditingId(null); setCatalogInput({name:'',brand:'',dosageForm:'ç‰‡å‰‚',price:'',strength:'',unit:'mg',packageSize:''}); setShowCatalogForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'catalog' && <button onClick={() => { setEditingId(null); setCatalogInput({name:'',brand:'',dosageForm:'片剂',price:'',strength:'',unit:'mg',packageSize:''}); setShowCatalogForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'labs' && <button onClick={() => { setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.ScanLine size={20}/></button>}
               {activeTab === 'imaging' && <button onClick={() => { setScanType('imaging'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.ScanLine size={20}/></button>}
               {activeTab === 'vitals' && <button onClick={() => { setEditingId(null); setVitalsInput({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' }); setShowVitalsForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
@@ -1717,36 +1718,36 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Menu */}
           {showMenu && (
             <div className="absolute left-4 top-20 w-48 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
-              <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl">ç³»ç»Ÿèœå•</div>
+              <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl">系统菜单</div>
               <div className="px-4 py-2 text-xs text-gray-500 border-b flex items-center gap-2">
                 <Icons.User size={14}/> {currentUser?.username}
                 {currentUser?.objectId === 'dev' ? (
-                  <span className="text-yellow-600 text-[10px] bg-yellow-50 px-1.5 py-0.5 rounded">å¼€å‘æ¨¡å¼</span>
+                  <span className="text-yellow-600 text-[10px] bg-yellow-50 px-1.5 py-0.5 rounded">开发模式</span>
                 ) : syncStatus === 'synced' && (
-                  <span className="text-green-500 text-[10px]">â— å·²åŒæ­¥</span>
+                  <span className="text-green-500 text-[10px]">● 已同步</span>
                 )}
               </div>
               {currentUser?.objectId !== 'dev' && (
                 <>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> åŒæ­¥åˆ°äº‘ç«¯</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); loadFromCloud(currentUser.objectId, sessionToken); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> ä»Žäº‘ç«¯æ¢å¤</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 同步到云端</button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); loadFromCloud(currentUser.objectId, sessionToken); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
                   <div className="border-t"></div>
                 </>
               )}
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> å¤‡ä»½åˆ°æœ¬åœ°</button>
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> ä»Žæœ¬åœ°æ¢å¤</button>
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDictionaryModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-t"><Icons.Library size={16}/> åŒ»å­¦æŒ‡æ ‡è¯å…¸</button>
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Settings size={16}/> è®¾ç½®</button>
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> é€€å‡ºç™»å½•</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 备份到本地</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> 从本地恢复</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDictionaryModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-t"><Icons.Library size={16}/> 医学指标词典</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Settings size={16}/> 设置</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> 退出登录</button>
             </div>
           )}
           
-          {/* æˆå‘˜åˆ‡æ¢ä¸‹æ‹‰èœå• */}
+          {/* 成员切换下拉菜单 */}
           {showMemberMenu && (
             <div className="absolute right-4 top-20 w-56 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
               <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl flex justify-between items-center">
-                <span>åˆ‡æ¢æˆå‘˜</span>
-                <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded">{members.length}äºº</span>
+                <span>切换成员</span>
+                <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded">{members.length}人</span>
               </div>
               <div className="max-h-60 overflow-y-auto">
                 {members.map(member => {
@@ -1777,14 +1778,14 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   onClick={() => { setEditingMember(null); setMemberInput({ name: '', relation: '', color: 'indigo' }); setShowMemberForm(true); setShowMemberMenu(false); }}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-indigo-600 font-medium"
                 >
-                  <Icons.UserPlus size={16}/> æ·»åŠ æˆå‘˜
+                  <Icons.UserPlus size={16}/> 添加成员
                 </button>
                 <button 
                   type="button" 
                   onClick={() => { setEditingMember(currentMember); setMemberInput({ name: currentMember.name, relation: currentMember.relation, color: currentMember.color }); setShowMemberForm(true); setShowMemberMenu(false); }}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-gray-600 rounded-b-xl"
                 >
-                  <Icons.Edit size={16}/> ç¼–è¾‘å½“å‰æˆå‘˜
+                  <Icons.Edit size={16}/> 编辑当前成员
                 </button>
               </div>
             </div>
@@ -1792,7 +1793,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
 
           {/* Tab Bar */}
           <div className="bg-white border-b flex p-1 shrink-0 overflow-x-auto">
-            {[{id:'vitals',label:'æŒ‡æ ‡',Icon:Icons.Heart},{id:'plan',label:'è®¡åˆ’',Icon:Icons.Clock},{id:'catalog',label:'è¯ç®±',Icon:Icons.Library},{id:'labs',label:'æ£€æµ‹',Icon:Icons.FileSpreadsheet},{id:'imaging',label:'æ£€æŸ¥',Icon:Icons.FileImage}].map(tab => (
+            {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'plan',label:'计划',Icon:Icons.Clock},{id:'catalog',label:'药箱',Icon:Icons.Library},{id:'labs',label:'检测',Icon:Icons.FileSpreadsheet},{id:'imaging',label:'检查',Icon:Icons.FileImage}].map(tab => (
               <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); setShowMenu(false); }} className={`flex-1 min-w-[60px] py-3 text-xs font-bold flex flex-col items-center gap-1 border-b-2 transition-colors ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400'}`}>
                 <tab.Icon size={18}/>{tab.label}
               </button>
@@ -1802,16 +1803,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto p-4 bg-slate-50" onClick={() => setShowMenu(false)}>
             
-            {/* Vitals Tab - å¥åº·æŒ‡æ ‡ */}
+            {/* Vitals Tab - 健康指标 */}
             {activeTab === 'vitals' && (
               <div className="space-y-4">
-                {/* æŒ‡æ ‡ç±»åž‹ç­›é€‰ */}
+                {/* 指标类型筛选 */}
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   <button 
                     onClick={() => setSelectedVitalType(null)} 
                     className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${selectedVitalType === null ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border'}`}
                   >
-                    å…¨éƒ¨
+                    全部
                   </button>
                   {VITAL_TYPES.map(type => (
                     <button 
@@ -1826,7 +1827,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   ))}
                 </div>
 
-                {/* æŒ‡æ ‡æ¦‚è§ˆå¡ç‰‡ */}
+                {/* 指标概览卡片 */}
                 {selectedVitalType === null && (
                   <div className="grid grid-cols-2 gap-3">
                     {VITAL_TYPES.map(type => {
@@ -1854,7 +1855,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                               <div className="text-xs text-gray-400 mt-1">{latest.date} {latest.time}</div>
                             </>
                           ) : (
-                            <div className="text-sm text-gray-400">æš‚æ— æ•°æ®</div>
+                            <div className="text-sm text-gray-400">暂无数据</div>
                           )}
                         </div>
                       );
@@ -1862,7 +1863,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   </div>
                 )}
 
-                {/* æŒ‡æ ‡è¯¦ç»†åˆ—è¡¨ */}
+                {/* 指标详细列表 */}
                 {selectedVitalType !== null && (() => {
                   const type = VITAL_TYPES.find(t => t.id === selectedVitalType);
                   const filteredVitals = vitals.filter(v => v.type === selectedVitalType).sort((a, b) => {
@@ -1872,33 +1873,33 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   });
                   return (
                     <>
-                      {/* è¯¦æƒ…å¤´éƒ¨ */}
+                      {/* 详情头部 */}
                       <div className="bg-white p-4 rounded-xl shadow-sm border" style={{ borderLeft: `4px solid ${type.color}` }}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             {renderVitalIcon(type.icon, 24, type.color)}
                             <div>
                               <div className="font-bold text-lg">{type.name}</div>
-                              <div className="text-xs text-gray-400">å‚è€ƒèŒƒå›´: {type.normalRange} {type.unit}</div>
+                              <div className="text-xs text-gray-400">参考范围: {type.normalRange} {type.unit}</div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-xs text-gray-400">å…± {filteredVitals.length} æ¡è®°å½•</div>
+                            <div className="text-xs text-gray-400">共 {filteredVitals.length} 条记录</div>
                           </div>
                         </div>
                       </div>
 
-                      {/* è¶‹åŠ¿å›¾ */}
+                      {/* 趋势图 */}
                       {filteredVitals.length >= 2 && (
                         <VitalTrendChart data={filteredVitals} type={type} showDays={30} />
                       )}
 
 
-                      {/* è®°å½•åˆ—è¡¨ */}
+                      {/* 记录列表 */}
                       {filteredVitals.length === 0 ? (
                         <div className="text-center text-gray-400 mt-8">
                           <div className="opacity-20 mx-auto mb-2 w-12">{renderVitalIcon(type.icon, 48)}</div>
-                          <p>æš‚æ— {type.name}è®°å½•</p>
+                          <p>暂无{type.name}记录</p>
                           <button 
                             onClick={() => { 
                               setEditingId(null); 
@@ -1907,7 +1908,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                             }} 
                             className="mt-3 text-indigo-600 text-sm font-medium"
                           >
-                            + æ·»åŠ è®°å½•
+                            + 添加记录
                           </button>
                         </div>
                       ) : (
@@ -1940,14 +1941,14 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   );
                 })()}
 
-                {/* å…¨éƒ¨è§†å›¾ä¸‹çš„åŽ†å²è®°å½• */}
+                {/* 全部视图下的历史记录 */}
                 {selectedVitalType === null && (
                   <>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase mt-4 mb-2">æœ€è¿‘è®°å½•</h3>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase mt-4 mb-2">最近记录</h3>
                     {vitals.length === 0 ? (
                       <div className="text-center text-gray-400 mt-8">
                         <div className="opacity-20 mx-auto mb-2 w-12"><Icons.Heart size={48}/></div>
-                        <p>æš‚æ— å¥åº·æŒ‡æ ‡è®°å½•</p>
+                        <p>暂无健康指标记录</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -2000,10 +2001,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="font-bold text-lg mb-1">{m.name}</div>
-                          <div className="text-sm text-gray-500">{m.startTime} å¼€å§‹ | {m.relation}</div>
+                          <div className="text-sm text-gray-500">{m.startTime} 开始 | {m.relation}</div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}å¤©` : 'é•¿æœŸ'}</span>
+                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}</span>
                           <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
                         </div>
                       </div>
@@ -2019,10 +2020,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                           <div className="font-bold text-lg mb-1">{m.name}</div>
                           {catalogItem && (<div className="text-xs text-gray-500 mb-2">{catalogItem.brand && <span className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded mr-2">{catalogItem.brand}</span>}<span>{catalogItem.strength}{catalogItem.unit}</span></div>)}
                           <div className="text-sm text-gray-700 font-medium mb-1">{m.method}</div>
-                          <div className="text-xs text-gray-400">å¼€å§‹: {m.startTime} {m.endTime && `-> ç»“æŸ: ${m.endTime}`}</div>
+                          <div className="text-xs text-gray-400">开始: {m.startTime} {m.endTime && `-> 结束: ${m.endTime}`}</div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}å¤©å‰©ä½™` : 'é•¿æœŸ'}</span>
+                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天剩余` : '长期'}</span>
                           <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
                         </div>
                       </div>
@@ -2032,7 +2033,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 )}
                 {endedMeds.length > 0 && (
                   <div className="mt-6">
-                    <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer hover:text-indigo-600">{isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} å·²ç»“æŸ ({endedMeds.length})</div>
+                    <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer hover:text-indigo-600">{isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} 已结束 ({endedMeds.length})</div>
                     {isEndedExpanded && endedMeds.map(m => (
                       <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70 hover:opacity-100 hover:shadow-md cursor-pointer transition-all relative">
                         <div className="font-medium text-gray-700">{m.name}</div>
@@ -2042,7 +2043,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     ))}
                   </div>
                 )}
-                {meds.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div><p>æš‚æ— æœè¯è®¡åˆ’</p></div>}
+                {meds.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div><p>暂无服药计划</p></div>}
               </>
             )}
 
@@ -2054,8 +2055,8 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     <div key={i.id} onClick={() => { setCatalogInput({...i}); setEditingId(i.id); setShowCatalogForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow relative">
                       <div className="font-bold text-base mb-1">{i.name}</div>
                       {i.brand && <div className="text-xs text-indigo-600 mb-1">{i.brand}</div>}
-                      <div className="text-sm text-gray-500">{i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{i.dosageForm}</span>}{i.strength}{i.unit}{i.packageSize && <span className="text-gray-400"> Ã—{i.packageSize}</span>}</div>
-                      {i.price && <div className="text-sm font-bold text-green-600 mt-1">Â¥{i.price}</div>}
+                      <div className="text-sm text-gray-500">{i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{i.dosageForm}</span>}{i.strength}{i.unit}{i.packageSize && <span className="text-gray-400"> ×{i.packageSize}</span>}</div>
+                      {i.price && <div className="text-sm font-bold text-green-600 mt-1">¥{i.price}</div>}
                       <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
                     </div>
                   ))}
@@ -2069,10 +2070,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                         <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
                           {i.brand && <span className="text-indigo-600 font-medium">{i.brand}</span>}
                           {i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{i.dosageForm}</span>}
-                          <span>{i.strength}{i.unit}{i.packageSize && ` Ã—${i.packageSize}`}</span>
+                          <span>{i.strength}{i.unit}{i.packageSize && ` ×${i.packageSize}`}</span>
                         </div>
                       </div>
-                      {i.price && <div className="text-base font-bold text-green-600">Â¥{i.price}</div>}
+                      {i.price && <div className="text-base font-bold text-green-600">¥{i.price}</div>}
                     </div>
                     <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-4 right-4 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
                   </div>
@@ -2083,7 +2084,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             {/* Labs Tab */}
             {activeTab === 'labs' && (
               <div className="space-y-3 pb-24">
-                {labReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div><p>æš‚æ— æ£€æµ‹æŠ¥å‘Š</p></div>}
+                {labReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div><p>暂无检测报告</p></div>}
                 {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
                   const isExpanded = expandedReports[report.id];
                   const abnormalCount = report.items.filter(i => i.flag !== 'Normal').length;
@@ -2097,11 +2098,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                         <div className="flex items-center gap-2">
                           {abnormalCount > 0 ? (
                             <div className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded flex items-center gap-1">
-                              <Icons.AlertTriangle size={12}/>{abnormalCount}é¡¹
+                              <Icons.AlertTriangle size={12}/>{abnormalCount}项
                             </div>
                           ) : (
                             <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
-                              <Icons.Check size={12}/>æ­£å¸¸
+                              <Icons.Check size={12}/>正常
                             </div>
                           )}
                           <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setEditingId(report.id); setScanEditData({...report}); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
@@ -2127,8 +2128,8 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                                 </div>
                                 <div className="flex items-center gap-0.5 shrink-0">
                                   <span className={`text-sm ${item.flag !== 'Normal' ? 'font-bold ' + flagColor : 'font-normal text-slate-700'}`}>{item.result}</span>
-                                  {item.flag === 'High' && <span className={`${flagColor} text-xs font-bold`}>â†‘</span>}
-                                  {item.flag === 'Low' && <span className={`${flagColor} text-xs font-bold`}>â†“</span>}
+                                  {item.flag === 'High' && <span className={`${flagColor} text-xs font-bold`}>↑</span>}
+                                  {item.flag === 'Low' && <span className={`${flagColor} text-xs font-bold`}>↓</span>}
                                 </div>
                               </div>
                               );
@@ -2144,7 +2145,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             {/* Imaging Tab */}
             {activeTab === 'imaging' && (
               <div className="space-y-3 pb-24">
-                {imagingReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileImage size={48}/></div><p>æš‚æ— æ£€æŸ¥æŠ¥å‘Š</p></div>}
+                {imagingReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileImage size={48}/></div><p>暂无检查报告</p></div>}
                 {imagingReports.map(report => {
                   const isExpanded = expandedImaging[report.id];
                   return (
@@ -2152,7 +2153,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       <div onClick={() => setExpandedImaging(p => ({...p, [report.id]: !p[report.id]}))} className="bg-slate-50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition-colors">
                         <div>
                           <div className="flex items-center gap-2"><span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{report.modality}</span><span className="font-bold text-sm">{report.region}</span></div>
-                          <div className="text-xs text-gray-500 mt-1">{report.date} â€¢ {report.hospital}</div>
+                          <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
                         </div>
                         <div className="flex items-center gap-3">
                           <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setEditingId(report.id); setScanEditData({...report}); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
@@ -2161,8 +2162,8 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       </div>
                       {isExpanded && (
                         <div className="p-4 text-sm">
-                          <div className="mb-4"><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">å½±åƒæ‰€è§</h4><p className="text-gray-700">{report.findings}</p></div>
-                          <div><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">è¯Šæ–­æ„è§</h4><p className="bg-indigo-50 p-3 rounded-lg font-medium text-indigo-900">{report.impression}</p></div>
+                          <div className="mb-4"><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">影像所见</h4><p className="text-gray-700">{report.findings}</p></div>
+                          <div><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">诊断意见</h4><p className="bg-indigo-50 p-3 rounded-lg font-medium text-indigo-900">{report.impression}</p></div>
                         </div>
                       )}
                     </div>
@@ -2172,18 +2173,18 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             )}
           </main>
 
-          {/* Vitals Form Modal - å¥åº·æŒ‡æ ‡å½•å…¥ */}
+          {/* Vitals Form Modal - 健康指标录入 */}
           {showVitalsForm && (
             <div className="absolute inset-0 z-50 bg-white flex flex-col">
               <div className="p-4 border-b flex justify-between items-center">
                 <button onClick={() => { setShowVitalsForm(false); setEditingId(null); }} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button>
-                <h3 className="font-bold">{editingId ? 'ç¼–è¾‘è®°å½•' : 'è®°å½•å¥åº·æŒ‡æ ‡'}</h3>
+                <h3 className="font-bold">{editingId ? '编辑记录' : '记录健康指标'}</h3>
                 <button onClick={saveVitals} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button>
               </div>
               <div className="flex-1 p-5 overflow-y-auto">
-                {/* æŒ‡æ ‡ç±»åž‹é€‰æ‹© */}
+                {/* 指标类型选择 */}
                 <div className="mb-5">
-                  <label className="text-xs font-bold text-gray-500 block mb-2">æŒ‡æ ‡ç±»åž‹</label>
+                  <label className="text-xs font-bold text-gray-500 block mb-2">指标类型</label>
                   <div className="grid grid-cols-3 gap-2">
                     {VITAL_TYPES.map(type => (
                       <button 
@@ -2199,12 +2200,12 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   </div>
                 </div>
 
-                {/* æ•°å€¼è¾“å…¥ */}
+                {/* 数值输入 */}
                 {(() => {
                   const currentType = VITAL_TYPES.find(t => t.id === vitalsInput.type);
                   return (
                     <div className="mb-5">
-                      <label className="text-xs font-bold text-gray-500 block mb-2">æ•°å€¼ ({currentType?.unit})</label>
+                      <label className="text-xs font-bold text-gray-500 block mb-2">数值 ({currentType?.unit})</label>
                       {currentType?.hasTwo ? (
                         <div className="flex items-center gap-3">
                           <div className="flex-1">
@@ -2239,35 +2240,35 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                           placeholder={currentType?.id === 'weight' ? '65.5' : currentType?.id === 'temperature' ? '36.5' : '70'}
                         />
                       )}
-                      <div className="text-xs text-gray-400 text-center mt-2">å‚è€ƒèŒƒå›´: {currentType?.normalRange} {currentType?.unit}</div>
+                      <div className="text-xs text-gray-400 text-center mt-2">参考范围: {currentType?.normalRange} {currentType?.unit}</div>
                     </div>
                   );
                 })()}
 
-                {/* æ—¥æœŸæ—¶é—´ */}
+                {/* 日期时间 */}
                 <div className="mb-5 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">æ—¥æœŸ</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">日期</label>
                     <input type="date" value={vitalsInput.date} onChange={e => setVitalsInput({...vitalsInput, date: e.target.value})} className="w-full p-3 border rounded-xl"/>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">æ—¶é—´</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">时间</label>
                     <input type="time" value={vitalsInput.time} onChange={e => setVitalsInput({...vitalsInput, time: e.target.value})} className="w-full p-3 border rounded-xl"/>
                   </div>
                 </div>
 
-                {/* å¤‡æ³¨ */}
+                {/* 备注 */}
                 <div className="mb-5">
-                  <label className="text-xs font-bold text-gray-500 block mb-2">å¤‡æ³¨ (å¯é€‰)</label>
+                  <label className="text-xs font-bold text-gray-500 block mb-2">备注 (可选)</label>
                   <input 
                     value={vitalsInput.note} 
                     onChange={e => setVitalsInput({...vitalsInput, note: e.target.value})} 
                     className="w-full p-3 border rounded-xl" 
-                    placeholder="å¦‚: æ™¨èµ·ã€é¤åŽã€è¿åŠ¨åŽ..."
+                    placeholder="如: 晨起、餐后、运动后..."
                   />
                 </div>
 
-                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> åˆ é™¤</button>}
+                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> 删除</button>}
               </div>
             </div>
           )}
@@ -2275,18 +2276,18 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Med Form Modal */}
           {showMedForm && (
             <div className="absolute inset-0 z-50 bg-white flex flex-col">
-              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowMedForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">è®¾ç½®æœè¯è®¡åˆ’</h3><button onClick={saveMedPlan} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
+              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowMedForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">设置服药计划</h3><button onClick={saveMedPlan} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
               <div className="flex-1 p-5 overflow-y-auto">
-                {/* è¯ç‰©åç§° - æœç´¢è¯ç®± */}
-                {/* è¯ç‰©åç§° - æœç´¢è¯ç®± */}
+                {/* 药物名称 - 搜索药箱 */}
+                {/* 药物名称 - 搜索药箱 */}
                 <div className="mb-4">
-                  <label className="text-xs font-bold text-gray-500 block mb-2">è¯ç‰©åç§°</label>
+                  <label className="text-xs font-bold text-gray-500 block mb-2">药物名称</label>
                   <div className="relative">
                     <input 
                       value={medInput.name} 
                       onChange={e => setMedInput({...medInput, name: e.target.value})} 
                       className="w-full p-4 pr-12 bg-gray-50 border rounded-xl" 
-                      placeholder="è¾“å…¥è¯åæˆ–ä»Žè¯ç®±é€‰æ‹©..."
+                      placeholder="输入药名或从药箱选择..."
                     />
                     <select 
                       value="" 
@@ -2294,30 +2295,30 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 opacity-0 cursor-pointer"
                       style={{fontSize: '16px'}}
                     >
-                      <option value="">é€‰æ‹©</option>
+                      <option value="">选择</option>
                       {catalog.map(c => <option key={c.id} value={c.name}>{c.name}{c.brand ? ` (${c.brand})` : ''}</option>)}
                     </select>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                       <Icons.ChevronDown size={20}/>
                     </div>
                   </div>
-                  {catalog.length > 0 && <p className="text-xs text-gray-400 mt-1">è¯ç®±ä¸­æœ‰ {catalog.length} ç§è¯å“å¯é€‰</p>}
+                  {catalog.length > 0 && <p className="text-xs text-gray-400 mt-1">药箱中有 {catalog.length} 种药品可选</p>}
                 </div>
 
-                {/* æœè¯å‘¨æœŸ */}
+                {/* 服药周期 */}
                 <div className="mb-4">
-                  <label className="text-xs font-bold text-gray-500 block mb-2">æœè¯å‘¨æœŸ</label>
+                  <label className="text-xs font-bold text-gray-500 block mb-2">服药周期</label>
                   <div className="bg-white border rounded-xl p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm font-medium">å¼€å§‹æ—¥æœŸ</span>
+                      <span className="text-sm font-medium">开始日期</span>
                       <input type="date" value={medInput.startTime} onChange={e => setMedInput({...medInput, startTime: e.target.value})} className="p-2 border rounded-lg text-sm"/>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">ç»“æŸæ—¥æœŸ</span>
+                      <span className="text-sm font-medium">结束日期</span>
                       <div className="flex items-center gap-2">
                         <div className="flex bg-gray-100 p-1 rounded-lg">
-                          <button onClick={() => setMedInput({...medInput, isLongTerm: true, endTime: ''})} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${medInput.isLongTerm ? 'bg-white text-indigo-600 shadow' : 'text-gray-500'}`}>é•¿æœŸ</button>
-                          <button onClick={() => setMedInput({...medInput, isLongTerm: false})} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${!medInput.isLongTerm ? 'bg-white text-indigo-600 shadow' : 'text-gray-500'}`}>å…·ä½“æ—¥æœŸ</button>
+                          <button onClick={() => setMedInput({...medInput, isLongTerm: true, endTime: ''})} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${medInput.isLongTerm ? 'bg-white text-indigo-600 shadow' : 'text-gray-500'}`}>长期</button>
+                          <button onClick={() => setMedInput({...medInput, isLongTerm: false})} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${!medInput.isLongTerm ? 'bg-white text-indigo-600 shadow' : 'text-gray-500'}`}>具体日期</button>
                         </div>
                         {!medInput.isLongTerm && <input type="date" value={medInput.endTime} onChange={e => setMedInput({...medInput, endTime: e.target.value})} className="p-2 border rounded-lg text-sm"/>}
                       </div>
@@ -2325,11 +2326,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   </div>
                 </div>
 
-                {/* é¢‘æ¬¡å’Œç”¨é‡ */}
+                {/* 频次和用量 */}
                 <div className="mb-4 bg-white border rounded-xl p-4">
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                      <label className="text-xs text-gray-500 block mb-2">æ¯æ—¥é¢‘æ¬¡</label>
+                      <label className="text-xs text-gray-500 block mb-2">每日频次</label>
                       <div className="flex items-center border rounded-xl bg-white overflow-hidden">
                         <button type="button" onClick={() => setMedInput({...medInput, frequency: String(Math.max(1, parseInt(medInput.frequency||1) - 1))})} className="shrink-0 w-11 h-11 flex items-center justify-center bg-gray-50 active:bg-gray-200 text-gray-600 font-bold text-xl border-r">-</button>
                         <div className="flex-1 h-11 flex items-center justify-center">
@@ -2339,7 +2340,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 block mb-2">æ¯æ¬¡ç”¨é‡</label>
+                      <label className="text-xs text-gray-500 block mb-2">每次用量</label>
                       <div className="flex items-center border rounded-xl bg-white overflow-hidden">
                         <button type="button" onClick={() => setMedInput({...medInput, dosagePerTime: String(Math.max(0.5, parseFloat(medInput.dosagePerTime||1) - 0.5))})} className="shrink-0 w-11 h-11 flex items-center justify-center bg-gray-50 active:bg-gray-200 text-gray-600 font-bold text-xl border-r">-</button>
                         <div className="flex-1 h-11 flex items-center justify-center">
@@ -2350,9 +2351,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     </div>
                   </div>
 
-                  {/* å»ºè®®æœç”¨æ—¶æ®µ */}
+                  {/* 建议服用时段 */}
                   <div className="mb-4">
-                    <label className="text-xs text-gray-500 block mb-2">å»ºè®®æœç”¨æ—¶æ®µ</label>
+                    <label className="text-xs text-gray-500 block mb-2">建议服用时段</label>
                     <div className="grid grid-cols-4 gap-2">
                       {TIME_PERIODS.map(t => {
                         const isSelected = (medInput.timePeriods || []).includes(t);
@@ -2373,9 +2374,9 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     </div>
                   </div>
 
-                  {/* ç”¨é¤å…³ç³» */}
+                  {/* 用餐关系 */}
                   <div>
-                    <label className="text-xs text-gray-500 block mb-2">ç”¨é¤å…³ç³»</label>
+                    <label className="text-xs text-gray-500 block mb-2">用餐关系</label>
                     <div className="flex bg-gray-100 p-1 rounded-xl">
                       {RELATIONS.map(r => (
                         <button 
@@ -2390,12 +2391,12 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   </div>
                 </div>
 
-                {/* å¾ªçŽ¯ç”¨è¯ */}
+                {/* 循环用药 */}
                 <div className={`mb-4 rounded-xl p-4 border-2 transition-all ${medInput.cycleEnabled ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-white'}`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Icons.RefreshCw size={16} className={medInput.cycleEnabled ? 'text-green-600' : 'text-gray-400'}/>
-                      <span className={`text-sm font-bold ${medInput.cycleEnabled ? 'text-green-700' : 'text-gray-600'}`}>å¾ªçŽ¯ç”¨è¯ (å¯é€‰)</span>
+                      <span className={`text-sm font-bold ${medInput.cycleEnabled ? 'text-green-700' : 'text-gray-600'}`}>循环用药 (可选)</span>
                     </div>
                     <button 
                       onClick={() => setMedInput({...medInput, cycleEnabled: !medInput.cycleEnabled})}
@@ -2407,20 +2408,20 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   {medInput.cycleEnabled && (
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="flex items-center gap-2 bg-white rounded-xl p-3 border">
-                        <span className="text-green-600 font-bold text-sm">æœ</span>
+                        <span className="text-green-600 font-bold text-sm">服</span>
                         <input type="number" value={medInput.cycleDays} onChange={e => setMedInput({...medInput, cycleDays: e.target.value})} className="flex-1 text-center font-bold text-lg" placeholder="7" min="1"/>
-                        <span className="text-gray-400 text-sm">å¤©</span>
+                        <span className="text-gray-400 text-sm">天</span>
                       </div>
                       <div className="flex items-center gap-2 bg-white rounded-xl p-3 border">
-                        <span className="text-gray-500 font-bold text-sm">åœ</span>
+                        <span className="text-gray-500 font-bold text-sm">停</span>
                         <input type="number" value={medInput.cycleRestDays} onChange={e => setMedInput({...medInput, cycleRestDays: e.target.value})} className="flex-1 text-center font-bold text-lg" placeholder="7" min="1"/>
-                        <span className="text-gray-400 text-sm">å¤©</span>
+                        <span className="text-gray-400 text-sm">天</span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> åˆ é™¤</button>}
+                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> 删除</button>}
               </div>
             </div>
           )}
@@ -2428,24 +2429,24 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Catalog Form Modal */}
           {showCatalogForm && (
             <div className="absolute inset-0 z-50 bg-white flex flex-col">
-              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowCatalogForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">ç¼–è¾‘è¯å“</h3><button onClick={saveCatalogItem} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
+              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowCatalogForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">编辑药品</h3><button onClick={saveCatalogItem} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
               <div className="flex-1 p-5 overflow-y-auto">
-                <div className="mb-4 text-xs font-bold text-gray-400 uppercase">åŸºæœ¬ä¿¡æ¯</div>
-                <div className="mb-4"><input value={catalogInput.name} onChange={e => setCatalogInput({...catalogInput, name: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="é€šç”¨åç§° (å¦‚: ç»´ç”Ÿç´ B12)"/></div>
-                <div className="mb-4"><input value={catalogInput.brand} onChange={e => setCatalogInput({...catalogInput, brand: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="å“ç‰Œåç§° (å¯é€‰, å¦‚: Nature Made)"/></div>
+                <div className="mb-4 text-xs font-bold text-gray-400 uppercase">基本信息</div>
+                <div className="mb-4"><input value={catalogInput.name} onChange={e => setCatalogInput({...catalogInput, name: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="通用名称 (如: 维生素B12)"/></div>
+                <div className="mb-4"><input value={catalogInput.brand} onChange={e => setCatalogInput({...catalogInput, brand: e.target.value})} className="w-full p-4 border rounded-xl" placeholder="品牌名称 (可选, 如: Nature Made)"/></div>
                 <div className="mb-4 grid grid-cols-2 gap-3">
-                  <div><label className="text-xs font-bold text-gray-500 block mb-2">å‰‚åž‹</label><select value={catalogInput.dosageForm} onChange={e => setCatalogInput({...catalogInput, dosageForm: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{DOSAGE_FORMS.map(d => <option key={d}>{d}</option>)}</select></div>
-                  <div><label className="text-xs font-bold text-gray-500 block mb-2">å•ä»· (Â¥)</label><input type="number" step="0.01" value={catalogInput.price} onChange={e => setCatalogInput({...catalogInput, price: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="0.00"/></div>
+                  <div><label className="text-xs font-bold text-gray-500 block mb-2">剂型</label><select value={catalogInput.dosageForm} onChange={e => setCatalogInput({...catalogInput, dosageForm: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{DOSAGE_FORMS.map(d => <option key={d}>{d}</option>)}</select></div>
+                  <div><label className="text-xs font-bold text-gray-500 block mb-2">单价 (¥)</label><input type="number" step="0.01" value={catalogInput.price} onChange={e => setCatalogInput({...catalogInput, price: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="0.00"/></div>
                 </div>
                 <div className="mb-4 bg-gray-50 p-4 rounded-xl border">
-                  <div className="mb-3 text-xs font-bold text-gray-500">è§„æ ¼å‚æ•°</div>
+                  <div className="mb-3 text-xs font-bold text-gray-500">规格参数</div>
                   <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="col-span-2"><label className="text-xs text-gray-400 block mb-1">å•ç‰‡å«é‡</label><input type="number" value={catalogInput.strength} onChange={e => setCatalogInput({...catalogInput, strength: e.target.value})} className="w-full p-3 border rounded-xl bg-white" placeholder="500"/></div>
-                    <div><label className="text-xs text-gray-400 block mb-1">å•ä½</label><select value={catalogInput.unit} onChange={e => setCatalogInput({...catalogInput, unit: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{UNITS.map(u => <option key={u}>{u}</option>)}</select></div>
+                    <div className="col-span-2"><label className="text-xs text-gray-400 block mb-1">单片含量</label><input type="number" value={catalogInput.strength} onChange={e => setCatalogInput({...catalogInput, strength: e.target.value})} className="w-full p-3 border rounded-xl bg-white" placeholder="500"/></div>
+                    <div><label className="text-xs text-gray-400 block mb-1">单位</label><select value={catalogInput.unit} onChange={e => setCatalogInput({...catalogInput, unit: e.target.value})} className="w-full p-3 border rounded-xl bg-white">{UNITS.map(u => <option key={u}>{u}</option>)}</select></div>
                   </div>
-                  <div><label className="text-xs text-gray-400 block mb-1">åŒ…è£…æ€»å®¹é‡ (ç”¨äºŽè®¡ç®—ç»­è¯)</label><input type="number" value={catalogInput.packageSize} onChange={e => setCatalogInput({...catalogInput, packageSize: e.target.value})} className="w-full p-3 border rounded-xl bg-white" placeholder="å¦‚: 100 (ç‰‡/ml)"/></div>
+                  <div><label className="text-xs text-gray-400 block mb-1">包装总容量 (用于计算续药)</label><input type="number" value={catalogInput.packageSize} onChange={e => setCatalogInput({...catalogInput, packageSize: e.target.value})} className="w-full p-3 border rounded-xl bg-white" placeholder="如: 100 (片/ml)"/></div>
                 </div>
-                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> åˆ é™¤</button>}
+                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> 删除</button>}
               </div>
             </div>
           )}
@@ -2453,12 +2454,12 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Checkup Form Modal */}
           {showCheckupForm && (
             <div className="absolute inset-0 z-50 bg-white flex flex-col">
-              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowCheckupForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">é¢„çº¦æ£€æŸ¥</h3><button onClick={saveCheckup} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
+              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => setShowCheckupForm(false)} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><h3 className="font-bold">预约检查</h3><button onClick={saveCheckup} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button></div>
               <div className="flex-1 p-5 overflow-y-auto">
-                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">æ£€æŸ¥é¡¹ç›®</label><input value={checkupInput.items} onChange={e => setCheckupInput({...checkupInput, items: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="å¦‚: è¡€å¸¸è§„"/></div>
-                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">æ—¥æœŸæ—¶é—´</label><input type="datetime-local" value={checkupInput.date} onChange={e => setCheckupInput({...checkupInput, date: e.target.value})} className="w-full p-3 border rounded-xl"/></div>
-                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">å¤‡æ³¨</label><textarea value={checkupInput.notes} onChange={e => setCheckupInput({...checkupInput, notes: e.target.value})} className="w-full p-3 border rounded-xl h-24" placeholder="å¦‚: ç©ºè…¹"/></div>
-                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> åˆ é™¤</button>}
+                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">检查项目</label><input value={checkupInput.items} onChange={e => setCheckupInput({...checkupInput, items: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="如: 血常规"/></div>
+                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">日期时间</label><input type="datetime-local" value={checkupInput.date} onChange={e => setCheckupInput({...checkupInput, date: e.target.value})} className="w-full p-3 border rounded-xl"/></div>
+                <div className="mb-4"><label className="text-xs font-bold text-gray-500 block mb-2">备注</label><textarea value={checkupInput.notes} onChange={e => setCheckupInput({...checkupInput, notes: e.target.value})} className="w-full p-3 border rounded-xl h-24" placeholder="如: 空腹"/></div>
+                {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> 删除</button>}
               </div>
             </div>
           )}
@@ -2468,29 +2469,29 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="absolute inset-0 z-50 bg-white flex flex-col">
               <div className="p-4 border-b flex justify-between items-center">
                 <button onClick={() => { setShowScanModal(false); setEditingId(null); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button>
-                <h3 className="font-bold">{editingId ? 'ç¼–è¾‘æŠ¥å‘Š' : (scanType === 'lab' ? 'æ·»åŠ æ£€æµ‹æŠ¥å‘Š' : 'æ·»åŠ æ£€æŸ¥æŠ¥å‘Š')}</h3>
+                <h3 className="font-bold">{editingId ? '编辑报告' : (scanType === 'lab' ? '添加检测报告' : '添加检查报告')}</h3>
                 {scanEditData ? (
                   <button onClick={() => {
                     if (scanType === 'lab') {
-                      // éªŒè¯æ•°æ®
+                      // 验证数据
                       if (!scanEditData.date) {
-                        alert('è¯·å¡«å†™æ£€æŸ¥æ—¥æœŸ');
+                        alert('请填写检查日期');
                         return;
                       }
                       if (!scanEditData.items || scanEditData.items.length === 0) {
-                        alert('è¯·è‡³å°‘æ·»åŠ ä¸€ä¸ªæ£€æµ‹æŒ‡æ ‡');
+                        alert('请至少添加一个检测指标');
                         return;
                       }
                       
-                      // éªŒè¯è‡³å°‘æœ‰ä¸€ä¸ªæŒ‡æ ‡æœ‰åç§°
+                      // 验证至少有一个指标有名称
                       const hasValidItem = scanEditData.items.some(item => item.name && item.name.trim());
                       if (!hasValidItem) {
-                        alert('è¯·è‡³å°‘å¡«å†™ä¸€ä¸ªæŒ‡æ ‡çš„åç§°');
+                        alert('请至少填写一个指标的名称');
                         return;
                       }
                       
                       const itemsWithFlags = scanEditData.items.map(item => ({ ...item, flag: calculateFlag(item.result, item.refRange) }));
-                      // åº”ç”¨è¯å…¸æ ‡å‡†åŒ–
+                      // 应用词典标准化
                       const standardizedReport = applyDictionaryToLabReport(
                         {...scanEditData, items: itemsWithFlags}, 
                         medicalDictionary
@@ -2499,13 +2500,13 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                       if (editingId) setLabReports(labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r));
                       else setLabReports([...labReports, {...standardizedReport, id: Date.now().toString()}]);
                     } else {
-                      // éªŒè¯å½±åƒæŠ¥å‘Šæ•°æ®
+                      // 验证影像报告数据
                       if (!scanEditData.date) {
-                        alert('è¯·å¡«å†™æ£€æŸ¥æ—¥æœŸ');
+                        alert('请填写检查日期');
                         return;
                       }
                       if (!scanEditData.modality && !scanEditData.findings && !scanEditData.impression) {
-                        alert('è¯·è‡³å°‘å¡«å†™æ£€æŸ¥ç±»åž‹ã€å½±åƒæ‰€è§æˆ–è¯Šæ–­æ„è§');
+                        alert('请至少填写检查类型、影像所见或诊断意见');
                         return;
                       }
                       
@@ -2522,19 +2523,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     <input type="file" ref={scanFileRef} onChange={handleScanFileUpload} accept=".jpg,.jpeg,.png,.webp,.pdf" multiple className="hidden"/>
                     <button onClick={() => scanFileRef.current?.click()} className="w-full h-56 border-2 border-dashed border-indigo-300 rounded-2xl bg-indigo-50 hover:bg-indigo-100 transition-colors flex flex-col items-center justify-center gap-3 mb-4">
                       <Icons.Upload size={48} className="text-indigo-400"/>
-                      <span className="text-base font-bold text-indigo-600">ç‚¹å‡»ä¸Šä¼ {scanType === 'lab' ? 'åŒ–éªŒå•' : 'æ£€æŸ¥æŠ¥å‘Š'}</span>
-                      <span className="text-xs text-gray-400">æ”¯æŒ JPGã€PNGã€PDF,å¯å¤šé€‰</span>
-                      {getApiKeyFor(CURRENT_API) ? (<span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">âœ“ {API_PROVIDERS.find(p=>p.id===CURRENT_API)?.name} å·²å¯ç”¨</span>) : (<span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">âš  æœªé…ç½®AIè¯†åˆ«</span>)}
+                      <span className="text-base font-bold text-indigo-600">点击上传{scanType === 'lab' ? '化验单' : '检查报告'}</span>
+                      <span className="text-xs text-gray-400">支持 JPG、PNG、PDF,可多选</span>
+                      {getApiKeyFor(CURRENT_API) ? (<span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">✓ {API_PROVIDERS.find(p=>p.id===CURRENT_API)?.name} 已启用</span>) : (<span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">⚠ 未配置AI识别</span>)}
                     </button>
-                    <p className="text-xs text-gray-400 text-center">{getApiKeyFor(CURRENT_API) ? 'ä¸Šä¼ åŽAIå°†è‡ªåŠ¨è¯†åˆ«æŠ¥å‘Šå†…å®¹' : 'è¯·å…ˆåœ¨èœå•â†‘è®¾ç½®ä¸­é…ç½®API'}<br/>æˆ–æ‰‹åŠ¨å¡«å†™æ•°æ®</p>
-                    <button onClick={() => { if (scanType === 'lab') { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', items: [{ name: '', result: '', unit: '', refRange: '', flag: 'Normal' }] }); } else { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' }); }}} className="mt-4 text-sm text-indigo-600 font-medium hover:underline">è·³è¿‡ä¸Šä¼ ,æ‰‹åŠ¨å¡«å†™ â†‘</button>
+                    <p className="text-xs text-gray-400 text-center">{getApiKeyFor(CURRENT_API) ? '上传后AI将自动识别报告内容' : '请先在菜单↑设置中配置API'}<br/>或手动填写数据</p>
+                    <button onClick={() => { if (scanType === 'lab') { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', items: [{ name: '', result: '', unit: '', refRange: '', flag: 'Normal' }] }); } else { setScanEditData({ date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' }); }}} className="mt-4 text-sm text-indigo-600 font-medium hover:underline">跳过上传,手动填写 ↑</button>
                   </div>
                 )}
                 {scanLoading && (
                   <div className="flex flex-col items-center justify-center h-full">
                     <Icons.Loader size={48} className="text-indigo-600 mb-4"/>
-                    <p className="font-bold text-slate-700">æ­£åœ¨AIè¯†åˆ«ä¸­...</p>
-                    <p className="text-xs text-gray-400 mt-1">å·²ä¸Šä¼  {uploadedFiles.length} ä¸ªæ–‡ä»¶</p>
+                    <p className="font-bold text-slate-700">正在AI识别中...</p>
+                    <p className="text-xs text-gray-400 mt-1">已上传 {uploadedFiles.length} 个文件</p>
                     <p className="text-xs text-gray-400 mt-1">{uploadedFiles.map(f => f.name).join(', ')}</p>
                     {debugInfo && (<div className="mt-4 p-3 bg-gray-100 rounded-lg w-full max-h-48 overflow-y-auto"><pre className="text-xs text-gray-600 whitespace-pre-wrap break-all">{debugInfo}</pre></div>)}
                   </div>
@@ -2542,8 +2543,8 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 {scanEditData && !scanLoading && (
                   <>
                     <div className="bg-white p-4 rounded-xl shadow-sm border mb-4">
-                      <div className="flex justify-between items-center mb-3"><label className="text-xs font-bold text-gray-400">æ—¥æœŸ</label><input type="date" value={scanEditData.date} onChange={e => setScanEditData({...scanEditData, date: e.target.value})} className="text-right text-sm font-bold outline-none bg-transparent"/></div>
-                      <div className="flex justify-between items-center"><label className="text-xs font-bold text-gray-400">æœºæž„</label><input value={scanEditData.hospital} onChange={e => setScanEditData({...scanEditData, hospital: e.target.value})} className="text-right text-sm outline-none bg-transparent flex-1 ml-4" placeholder="åŒ»é™¢åç§°"/></div>
+                      <div className="flex justify-between items-center mb-3"><label className="text-xs font-bold text-gray-400">日期</label><input type="date" value={scanEditData.date} onChange={e => setScanEditData({...scanEditData, date: e.target.value})} className="text-right text-sm font-bold outline-none bg-transparent"/></div>
+                      <div className="flex justify-between items-center"><label className="text-xs font-bold text-gray-400">机构</label><input value={scanEditData.hospital} onChange={e => setScanEditData({...scanEditData, hospital: e.target.value})} className="text-right text-sm outline-none bg-transparent flex-1 ml-4" placeholder="医院名称"/></div>
                     </div>
                     {scanType === 'lab' && (
                       <div className="bg-white rounded-xl border overflow-hidden">
@@ -2553,39 +2554,39 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                           return (
                             <div key={idx} className="p-3 border-b">
                               <div className="flex justify-between items-center gap-2 mb-2">
-                                <input value={item.name} onChange={e => { const n = [...scanEditData.items]; n[idx].name = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 font-medium outline-none text-sm" placeholder="æŒ‡æ ‡åç§°"/>
+                                <input value={item.name} onChange={e => { const n = [...scanEditData.items]; n[idx].name = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 font-medium outline-none text-sm" placeholder="指标名称"/>
                                 <div className="flex items-center gap-1">
-                                  <input value={item.result} onChange={e => { const n = [...scanEditData.items]; n[idx].result = e.target.value; setScanEditData({...scanEditData, items: n}); }} className={`w-20 text-right font-bold outline-none text-lg ${flagColor}`} placeholder="ç»“æžœ"/>
-                                  {itemFlag === 'High' && <span className={`text-lg ${flagColor}`}>â†‘</span>}
-                                  {itemFlag === 'Low' && <span className={`text-lg ${flagColor}`}>â†“</span>}
+                                  <input value={item.result} onChange={e => { const n = [...scanEditData.items]; n[idx].result = e.target.value; setScanEditData({...scanEditData, items: n}); }} className={`w-20 text-right font-bold outline-none text-lg ${flagColor}`} placeholder="结果"/>
+                                  {itemFlag === 'High' && <span className={`text-lg ${flagColor}`}>↑</span>}
+                                  {itemFlag === 'Low' && <span className={`text-lg ${flagColor}`}>↓</span>}
                                 </div>
                                 <button onClick={() => setScanEditData({...scanEditData, items: scanEditData.items.filter((_, i) => i !== idx)})} className="text-gray-300 hover:text-rose-500 ml-2"><Icons.Trash2 size={14}/></button>
                               </div>
                               <div className="flex gap-2 items-center border-t border-dashed pt-2">
-                                <span className="text-[10px] text-gray-400">å‚è€ƒ:</span>
-                                <input value={item.refRange} onChange={e => { const n = [...scanEditData.items]; n[idx].refRange = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 text-xs text-gray-500 outline-none bg-transparent" placeholder="å‚è€ƒèŒƒå›´"/>
-                                <input value={item.unit} onChange={e => { const n = [...scanEditData.items]; n[idx].unit = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="w-20 text-xs text-gray-500 outline-none bg-transparent text-right" placeholder="å•ä½"/>
+                                <span className="text-[10px] text-gray-400">参考:</span>
+                                <input value={item.refRange} onChange={e => { const n = [...scanEditData.items]; n[idx].refRange = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="flex-1 text-xs text-gray-500 outline-none bg-transparent" placeholder="参考范围"/>
+                                <input value={item.unit} onChange={e => { const n = [...scanEditData.items]; n[idx].unit = e.target.value; setScanEditData({...scanEditData, items: n}); }} className="w-20 text-xs text-gray-500 outline-none bg-transparent text-right" placeholder="单位"/>
                               </div>
                             </div>
                           );
                         })}
-                        <button onClick={() => setScanEditData({...scanEditData, items: [...(scanEditData.items||[]), {name:'', result:'', unit:'', refRange:'', flag:'Normal'}]})} className="w-full py-3 text-indigo-500 text-xs font-bold flex items-center justify-center gap-1"><Icons.Plus size={14}/>æ·»åŠ æŒ‡æ ‡</button>
+                        <button onClick={() => setScanEditData({...scanEditData, items: [...(scanEditData.items||[]), {name:'', result:'', unit:'', refRange:'', flag:'Normal'}]})} className="w-full py-3 text-indigo-500 text-xs font-bold flex items-center justify-center gap-1"><Icons.Plus size={14}/>添加指标</button>
                       </div>
                     )}
                     {scanType === 'imaging' && (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
-                          <div><label className="text-xs font-bold text-gray-400 block mb-2">æ£€æŸ¥ç±»åž‹</label><input value={scanEditData.modality || ''} onChange={e => setScanEditData({...scanEditData, modality: e.target.value})} className="w-full p-3 border rounded-xl text-sm" placeholder="å¦‚: èƒ¸éƒ¨CT"/></div>
-                          <div><label className="text-xs font-bold text-gray-400 block mb-2">éƒ¨ä½</label><input value={scanEditData.region || ''} onChange={e => setScanEditData({...scanEditData, region: e.target.value})} className="w-full p-3 border rounded-xl text-sm" placeholder="å¦‚: è‚ºéƒ¨"/></div>
+                          <div><label className="text-xs font-bold text-gray-400 block mb-2">检查类型</label><input value={scanEditData.modality || ''} onChange={e => setScanEditData({...scanEditData, modality: e.target.value})} className="w-full p-3 border rounded-xl text-sm" placeholder="如: 胸部CT"/></div>
+                          <div><label className="text-xs font-bold text-gray-400 block mb-2">部位</label><input value={scanEditData.region || ''} onChange={e => setScanEditData({...scanEditData, region: e.target.value})} className="w-full p-3 border rounded-xl text-sm" placeholder="如: 肺部"/></div>
                         </div>
-                        <div><label className="text-xs font-bold text-gray-400 block mb-2">å½±åƒæ‰€è§</label><textarea value={scanEditData.findings || ''} onChange={e => setScanEditData({...scanEditData, findings: e.target.value})} className="w-full p-3 border rounded-xl h-28 text-sm"/></div>
-                        <div><label className="text-xs font-bold text-gray-400 block mb-2">è¯Šæ–­æ„è§</label><textarea value={scanEditData.impression || ''} onChange={e => setScanEditData({...scanEditData, impression: e.target.value})} className="w-full p-3 bg-indigo-50 border border-indigo-100 rounded-xl h-24 text-sm"/></div>
+                        <div><label className="text-xs font-bold text-gray-400 block mb-2">影像所见</label><textarea value={scanEditData.findings || ''} onChange={e => setScanEditData({...scanEditData, findings: e.target.value})} className="w-full p-3 border rounded-xl h-28 text-sm"/></div>
+                        <div><label className="text-xs font-bold text-gray-400 block mb-2">诊断意见</label><textarea value={scanEditData.impression || ''} onChange={e => setScanEditData({...scanEditData, impression: e.target.value})} className="w-full p-3 bg-indigo-50 border border-indigo-100 rounded-xl h-24 text-sm"/></div>
                       </div>
                     )}
                     <div className="flex gap-3 mt-4">
-                      <button onClick={() => { setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center justify-center gap-1"><Icons.Upload size={14}/>é‡æ–°ä¸Šä¼ </button>
+                      <button onClick={() => { setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm flex items-center justify-center gap-1"><Icons.Upload size={14}/>重新上传</button>
                     </div>
-                    {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full mt-3 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> åˆ é™¤æ­¤æŠ¥å‘Š</button>}
+                    {editingId && <button onClick={() => setShowDeleteConfirm(editingId)} className="w-full mt-3 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2"><Icons.Trash2 size={16}/> 删除此报告</button>}
                   </>
                 )}
               </div>
@@ -2595,16 +2596,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {/* Trend Modal */}
           {showTrendModal && (
             <div className="absolute inset-0 z-[80] bg-white flex flex-col">
-              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => { setShowTrendModal(false); setSelectedTrendItems([]); }} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><div className="text-center"><h3 className="font-bold">è¶‹åŠ¿åˆ†æž</h3><p className="text-xs text-gray-400">å·²é€‰ {selectedTrendItems.length} é¡¹</p></div><button onClick={handlePrintTrend} className="p-2 bg-indigo-600 text-white rounded-full" title="æ‰“å°/å¯¼å‡ºPDF"><Icons.Printer size={18}/></button></div>
+              <div className="p-4 border-b flex justify-between items-center"><button onClick={() => { setShowTrendModal(false); setSelectedTrendItems([]); }} className="p-2 bg-gray-100 rounded-full"><Icons.X size={20}/></button><div className="text-center"><h3 className="font-bold">趋势分析</h3><p className="text-xs text-gray-400">已选 {selectedTrendItems.length} 项</p></div><button onClick={handlePrintTrend} className="p-2 bg-indigo-600 text-white rounded-full" title="打印/导出PDF"><Icons.Printer size={18}/></button></div>
               <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
-                <div className="flex gap-2 mb-4 justify-center">{[1,3,6,12].map(m => <button key={m} onClick={() => setQuickRange(m)} className="px-3 py-1.5 bg-white border border-indigo-100 rounded-lg text-xs text-indigo-600 font-bold shadow-sm hover:bg-indigo-50">è¿‘{m}æœˆ</button>)}</div>
+                <div className="flex gap-2 mb-4 justify-center">{[1,3,6,12].map(m => <button key={m} onClick={() => setQuickRange(m)} className="px-3 py-1.5 bg-white border border-indigo-100 rounded-lg text-xs text-indigo-600 font-bold shadow-sm hover:bg-indigo-50">近{m}月</button>)}</div>
                 <div className="bg-white p-4 rounded-xl shadow-sm mb-4 flex items-center gap-2 border">
                   <Icons.Calendar size={16}/>
                   <input type="date" value={trendRange.start} onChange={e => setTrendRange(p => ({...p, start: e.target.value}))} className="text-xs bg-gray-50 p-2 rounded flex-1"/>
                   <span className="text-gray-400">-</span>
                   <input type="date" value={trendRange.end} onChange={e => setTrendRange(p => ({...p, end: e.target.value}))} className="text-xs bg-gray-50 p-2 rounded flex-1"/>
                 </div>
-                <div className="bg-white p-4 rounded-xl shadow-sm border"><h4 className="text-xs font-bold text-gray-400 mb-4 flex items-center gap-1"><Icons.Activity size={14}/> æŒ‡æ ‡å˜åŒ–è¶‹åŠ¿</h4><TrendChart datasets={trendDatasets} dateRange={trendRange}/></div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border"><h4 className="text-xs font-bold text-gray-400 mb-4 flex items-center gap-1"><Icons.Activity size={14}/> 指标变化趋势</h4><TrendChart datasets={trendDatasets} dateRange={trendRange}/></div>
                 <MedicationGantt meds={meds} dateRange={trendRange} selectedMeds={selectedMeds} />
               </div>
             </div>
@@ -2625,11 +2626,11 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs text-center">
                 <Icons.AlertTriangle size={40} className="text-rose-500 mx-auto mb-3"/>
-                <h3 className="text-lg font-bold mb-2">ç¡®è®¤åˆ é™¤?</h3>
-                <p className="text-sm text-gray-500 mb-5">æ­¤æ“ä½œæ— æ³•æ’¤é”€</p>
+                <h3 className="text-lg font-bold mb-2">确认删除?</h3>
+                <p className="text-sm text-gray-500 mb-5">此操作无法撤销</p>
                 <div className="flex gap-3">
-                  <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold">å–æ¶ˆ</button>
-                  <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold">åˆ é™¤</button>
+                  <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold">取消</button>
+                  <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold">删除</button>
                 </div>
               </div>
             </div>
@@ -2639,10 +2640,10 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
           {showRestoreModal && (
             <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-5 w-full max-w-sm">
-                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">æ¢å¤æ•°æ®</h3><button onClick={() => setShowRestoreModal(false)} className="p-1 bg-gray-100 rounded-full"><Icons.X size={16}/></button></div>
-                <p className="text-sm text-gray-500 mb-4">é€‰æ‹©ä¹‹å‰å¯¼å‡ºçš„JSONå¤‡ä»½æ–‡ä»¶æ¥æ¢å¤æ•°æ®ã€‚<span className="text-rose-500 font-medium">æ³¨æ„:æ¢å¤å°†è¦†ç›–çŽ°æœ‰æ•°æ®ã€‚</span></p>
+                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">恢复数据</h3><button onClick={() => setShowRestoreModal(false)} className="p-1 bg-gray-100 rounded-full"><Icons.X size={16}/></button></div>
+                <p className="text-sm text-gray-500 mb-4">选择之前导出的JSON备份文件来恢复数据。<span className="text-rose-500 font-medium">注意:恢复将覆盖现有数据。</span></p>
                 <input type="file" ref={restoreFileRef} onChange={handleFileRestore} accept=".json" className="hidden"/>
-                <button onClick={() => restoreFileRef.current?.click()} className="w-full py-4 border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center gap-2 hover:bg-indigo-100"><Icons.Upload size={20}/> é€‰æ‹©å¤‡ä»½æ–‡ä»¶</button>
+                <button onClick={() => restoreFileRef.current?.click()} className="w-full py-4 border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center gap-2 hover:bg-indigo-100"><Icons.Upload size={20}/> 选择备份文件</button>
               </div>
             </div>
           )}
@@ -2652,64 +2653,64 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="absolute inset-0 z-[110] bg-black/50 flex items-center justify-center p-6">
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs text-center">
                 <Icons.AlertTriangle size={40} className="text-rose-500 mx-auto mb-3"/>
-                <h3 className="text-lg font-bold mb-2">é‡ç½®æ‰€æœ‰æ•°æ®?</h3>
-                <p className="text-sm text-gray-500 mb-5">è¿™å°†åˆ é™¤æ‰€æœ‰è‡ªå®šä¹‰æ•°æ®å¹¶æ¢å¤ä¸ºåˆå§‹æ¼”ç¤ºæ•°æ®ã€‚æ­¤æ“ä½œæ— æ³•æ’¤é”€!</p>
+                <h3 className="text-lg font-bold mb-2">重置所有数据?</h3>
+                <p className="text-sm text-gray-500 mb-5">这将删除所有自定义数据并恢复为初始演示数据。此操作无法撤销!</p>
                 <div className="flex gap-3">
-                  <button onClick={() => setShowResetConfirm(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold">å–æ¶ˆ</button>
-                  <button onClick={handleResetData} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold">ç¡®è®¤é‡ç½®</button>
+                  <button onClick={() => setShowResetConfirm(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold">取消</button>
+                  <button onClick={handleResetData} className="flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold">确认重置</button>
                 </div>
               </div>
             </div>
           )}
 
 
-          {/* Backup Modal - å¤‡ä»½æ•°æ® */}
+          {/* Backup Modal - 备份数据 */}
           {showBackupModal && (
             <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Icons.Check size={40} className="text-green-600"/>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">å¤‡ä»½å°±ç»ª</h3>
-                <p className="text-sm text-gray-500 mb-1">æ–‡ä»¶å¤§å°: {backupStats.size}KB</p>
-                <p className="text-xs text-gray-400 mb-6">åŒ…å« {backupStats.members || 1} ä¸ªæˆå‘˜ã€{backupStats.meds} ä¸ªè®¡åˆ’ã€{backupStats.catalog} ä¸ªè¯å“</p>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">备份就绪</h3>
+                <p className="text-sm text-gray-500 mb-1">文件大小: {backupStats.size}KB</p>
+                <p className="text-xs text-gray-400 mb-6">包含 {backupStats.members || 1} 个成员、{backupStats.meds} 个计划、{backupStats.catalog} 个药品</p>
                 
                 <button 
                   type="button"
                   onClick={downloadBackupFile} 
                   className="w-full mb-3 py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-sm flex items-center justify-center gap-2 active:bg-indigo-100 border border-indigo-200"
                 >
-                  <Icons.Download size={16}/> ä¸‹è½½æ–‡ä»¶
+                  <Icons.Download size={16}/> 下载文件
                 </button>
                 <button 
                   type="button"
                   onClick={copyBackupData} 
                   className="w-full mb-3 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 active:bg-gray-200"
                 >
-                  <Icons.FileJson size={16}/> å¤åˆ¶æ•°æ®
+                  <Icons.FileJson size={16}/> 复制数据
                 </button>
                 <button 
                   type="button"
                   onClick={() => setShowBackupModal(false)} 
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-lg active:bg-indigo-700"
                 >
-                  å…³é—­
+                  关闭
                 </button>
               </div>
             </div>
           )}
 
-          {/* åŒ»å­¦æŒ‡æ ‡è¯å…¸ç®¡ç†ç•Œé¢ */}
+          {/* 医学指标词典管理界面 */}
           {showDictionaryModal && (
             <div className="absolute inset-0 z-[100] bg-white flex flex-col">
-              {/* å¤´éƒ¨ */}
+              {/* 头部 */}
               <div className="p-4 border-b flex justify-between items-center bg-indigo-50">
                 <button onClick={() => { setShowDictionaryModal(false); setDictionarySearch(''); setEditingDictEntry(null); }} className="p-2 bg-white rounded-full shadow">
                   <Icons.X size={20}/>
                 </button>
                 <div className="text-center flex-1">
-                  <h3 className="font-bold text-lg">åŒ»å­¦æŒ‡æ ‡è¯å…¸</h3>
-                  <p className="text-xs text-gray-500">{medicalDictionary.length} ä¸ªæŒ‡æ ‡</p>
+                  <h3 className="font-bold text-lg">医学指标词典</h3>
+                  <p className="text-xs text-gray-500">{medicalDictionary.length} 个指标</p>
                 </div>
                 <button onClick={() => { 
                   setEditingDictEntry(null); 
@@ -2719,21 +2720,21 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 </button>
               </div>
 
-              {/* æœç´¢æ  */}
+              {/* 搜索栏 */}
               <div className="p-4 border-b bg-gray-50">
                 <div className="relative">
                   <input 
                     type="text" 
                     value={dictionarySearch} 
                     onChange={e => setDictionarySearch(e.target.value)} 
-                    placeholder="æœç´¢æŒ‡æ ‡åç§°..." 
+                    placeholder="搜索指标名称..." 
                     className="w-full p-3 pl-10 border rounded-xl bg-white"
                   />
                   <Icons.FileSpreadsheet size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
                 </div>
               </div>
 
-              {/* è¯å…¸åˆ—è¡¨ */}
+              {/* 词典列表 */}
               <div className="flex-1 overflow-y-auto p-4">
                 {(() => {
                   const filtered = medicalDictionary.filter(entry => {
@@ -2751,7 +2752,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     return (
                       <div className="text-center text-gray-400 mt-8">
                         <Icons.FileSpreadsheet size={48} className="mx-auto mb-2 opacity-20"/>
-                        <p>æœªæ‰¾åˆ°åŒ¹é…çš„æŒ‡æ ‡</p>
+                        <p>未找到匹配的指标</p>
                       </div>
                     );
                   }
@@ -2773,17 +2774,17 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1">
                             <div className="font-bold text-base text-gray-800 mb-1">
-                              {entry.cnName || 'æœªå‘½å'}
+                              {entry.cnName || '未命名'}
                               {entry.enName && <span className="ml-2 text-sm text-indigo-600">({entry.enName})</span>}
                             </div>
                             {(entry.cnAliases && entry.cnAliases.length > 0) && (
                               <div className="text-xs text-gray-500 mb-1">
-                                åˆ«ç§°: {entry.cnAliases.join('ã€')}
+                                别称: {entry.cnAliases.join('、')}
                               </div>
                             )}
                             {(entry.enAliases && entry.enAliases.length > 0) && (
                               <div className="text-xs text-gray-500 mb-1">
-                                è‹±æ–‡åˆ«ç§°: {entry.enAliases.join(', ')}
+                                英文别称: {entry.enAliases.join(', ')}
                               </div>
                             )}
                           </div>
@@ -2792,19 +2793,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                         
                         {entry.description && (
                           <div className="text-sm text-gray-600 mb-2 bg-blue-50 p-2 rounded">
-                            ðŸ’¡ {entry.description}
+                            💡 {entry.description}
                           </div>
                         )}
                         
                         <div className="flex gap-3 text-xs">
                           {entry.unit && (
                             <span className="bg-gray-100 px-2 py-1 rounded">
-                              å•ä½: {entry.unit}
+                              单位: {entry.unit}
                             </span>
                           )}
                           {entry.normalRange && (
                             <span className="bg-green-50 text-green-700 px-2 py-1 rounded">
-                              å‚è€ƒ: {entry.normalRange}
+                              参考: {entry.normalRange}
                             </span>
                           )}
                         </div>
@@ -2814,25 +2815,25 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                 })()}
               </div>
 
-              {/* ç¼–è¾‘/æ·»åŠ è¡¨å• */}
+              {/* 编辑/添加表单 */}
               {(editingDictEntry !== null || dictEntryInput.cnName || dictEntryInput.enName) && (
                 <div className="absolute inset-0 bg-white z-10 flex flex-col">
                   <div className="p-4 border-b flex justify-between items-center">
                     <button onClick={() => { setEditingDictEntry(null); setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' }); }} className="p-2 bg-gray-100 rounded-full">
                       <Icons.X size={20}/>
                     </button>
-                    <h3 className="font-bold">{editingDictEntry ? 'ç¼–è¾‘æŒ‡æ ‡' : 'æ–°å¢žæŒ‡æ ‡'}</h3>
+                    <h3 className="font-bold">{editingDictEntry ? '编辑指标' : '新增指标'}</h3>
                     <button onClick={() => {
                       if (!dictEntryInput.cnName && !dictEntryInput.enName) {
-                        alert('è¯·è‡³å°‘å¡«å†™ä¸­æ–‡åç§°æˆ–è‹±æ–‡åç§°');
+                        alert('请至少填写中文名称或英文名称');
                         return;
                       }
                       
-                      const aliases = dictEntryInput.cnAliases ? dictEntryInput.cnAliases.split(/[,ï¼Œã€]/).map(s => s.trim()).filter(Boolean) : [];
-                      const enAliases = dictEntryInput.enAliases ? dictEntryInput.enAliases.split(/[,ï¼Œ]/).map(s => s.trim()).filter(Boolean) : [];
+                      const aliases = dictEntryInput.cnAliases ? dictEntryInput.cnAliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean) : [];
+                      const enAliases = dictEntryInput.enAliases ? dictEntryInput.enAliases.split(/[,，]/).map(s => s.trim()).filter(Boolean) : [];
                       
                       if (editingDictEntry) {
-                        // ç¼–è¾‘
+                        // 编辑
                         setMedicalDictionary(medicalDictionary.map(e => e.id === editingDictEntry.id ? {
                           ...e,
                           cnName: dictEntryInput.cnName,
@@ -2845,7 +2846,7 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                           updatedAt: new Date().toISOString()
                         } : e));
                       } else {
-                        // æ–°å¢ž
+                        // 新增
                         setMedicalDictionary([...medicalDictionary, {
                           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                           cnName: dictEntryInput.cnName,
@@ -2869,95 +2870,95 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
 
                   <div className="flex-1 overflow-y-auto p-5">
                     <div className="space-y-4">
-                      {/* ä¸­æ–‡åç§° */}
+                      {/* 中文名称 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">ä¸­æ–‡åç§° *</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">中文名称 *</label>
                         <input 
                           value={dictEntryInput.cnName} 
                           onChange={e => setDictEntryInput({...dictEntryInput, cnName: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="å¦‚ï¼šç™½ç»†èƒžè®¡æ•°"
+                          placeholder="如：白细胞计数"
                         />
                       </div>
 
-                      {/* ä¸­æ–‡åˆ«ç§° */}
+                      {/* 中文别称 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">ä¸­æ–‡åˆ«ç§°ï¼ˆå¯é€‰ï¼‰</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">中文别称（可选）</label>
                         <input 
                           value={dictEntryInput.cnAliases} 
                           onChange={e => setDictEntryInput({...dictEntryInput, cnAliases: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="ç”¨é€—å·åˆ†éš”ï¼Œå¦‚ï¼šç™½ç»†èƒž,WBCè®¡æ•°"
+                          placeholder="用逗号分隔，如：白细胞,WBC计数"
                         />
-                        <p className="text-xs text-gray-400 mt-1">å¤šä¸ªåˆ«ç§°ç”¨é€—å·ã€é¡¿å·æˆ–åˆ†å·åˆ†éš”</p>
+                        <p className="text-xs text-gray-400 mt-1">多个别称用逗号、顿号或分号分隔</p>
                       </div>
 
-                      {/* è‹±æ–‡åç§° */}
+                      {/* 英文名称 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">è‹±æ–‡åç§°</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">英文名称</label>
                         <input 
                           value={dictEntryInput.enName} 
                           onChange={e => setDictEntryInput({...dictEntryInput, enName: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="å¦‚ï¼šWBC"
+                          placeholder="如：WBC"
                         />
                       </div>
 
-                      {/* è‹±æ–‡åˆ«ç§° */}
+                      {/* 英文别称 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">è‹±æ–‡åˆ«ç§°ï¼ˆå¯é€‰ï¼‰</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">英文别称（可选）</label>
                         <input 
                           value={dictEntryInput.enAliases} 
                           onChange={e => setDictEntryInput({...dictEntryInput, enAliases: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="ç”¨é€—å·åˆ†éš”ï¼Œå¦‚ï¼šWhite Blood Cell,Leukocyte"
+                          placeholder="用逗号分隔，如：White Blood Cell,Leukocyte"
                         />
                       </div>
 
-                      {/* å•ä½ */}
+                      {/* 单位 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">å•ä½</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">单位</label>
                         <input 
                           value={dictEntryInput.unit} 
                           onChange={e => setDictEntryInput({...dictEntryInput, unit: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="å¦‚ï¼š10^9/L"
+                          placeholder="如：10^9/L"
                         />
                       </div>
 
-                      {/* å‚è€ƒèŒƒå›´ */}
+                      {/* 参考范围 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">å‚è€ƒèŒƒå›´</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">参考范围</label>
                         <input 
                           value={dictEntryInput.normalRange} 
                           onChange={e => setDictEntryInput({...dictEntryInput, normalRange: e.target.value})} 
                           className="w-full p-3 border rounded-xl" 
-                          placeholder="å¦‚ï¼š4.0-10.0"
+                          placeholder="如：4.0-10.0"
                         />
                       </div>
 
-                      {/* è¯´æ˜Ž */}
+                      {/* 说明 */}
                       <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-2">ä¸´åºŠæ„ä¹‰è¯´æ˜Ž</label>
+                        <label className="text-xs font-bold text-gray-500 block mb-2">临床意义说明</label>
                         <textarea 
                           value={dictEntryInput.description} 
                           onChange={e => setDictEntryInput({...dictEntryInput, description: e.target.value})} 
                           className="w-full p-3 border rounded-xl h-24" 
-                          placeholder="ç®€è¦è¯´æ˜Žè¯¥æŒ‡æ ‡çš„ä¸´åºŠæ„ä¹‰..."
+                          placeholder="简要说明该指标的临床意义..."
                         />
                       </div>
                     </div>
 
-                    {/* åˆ é™¤æŒ‰é’® */}
+                    {/* 删除按钮 */}
                     {editingDictEntry && (
                       <button onClick={() => {
-                        if (confirm(`ç¡®å®šè¦åˆ é™¤ã€Œ${editingDictEntry.cnName}ã€å—ï¼Ÿ`)) {
+                        if (confirm(`确定要删除「${editingDictEntry.cnName}」吗？`)) {
                           setMedicalDictionary(medicalDictionary.filter(e => e.id !== editingDictEntry.id));
                           setEditingDictEntry(null);
                           setDictEntryInput({ cnName: '', cnAliases: '', enName: '', enAliases: '', description: '', unit: '', normalRange: '' });
                         }
                       }} className="w-full mt-4 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold flex items-center justify-center gap-2">
-                        <Icons.Trash2 size={16}/> åˆ é™¤æ­¤æŒ‡æ ‡
+                        <Icons.Trash2 size={16}/> 删除此指标
                       </button>
                     )}
                   </div>
@@ -2972,19 +2973,19 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold">è®¾ç½®</h3>
+                  <h3 className="text-lg font-bold">设置</h3>
                   <button onClick={() => setShowSettingsModal(false)} className="p-1 bg-gray-100 rounded-full"><Icons.X size={16}/></button>
                 </div>
                 
                 <div className="mb-6">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">AI è¯†åˆ«è®¾ç½®</h4>
+                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">AI 识别设置</h4>
                   <div className="mb-3">
-                    <label className="text-xs font-bold text-gray-500 block mb-2">é€‰æ‹©AIæœåŠ¡</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">选择AI服务</label>
                     <div className="space-y-2">
                       {API_PROVIDERS.map(provider => (
                         <button key={provider.id} onClick={() => { setApiProvider(provider.id); setApiKeyInput(getApiKeyFor(provider.id)); }} className={`w-full p-3 rounded-xl text-left text-sm font-medium transition-all flex items-center justify-between ${apiProvider === provider.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
                           <span>{provider.name}</span>
-                          {getApiKeyFor(provider.id) && <span className="text-xs text-green-600">âœ“ å·²é…ç½®</span>}
+                          {getApiKeyFor(provider.id) && <span className="text-xs text-green-600">✓ 已配置</span>}
                         </button>
                       ))}
                     </div>
@@ -3001,65 +3002,65 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                         {showApiKey ? <Icons.EyeOff size={18}/> : <Icons.Eye size={18}/>}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">æ¯ä¸ªAIæœåŠ¡ä½¿ç”¨ç‹¬ç«‹çš„API Key</p>
+                    <p className="text-xs text-gray-400 mt-1">每个AI服务使用独立的API Key</p>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">æ•°æ®ç®¡ç†</h4>
+                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">数据管理</h4>
                   <button onClick={() => setShowResetConfirm(true)} className="w-full py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-rose-100 hover:bg-rose-100">
-                    <Icons.RefreshCw size={16}/> é‡ç½®æ‰€æœ‰æ•°æ®
+                    <Icons.RefreshCw size={16}/> 重置所有数据
                   </button>
                 </div>
                 
                 <div className="flex gap-3">
-                  <button onClick={() => setShowSettingsModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold text-sm">å–æ¶ˆ</button>
+                  <button onClick={() => setShowSettingsModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold text-sm">取消</button>
                   <button onClick={() => {
                     CURRENT_API = apiProvider;
                     localStorage.setItem('ai_api_provider', apiProvider);
                     saveApiKeyFor(apiProvider, apiKeyInput);
                     setShowSettingsModal(false);
-                    alert('è®¾ç½®å·²ä¿å­˜!');
-                  }} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm">ä¿å­˜</button>
+                    alert('设置已保存!');
+                  }} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm">保存</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* æˆå‘˜ç®¡ç†è¡¨å•æ¨¡æ€æ¡† */}
+          {/* 成员管理表单模态框 */}
           {showMemberForm && (
             <div className="absolute inset-0 z-[70] bg-black/50 flex items-end justify-center" onClick={() => { setShowMemberForm(false); setEditingMember(null); }}>
               <div className="w-full max-w-lg bg-white rounded-t-2xl p-5 animate-slide-up" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold">{editingMember ? 'ç¼–è¾‘æˆå‘˜' : 'æ·»åŠ æˆå‘˜'}</h3>
+                  <h3 className="text-lg font-bold">{editingMember ? '编辑成员' : '添加成员'}</h3>
                   <button onClick={() => { setShowMemberForm(false); setEditingMember(null); }} className="p-1 bg-gray-100 rounded-full"><Icons.X size={16}/></button>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">å§“å/ç§°å‘¼ *</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">姓名/称呼 *</label>
                     <input 
                       type="text" 
                       value={memberInput.name} 
                       onChange={e => setMemberInput({...memberInput, name: e.target.value})} 
                       className="w-full p-3 border rounded-xl text-sm" 
-                      placeholder="å¦‚ï¼šå¦ˆå¦ˆã€çˆ¸çˆ¸ã€å®å®"
+                      placeholder="如：妈妈、爸爸、宝宝"
                     />
                   </div>
                   
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">å…³ç³»</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">关系</label>
                     <input 
                       type="text" 
                       value={memberInput.relation} 
                       onChange={e => setMemberInput({...memberInput, relation: e.target.value})} 
                       className="w-full p-3 border rounded-xl text-sm" 
-                      placeholder="å¦‚ï¼šæœ¬äººã€æ¯äº²ã€çˆ¶äº²ã€å­å¥³"
+                      placeholder="如：本人、母亲、父亲、子女"
                     />
                   </div>
                   
                   <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-2">å¤´åƒé¢œè‰²</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-2">头像颜色</label>
                     <div className="flex gap-2 flex-wrap">
                       {MEMBER_COLORS.map(color => (
                         <button 
@@ -3081,12 +3082,12 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     onClick={() => { setShowMemberForm(false); setEditingMember(null); }} 
                     className="flex-1 py-3 rounded-xl bg-gray-100 font-bold text-sm"
                   >
-                    å–æ¶ˆ
+                    取消
                   </button>
                   {editingMember && editingMember.id !== 'default' && members.length > 1 && (
                     <button 
                       onClick={() => { 
-                        if (confirm(`ç¡®å®šè¦åˆ é™¤æˆå‘˜ã€Œ${editingMember.name}ã€å—ï¼Ÿè¯¥æˆå‘˜çš„æ‰€æœ‰æ•°æ®å°†è¢«æ¸…é™¤ã€‚`)) {
+                        if (confirm(`确定要删除成员「${editingMember.name}」吗？该成员的所有数据将被清除。`)) {
                           deleteMember(editingMember.id); 
                           setShowMemberForm(false); 
                           setEditingMember(null); 
@@ -3102,14 +3103,14 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm disabled:opacity-50"
                     disabled={!memberInput.name.trim()}
                   >
-                    {editingMember ? 'ä¿å­˜' : 'æ·»åŠ '}
+                    {editingMember ? '保存' : '添加'}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Sync Conflict Modal - åŒæ­¥å†²çªå¯¹è¯æ¡† */}
+          {/* Sync Conflict Modal - 同步冲突对话框 */}
           {showSyncConflict && (
             <div className="absolute inset-0 z-[125] bg-black/60 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
@@ -3117,26 +3118,26 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                   <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Icons.AlertTriangle size={32} className="text-yellow-600"/>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800">å‘çŽ°æ•°æ®å†²çª</h3>
-                  <p className="text-sm text-gray-500 mt-2">äº‘ç«¯å’Œæœ¬åœ°éƒ½æœ‰æ•°æ®ï¼Œè¯·é€‰æ‹©ä¿ç•™å“ªä¸€ä»½</p>
+                  <h3 className="text-lg font-bold text-slate-800">发现数据冲突</h3>
+                  <p className="text-sm text-gray-500 mt-2">云端和本地都有数据，请选择保留哪一份</p>
                 </div>
                 
                 <div className="space-y-3 mb-6">
                   <div className="p-4 border-2 border-indigo-200 bg-indigo-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <Icons.Cloud size={16} className="text-indigo-600"/>
-                      <span className="font-medium text-indigo-700">äº‘ç«¯æ•°æ®</span>
+                      <span className="font-medium text-indigo-700">云端数据</span>
                     </div>
                     <p className="text-xs text-gray-600">
-                      {conflictData?.lastUpdated ? `æœ€åŽæ›´æ–°: ${new Date(conflictData.lastUpdated).toLocaleString()}` : 'æœ‰å·²ä¿å­˜çš„æ•°æ®'}
+                      {conflictData?.lastUpdated ? `最后更新: ${new Date(conflictData.lastUpdated).toLocaleString()}` : '有已保存的数据'}
                     </p>
                   </div>
                   <div className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <Icons.Smartphone size={16} className="text-gray-600"/>
-                      <span className="font-medium text-gray-700">æœ¬åœ°æ•°æ®</span>
+                      <span className="font-medium text-gray-700">本地数据</span>
                     </div>
-                    <p className="text-xs text-gray-600">å½“å‰è®¾å¤‡ä¸Šçš„æ•°æ®</p>
+                    <p className="text-xs text-gray-600">当前设备上的数据</p>
                   </div>
                 </div>
                 
@@ -3145,28 +3146,28 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
                     onClick={resolveConflictWithCloud}
                     className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
                   >
-                    <Icons.Cloud size={16}/> ä½¿ç”¨äº‘ç«¯æ•°æ®
+                    <Icons.Cloud size={16}/> 使用云端数据
                   </button>
                   <button 
                     onClick={resolveConflictWithLocal}
                     className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold flex items-center justify-center gap-2"
                   >
-                    <Icons.Smartphone size={16}/> ä½¿ç”¨æœ¬åœ°æ•°æ®
+                    <Icons.Smartphone size={16}/> 使用本地数据
                   </button>
                 </div>
                 
                 <p className="text-[10px] text-gray-400 text-center mt-4">
-                  é€‰æ‹©åŽï¼Œå¦ä¸€ä»½æ•°æ®å°†è¢«è¦†ç›–
+                  选择后，另一份数据将被覆盖
                 </p>
               </div>
             </div>
           )}
 
-          {/* Offline Indicator - ç¦»çº¿æç¤ºæ¡ */}
+          {/* Offline Indicator - 离线提示条 */}
           {!isOnline && (
             <div className="absolute top-0 left-0 right-0 z-[140] bg-yellow-500 text-yellow-900 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
               <Icons.CloudOff size={16}/>
-              ç½‘ç»œå·²æ–­å¼€ï¼Œæ•°æ®å°†åœ¨æ¢å¤è¿žæŽ¥åŽåŒæ­¥
+              网络已断开，数据将在恢复连接后同步
             </div>
           )}
 
@@ -3175,23 +3176,23 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
             <div className="absolute inset-0 z-[90] bg-white flex flex-col">
               <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white">
                 <button onClick={() => setShowPrintPreview(false)} className="p-2 bg-indigo-500 rounded-full"><Icons.X size={20}/></button>
-                <h3 className="font-bold">æŠ¥å‘Šé¢„è§ˆ</h3>
+                <h3 className="font-bold">报告预览</h3>
                 <div className="w-10"/>
               </div>
               <div className="flex-1 overflow-y-auto p-4 bg-white">
                 <div dangerouslySetInnerHTML={{__html: printHtml}} style={{fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', color: '#1e293b'}}/>
               </div>
               <div className="p-4 border-t bg-gray-50 flex gap-3">
-                <button onClick={() => setShowPrintPreview(false)} className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm">å…³é—­</button>
+                <button onClick={() => setShowPrintPreview(false)} className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm">关闭</button>
                 <button onClick={() => {
                   var el = document.createElement('textarea');
-                  el.value = 'ðŸ“Š å¥åº·è¶‹åŠ¿åˆ†æžæŠ¥å‘Š\n' + 'æ—¶é—´æ®µ: ' + trendRange.start + ' è‡³ ' + trendRange.end + '\næŒ‡æ ‡: ' + selectedTrendItems.join('ã€');
+                  el.value = '📊 健康趋势分析报告\n' + '时间段: ' + trendRange.start + ' 至 ' + trendRange.end + '\n指标: ' + selectedTrendItems.join('、');
                   document.body.appendChild(el);
                   el.select();
                   document.execCommand('copy');
                   document.body.removeChild(el);
-                  alert('æŠ¥å‘Šæ‘˜è¦å·²å¤åˆ¶åˆ°å‰ªè´´æ¿!\n\næç¤º:æ‚¨å¯ä»¥æˆªå›¾ä¿å­˜å®Œæ•´æŠ¥å‘Š');
-                }} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm">å¤åˆ¶æ‘˜è¦</button>
+                  alert('报告摘要已复制到剪贴板!\n\n提示:您可以截图保存完整报告');
+                }} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm">复制摘要</button>
               </div>
             </div>
           )}
@@ -3202,16 +3203,16 @@ Babel: ${loadStatus.Babel ? 'âœ“' : 'âœ—'}
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
   <script>
-    // Safari å…¼å®¹æ€§å’Œé”™è¯¯ç›‘æŽ§
+    // Safari 兼容性和错误监控
     window.addEventListener('error', function(e) {
       console.error('Global error:', e.error);
-      // åœ¨Safariä¸­æ˜¾ç¤ºé”™è¯¯ï¼ˆå¼€å‘æ—¶ï¼‰
+      // 在Safari中显示错误（开发时）
       if (window.location.hostname === 'localhost' || window.location.hostname.includes('vercel')) {
-        document.body.innerHTML = '<div style="color:white;padding:20px;background:#dc2626;"><h3>åŠ è½½é”™è¯¯</h3><p>' + e.message + '</p><p>è¯·æ£€æŸ¥æµè§ˆå™¨æŽ§åˆ¶å°</p></div>';
+        document.body.innerHTML = '<div style="color:white;padding:20px;background:#dc2626;"><h3>加载错误</h3><p>' + e.message + '</p><p>请检查浏览器控制台</p></div>';
       }
     });
     
-    // æ£€æµ‹Safariå¹¶æ·»åŠ æ ‡è®°
+    // 检测Safari并添加标记
     if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
       document.documentElement.classList.add('is-safari');
     }

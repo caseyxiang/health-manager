@@ -1,5 +1,5 @@
 // 健康管家 Pro - 图表组件库
-// Version: v15.72
+// Version: v15.73
 
 // ========== 趋势图表组件 ==========
 const TrendChart = ({ datasets, dateRange }) => {
