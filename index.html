@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.73</title>
+  <title>健康管家 Pro v15.74</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.73";
+    const VERSION = "v15.74";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1077,7 +1077,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 退出登录
-      const handleLogout = () => {
+      const handleLogout = async () => {
+        // 退出前先同步到云端（关键：确保数据不丢失）
+        if (currentUser && sessionToken && currentUser.objectId !== 'dev' && isOnline) {
+          setSyncStatus('syncing');
+          try {
+            await saveToCloud(currentUser.objectId, sessionToken, false);
+            console.log('✅ 退出前同步成功');
+          } catch (e) {
+            console.error('❌ 退出前同步失败:', e);
+          }
+        }
+        
         // 清除用户状态
         setCurrentUser(null);
         setSessionToken(null);
@@ -1374,25 +1385,47 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           relation: memberInput.relation.trim() || '家人',
           color: memberInput.color
         };
-        setMembers([...members, newMember]);
+        
+        // 先更新localStorage
+        const updatedMembers = [...members, newMember];
+        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        
+        // 再更新state
+        setMembers(updatedMembers);
         setMemberInput({ name: '', relation: '', color: 'indigo' });
         setShowMemberForm(false);
         // 自动切æ¢åˆ°æ–°æˆå'˜
         switchMember(newMember.id);
+        
+        // 立即同步到云端
+        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+          setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
+        }
       };
       
       // 编辑成员
       const updateMember = () => {
         if (!memberInput.name.trim() || !editingMember) return;
-        setMembers(members.map(m => m.id === editingMember.id ? {
+        
+        // 先更新localStorage
+        const updatedMembers = members.map(m => m.id === editingMember.id ? {
           ...m,
           name: memberInput.name.trim(),
           relation: memberInput.relation.trim() || m.relation,
           color: memberInput.color
-        } : m));
+        } : m);
+        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        
+        // 再更新state
+        setMembers(updatedMembers);
         setEditingMember(null);
         setMemberInput({ name: '', relation: '', color: 'indigo' });
         setShowMemberForm(false);
+        
+        // 立即同步到云端
+        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+          setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
+        }
       };
       
       // 删除成员
@@ -1403,11 +1436,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           const otherMember = members.find(m => m.id !== memberId);
           if (otherMember) switchMember(otherMember.id);
         }
-        setMembers(members.filter(m => m.id !== memberId));
-        // 清理该成员的数据(可选)
+        
+        // 先更新localStorage（确保立即持久化）
+        const updatedMembers = members.filter(m => m.id !== memberId);
+        localStorage.setItem('health_pro_members', JSON.stringify(updatedMembers));
+        
+        // 再更新state
+        setMembers(updatedMembers);
+        
+        // 清理该成员的数据
         ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'].forEach(dataType => {
           localStorage.removeItem(`health_pro_${memberId}_${dataType}`);
         });
+        
+        // 立即同步到云端（不等待防抖）
+        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+          setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
+        }
       };
 
       // UI States
