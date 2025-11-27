@@ -1,7 +1,7 @@
-// å¥åº·ç®¡å®¶ Pro - é…ç½®æ–‡ä»¶
-// Version: v15.71
+// 健康管家 Pro - 配置文件
+// Version: v15.72
 
-const VERSION = "v15.71";
+const VERSION = "v15.72";
 
 // Inline SVG Icons
 const Icons = {
@@ -50,100 +50,65 @@ const Icons = {
   LogIn: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("path", {d:"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"}), React.createElement("polyline", {points:"10 17 15 12 10 7"}), React.createElement("line", {x1:"15", x2:"3", y1:"12", y2:"12"})),
   LogOut: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("path", {d:"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"}), React.createElement("polyline", {points:"16 17 21 12 16 7"}), React.createElement("line", {x1:"21", x2:"9", y1:"12", y2:"12"})),
   Cloud: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("path", {d:"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"})),
-  CloudOff: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap="round", strokeLinejoin:"round"}, React.createElement("path", {d:"m2 2 20 20"}), React.createElement("path", {d:"M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"}), React.createElement("path", {d:"M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 8 5.07"})),
-  Smartphone: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("rect", {width:"14", height:"20", x:"5", y:"2", rx:"2", ry:"2"}), React.createElement("path", {d:"M12 18h.01"}))
+  CloudOff: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("path", {d:"m2 2 20 20"}), React.createElement("path", {d:"M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"}), React.createElement("path", {d:"M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"})),
+  Search: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("circle", {cx:"11", cy:"11", r:"8"}), React.createElement("path", {d:"m21 21-4.3-4.3"})),
+  Filter: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("polygon", {points:"22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"})),
+  Book: (p) => React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:p.size||20, height:p.size||20, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement("path", {d:"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"}))
 };
 
-// å•ä½åˆ—è¡¨
-const UNITS = ['mg', 'g', 'mcg', 'ml', 'L', 'IU', 'ç‰‡', 'ç²’', 'æ”¯', 'ç“¶', 'ç›’', 'åŒ…'];
-
-// å‰‚åž‹åˆ—è¡¨
-const DOSAGE_FORMS = ['ç‰‡å‰‚', 'èƒ¶å›Š', 'é¢—ç²’å‰‚', 'å£æœæ¶²', 'æ³¨å°„å‰‚', 'è½¯è†', 'æ»´å‰‚', 'å–·é›¾å‰‚', 'è´´å‰‚', 'å…¶ä»–'];
-
-// ç”¨é¤å…³ç³»
-const RELATIONS = ['æ— å…³', 'é¤å‰', 'éšé¤', 'é¤åŽ'];
-
-// æˆå‘˜å¤´åƒé¢œè‰²é€‰é¡¹
+// 成员颜色配置
 const MEMBER_COLORS = [
   { id: 'indigo', bg: 'bg-indigo-500', text: 'text-white', hex: '#6366f1' },
   { id: 'pink', bg: 'bg-pink-500', text: 'text-white', hex: '#ec4899' },
   { id: 'green', bg: 'bg-green-500', text: 'text-white', hex: '#22c55e' },
   { id: 'orange', bg: 'bg-orange-500', text: 'text-white', hex: '#f97316' },
   { id: 'cyan', bg: 'bg-cyan-500', text: 'text-white', hex: '#06b6d4' },
-  { id: 'purple', bg: 'bg-purple-500', text: 'text-white', hex: '#a855f7' }
+  { id: 'purple', bg: 'bg-purple-500', text: 'text-white', hex: '#a855f7' },
 ];
 
-// é»˜è®¤æˆå‘˜ï¼ˆè‡ªå·±ï¼‰
-const DEFAULT_MEMBER = { id: 'default', name: 'æˆ‘', relation: 'æœ¬äºº', color: 'indigo' };
+// 默认成员（自己）
+const DEFAULT_MEMBER = { id: 'default', name: '我', relation: '本人', color: 'indigo' };
 const DEFAULT_MEMBERS = [DEFAULT_MEMBER];
+const TIME_PERIODS = ['早餐', '午餐', '晚餐', '睡前'];
 
-// æœè¯æ—¶æ®µ
-const TIME_PERIODS = ['æ—©é¤', 'åˆé¤', 'æ™šé¤', 'ç¡å‰'];
-
-// åŒ»å­¦æŒ‡æ ‡è¯å…¸ - é»˜è®¤æ•°æ®
-const DEFAULT_MEDICAL_DICTIONARY = [
-  { id: '1', cnName: 'ç™½ç»†èƒžè®¡æ•°', cnAliases: ['ç™½ç»†èƒž', 'WBCè®¡æ•°'], enName: 'WBC', enAliases: ['White Blood Cell'], description: 'è¯„ä¼°å…ç–«ç³»ç»ŸåŠŸèƒ½ï¼Œå‡é«˜å¸¸è§äºŽæ„ŸæŸ“ã€ç‚Žç—‡', unit: '10^9/L', normalRange: '4.0-10.0' },
-  { id: '2', cnName: 'çº¢ç»†èƒžè®¡æ•°', cnAliases: ['çº¢ç»†èƒž', 'RBCè®¡æ•°'], enName: 'RBC', enAliases: ['Red Blood Cell'], description: 'è¯„ä¼°æºæ°§èƒ½åŠ›ï¼Œåä½Žæç¤ºè´«è¡€', unit: '10^12/L', normalRange: 'ç”·4.0-5.5ï¼Œå¥³3.5-5.0' },
-  { id: '3', cnName: 'è¡€çº¢è›‹ç™½', cnAliases: ['è¡€çº¢è›‹ç™½æµ“åº¦'], enName: 'HGB', enAliases: ['Hemoglobin', 'Hb'], description: 'è¯Šæ–­è´«è¡€çš„ä¸»è¦æŒ‡æ ‡', unit: 'g/L', normalRange: 'ç”·120-160ï¼Œå¥³110-150' },
-  { id: '4', cnName: 'è¡€å°æ¿è®¡æ•°', cnAliases: ['è¡€å°æ¿', 'PLTè®¡æ•°'], enName: 'PLT', enAliases: ['Platelet'], description: 'è¯„ä¼°å‡è¡€åŠŸèƒ½', unit: '10^9/L', normalRange: '100-300' },
-  { id: '5', cnName: 'ä¸­æ€§ç²’ç»†èƒžç™¾åˆ†æ¯”', cnAliases: ['ä¸­æ€§ç²’ç»†èƒž%'], enName: 'NEUT%', enAliases: ['Neutrophil%'], description: 'ç»†èŒæ„ŸæŸ“æ—¶å‡é«˜', unit: '%', normalRange: '50-70' },
-  { id: '6', cnName: 'æ·‹å·´ç»†èƒžç™¾åˆ†æ¯”', cnAliases: ['æ·‹å·´ç»†èƒž%'], enName: 'LYMPH%', enAliases: ['Lymphocyte%'], description: 'ç—…æ¯’æ„ŸæŸ“æ—¶å‡é«˜', unit: '%', normalRange: '20-40' },
-  { id: '7', cnName: 'ä¸™æ°¨é…¸æ°¨åŸºè½¬ç§»é…¶', cnAliases: ['è°·ä¸™è½¬æ°¨é…¶'], enName: 'ALT', enAliases: ['GPT', 'SGPT'], description: 'è‚åŠŸèƒ½æŒ‡æ ‡ï¼Œå‡é«˜æç¤ºè‚æŸä¼¤', unit: 'U/L', normalRange: '0-40' },
-  { id: '8', cnName: 'å¤©é—¨å†¬æ°¨é…¸æ°¨åŸºè½¬ç§»é…¶', cnAliases: ['è°·è‰è½¬æ°¨é…¶'], enName: 'AST', enAliases: ['GOT', 'SGOT'], description: 'è‚åŠŸèƒ½æŒ‡æ ‡ï¼Œå¿ƒè‚ŒæŸä¼¤æ—¶ä¹Ÿå‡é«˜', unit: 'U/L', normalRange: '0-40' },
-  { id: '9', cnName: 'æ€»èƒ†çº¢ç´ ', cnAliases: ['èƒ†çº¢ç´ '], enName: 'TBIL', enAliases: ['Total Bilirubin'], description: 'è‚åŠŸèƒ½æŒ‡æ ‡ï¼Œå‡é«˜å‡ºçŽ°é»„ç–¸', unit: 'Î¼mol/L', normalRange: '3.4-20.5' },
-  { id: '10', cnName: 'ç›´æŽ¥èƒ†çº¢ç´ ', cnAliases: ['ç»“åˆèƒ†çº¢ç´ '], enName: 'DBIL', enAliases: ['Direct Bilirubin'], description: 'èƒ†é“æ¢—é˜»æ—¶å‡é«˜', unit: 'Î¼mol/L', normalRange: '0-6.8' },
-  { id: '11', cnName: 'æ€»è›‹ç™½', cnAliases: ['è¡€æ¸…æ€»è›‹ç™½'], enName: 'TP', enAliases: ['Total Protein'], description: 'è¥å…»çŠ¶æ€å’Œè‚åŠŸèƒ½æŒ‡æ ‡', unit: 'g/L', normalRange: '60-80' },
-  { id: '12', cnName: 'ç™½è›‹ç™½', cnAliases: ['è¡€æ¸…ç™½è›‹ç™½'], enName: 'ALB', enAliases: ['Albumin'], description: 'è‚è„åˆæˆåŠŸèƒ½æŒ‡æ ‡', unit: 'g/L', normalRange: '35-55' },
-  { id: '13', cnName: 'çƒè›‹ç™½', cnAliases: ['è¡€æ¸…çƒè›‹ç™½'], enName: 'GLO', enAliases: ['Globulin'], description: 'å…ç–«çƒè›‹ç™½', unit: 'g/L', normalRange: '20-35' },
-  { id: '14', cnName: 'å°¿ç´ æ°®', cnAliases: ['å°¿ç´ '], enName: 'BUN', enAliases: ['Blood Urea Nitrogen'], description: 'è‚¾åŠŸèƒ½æŒ‡æ ‡', unit: 'mmol/L', normalRange: '2.9-8.2' },
-  { id: '15', cnName: 'è‚Œé…', cnAliases: ['è¡€æ¸…è‚Œé…'], enName: 'Cr', enAliases: ['Creatinine'], description: 'è‚¾åŠŸèƒ½é‡è¦æŒ‡æ ‡', unit: 'Î¼mol/L', normalRange: 'ç”·53-106ï¼Œå¥³44-97' },
-  { id: '16', cnName: 'å°¿é…¸', cnAliases: ['è¡€å°¿é…¸'], enName: 'UA', enAliases: ['Uric Acid'], description: 'ç—›é£Žè¯Šæ–­æŒ‡æ ‡', unit: 'Î¼mol/L', normalRange: 'ç”·208-428ï¼Œå¥³155-357' },
-  { id: '17', cnName: 'è‘¡è„ç³–', cnAliases: ['è¡€ç³–', 'ç©ºè…¹è¡€ç³–'], enName: 'GLU', enAliases: ['Glucose', 'FPG'], description: 'ç³–å°¿ç—…è¯Šæ–­æŒ‡æ ‡', unit: 'mmol/L', normalRange: '3.9-6.1ï¼ˆç©ºè…¹ï¼‰' },
-  { id: '18', cnName: 'ç”˜æ²¹ä¸‰é…¯', cnAliases: ['ä¸‰é…°ç”˜æ²¹'], enName: 'TG', enAliases: ['Triglyceride'], description: 'è¡€è„‚æŒ‡æ ‡', unit: 'mmol/L', normalRange: '<1.7' },
-  { id: '19', cnName: 'æ€»èƒ†å›ºé†‡', cnAliases: ['èƒ†å›ºé†‡'], enName: 'TC', enAliases: ['Total Cholesterol'], description: 'è¡€è„‚æŒ‡æ ‡', unit: 'mmol/L', normalRange: '<5.2' },
-  { id: '20', cnName: 'é«˜å¯†åº¦è„‚è›‹ç™½èƒ†å›ºé†‡', cnAliases: ['é«˜å¯†åº¦è„‚è›‹ç™½', 'å¥½èƒ†å›ºé†‡'], enName: 'HDL-C', enAliases: ['HDL'], description: 'ä¿æŠ¤æ€§èƒ†å›ºé†‡', unit: 'mmol/L', normalRange: '>1.0' },
-  { id: '21', cnName: 'ä½Žå¯†åº¦è„‚è›‹ç™½èƒ†å›ºé†‡', cnAliases: ['ä½Žå¯†åº¦è„‚è›‹ç™½', 'åèƒ†å›ºé†‡'], enName: 'LDL-C', enAliases: ['LDL'], description: 'è‡´åŠ¨è„‰ç¡¬åŒ–èƒ†å›ºé†‡', unit: 'mmol/L', normalRange: '<3.4' },
-  { id: '22', cnName: 'é’¾', cnAliases: ['è¡€æ¸…é’¾'], enName: 'K', enAliases: ['Potassium'], description: 'ç”µè§£è´¨ï¼Œå½±å“å¿ƒè„åŠŸèƒ½', unit: 'mmol/L', normalRange: '3.5-5.5' },
-  { id: '23', cnName: 'é’ ', cnAliases: ['è¡€æ¸…é’ '], enName: 'Na', enAliases: ['Sodium'], description: 'ç”µè§£è´¨ï¼Œç»´æŒæ¸—é€åŽ‹', unit: 'mmol/L', normalRange: '135-145' },
-  { id: '24', cnName: 'æ°¯', cnAliases: ['è¡€æ¸…æ°¯'], enName: 'Cl', enAliases: ['Chloride'], description: 'ç”µè§£è´¨', unit: 'mmol/L', normalRange: '96-108' },
-  { id: '25', cnName: 'é’™', cnAliases: ['è¡€æ¸…é’™'], enName: 'Ca', enAliases: ['Calcium'], description: 'éª¨éª¼å¥åº·æŒ‡æ ‡', unit: 'mmol/L', normalRange: '2.1-2.7' },
-  { id: '26', cnName: 'ç³–åŒ–è¡€çº¢è›‹ç™½', cnAliases: ['ç³–åŒ–è¡€çº¢è›‹ç™½A1c'], enName: 'HbA1c', enAliases: ['Glycated Hemoglobin', 'A1C'], description: 'åæ˜ è¿‘3ä¸ªæœˆè¡€ç³–æŽ§åˆ¶', unit: '%', normalRange: '<6.5' },
-  { id: '27', cnName: 'ä¿ƒç”²çŠ¶è…ºæ¿€ç´ ', cnAliases: ['ä¿ƒç”²çŠ¶è…ºç´ '], enName: 'TSH', enAliases: ['Thyroid Stimulating Hormone'], description: 'ç”²çŠ¶è…ºåŠŸèƒ½ç­›æŸ¥', unit: 'mIU/L', normalRange: '0.27-4.2' },
-  { id: '28', cnName: 'æ¸¸ç¦»ç”²çŠ¶è…ºç´ ', cnAliases: ['æ¸¸ç¦»T4'], enName: 'FT4', enAliases: ['Free T4'], description: 'ç”²çŠ¶è…ºåŠŸèƒ½æŒ‡æ ‡', unit: 'pmol/L', normalRange: '12-22' },
-  { id: '29', cnName: 'æ¸¸ç¦»ä¸‰ç¢˜ç”²çŠ¶è…ºåŽŸæ°¨é…¸', cnAliases: ['æ¸¸ç¦»T3'], enName: 'FT3', enAliases: ['Free T3'], description: 'ç”²çŠ¶è…ºåŠŸèƒ½æŒ‡æ ‡', unit: 'pmol/L', normalRange: '3.1-6.8' },
-  { id: '30', cnName: 'Cååº”è›‹ç™½', cnAliases: ['è¶…æ•Cååº”è›‹ç™½'], enName: 'CRP', enAliases: ['C-Reactive Protein', 'hs-CRP'], description: 'ç‚Žç—‡æŒ‡æ ‡', unit: 'mg/L', normalRange: '<10' }
-];
-
-// å›¾è¡¨é¢œè‰²
+// 图表颜色
 const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
-// å¥åº·æŒ‡æ ‡ç±»åž‹å®šä¹‰
+// 健康指标类型定义
 const VITAL_TYPES = [
-  { id: 'blood_pressure', name: 'è¡€åŽ‹', icon: 'Heart', unit: 'mmHg', hasTwo: true, label1: 'æ”¶ç¼©åŽ‹', label2: 'èˆ’å¼ åŽ‹', normalRange: '90-140 / 60-90', color: '#ef4444' },
-  { id: 'heart_rate', name: 'å¿ƒçŽ‡', icon: 'Activity', unit: 'bpm', hasTwo: false, normalRange: '60-100', color: '#f97316' },
-  { id: 'weight', name: 'ä½“é‡', icon: 'Scale', unit: 'kg', hasTwo: false, normalRange: '-', color: '#8b5cf6' },
-  { id: 'blood_sugar', name: 'è¡€ç³–', icon: 'Droplet', unit: 'mmol/L', hasTwo: false, normalRange: '3.9-6.1(ç©ºè…¹)', color: '#10b981' },
-  { id: 'temperature', name: 'ä½“æ¸©', icon: 'Thermometer', unit: 'Â°C', hasTwo: false, normalRange: '36.1-37.2', color: '#06b6d4' },
-  { id: 'oxygen', name: 'è¡€æ°§', icon: 'Wind', unit: '%', hasTwo: false, normalRange: '95-100', color: '#3b82f6' }
+  { id: 'blood_pressure', name: '血压', icon: 'Heart', unit: 'mmHg', hasTwo: true, label1: '收缩压', label2: '舒张压', normalRange: '90-140 / 60-90', color: '#ef4444' },
+  { id: 'heart_rate', name: '心率', icon: 'Activity', unit: 'bpm', hasTwo: false, normalRange: '60-100', color: '#f97316' },
+  { id: 'weight', name: '体重', icon: 'Scale', unit: 'kg', hasTwo: false, normalRange: '-', color: '#8b5cf6' },
+  { id: 'blood_sugar', name: '血糖', icon: 'Droplet', unit: 'mmol/L', hasTwo: false, normalRange: '3.9-6.1(空腹)', color: '#10b981' },
+  { id: 'temperature', name: '体温', icon: 'Thermometer', unit: '°C', hasTwo: false, normalRange: '36.1-37.2', color: '#06b6d4' },
+  { id: 'oxygen', name: '血氧', icon: 'Wind', unit: '%', hasTwo: false, normalRange: '95-100', color: '#3b82f6' }
 ];
 
-// AI API é…ç½®
+// AI API 配置
 const API_PROVIDERS = [
   { id: 'gemini', name: 'Google Gemini', placeholder: 'AIzaSy...' },
   { id: 'openai', name: 'OpenAI GPT-4o', placeholder: 'sk-...' },
   { id: 'claude', name: 'Claude API', placeholder: 'sk-ant-...' },
-  { id: 'qwen', name: 'é˜¿é‡Œé€šä¹‰åƒé—®', placeholder: 'sk-...', defaultKey: 'sk-43aaa7b36c9d4303bc916e184a523790' },
-  { id: 'siliconflow', name: 'ç¡…åŸºæµåŠ¨', placeholder: 'sk-...' }
+  { id: 'qwen', name: '阿里通义千问', placeholder: 'sk-...', defaultKey: 'sk-43aaa7b36c9d4303bc916e184a523790' },
+  { id: 'siliconflow', name: '硅基流动', placeholder: 'sk-...' }
 ];
 
-// LeanCloud é…ç½®
+let CURRENT_API = localStorage.getItem('ai_api_provider') || 'qwen';
+
+// 获取指定服务商的API Key
+function getApiKeyFor(providerId) {
+  const provider = API_PROVIDERS.find(p => p.id === providerId);
+  return localStorage.getItem('ai_api_key_' + providerId) || (provider && provider.defaultKey) || '';
+}
+
+// LeanCloud 配置
 const LC_CONFIG = {
   appId: 'CRfeDG3VSyidc5qcX3SVtibn-gzGzoHsz',
   appKey: 'mqv2BXZT7u9GhAwVe7mAO9PL',
   serverURL: 'https://crfedg3v.lc-cn-n1-shared.com'
 };
 
-// é»˜è®¤æ¼”ç¤ºæ•°æ®
+// 默认演示数据
 const DEFAULT_MEDS = [];
 const DEFAULT_CATALOG = [];
 const DEFAULT_CHECKUPS = [];
@@ -151,11 +116,45 @@ const DEFAULT_LAB_REPORTS = [];
 const DEFAULT_IMAGING_REPORTS = [];
 const DEFAULT_VITALS = [];
 
-// åŒ»å­¦æœ¯è¯­è¯æ±‡è¡¨
+// 医学指标词典 - 默认数据
+const DEFAULT_MEDICAL_DICTIONARY = [
+  { id: '1', cnName: '白细胞计数', cnAliases: ['白细胞', 'WBC计数'], enName: 'WBC', enAliases: ['White Blood Cell'], description: '评估免疫系统功能，升高常见于感染、炎症', unit: '10^9/L', normalRange: '4.0-10.0' },
+  { id: '2', cnName: '红细胞计数', cnAliases: ['红细胞', 'RBC计数'], enName: 'RBC', enAliases: ['Red Blood Cell'], description: '评估携氧能力，偏低提示贫血', unit: '10^12/L', normalRange: '男4.0-5.5，女3.5-5.0' },
+  { id: '3', cnName: '血红蛋白', cnAliases: ['血红蛋白浓度'], enName: 'HGB', enAliases: ['Hemoglobin', 'Hb'], description: '诊断贫血的主要指标', unit: 'g/L', normalRange: '男120-160，女110-150' },
+  { id: '4', cnName: '血小板计数', cnAliases: ['血小板', 'PLT计数'], enName: 'PLT', enAliases: ['Platelet'], description: '评估凝血功能', unit: '10^9/L', normalRange: '100-300' },
+  { id: '5', cnName: '中性粒细胞百分比', cnAliases: ['中性粒细胞%'], enName: 'NEUT%', enAliases: ['Neutrophil%'], description: '细菌感染时升高', unit: '%', normalRange: '50-70' },
+  { id: '6', cnName: '淋巴细胞百分比', cnAliases: ['淋巴细胞%'], enName: 'LYMPH%', enAliases: ['Lymphocyte%'], description: '病毒感染时升高', unit: '%', normalRange: '20-40' },
+  { id: '7', cnName: '丙氨酸氨基转移酶', cnAliases: ['谷丙转氨酶'], enName: 'ALT', enAliases: ['GPT', 'SGPT'], description: '肝功能指标，升高提示肝损伤', unit: 'U/L', normalRange: '0-40' },
+  { id: '8', cnName: '天门冬氨酸氨基转移酶', cnAliases: ['谷草转氨酶'], enName: 'AST', enAliases: ['GOT', 'SGOT'], description: '肝功能指标，心肌损伤时也升高', unit: 'U/L', normalRange: '0-40' },
+  { id: '9', cnName: '总胆红素', cnAliases: ['胆红素'], enName: 'TBIL', enAliases: ['Total Bilirubin'], description: '肝功能指标，升高出现黄疸', unit: 'μmol/L', normalRange: '3.4-20.5' },
+  { id: '10', cnName: '直接胆红素', cnAliases: ['结合胆红素'], enName: 'DBIL', enAliases: ['Direct Bilirubin'], description: '胆道梗阻时升高', unit: 'μmol/L', normalRange: '0-6.8' },
+  { id: '11', cnName: '总蛋白', cnAliases: ['血清总蛋白'], enName: 'TP', enAliases: ['Total Protein'], description: '营养状态和肝功能指标', unit: 'g/L', normalRange: '60-80' },
+  { id: '12', cnName: '白蛋白', cnAliases: ['血清白蛋白'], enName: 'ALB', enAliases: ['Albumin'], description: '肝脏合成功能指标', unit: 'g/L', normalRange: '35-55' },
+  { id: '13', cnName: '球蛋白', cnAliases: ['血清球蛋白'], enName: 'GLO', enAliases: ['Globulin'], description: '免疫球蛋白', unit: 'g/L', normalRange: '20-35' },
+  { id: '14', cnName: '尿素氮', cnAliases: ['尿素'], enName: 'BUN', enAliases: ['Blood Urea Nitrogen'], description: '肾功能指标', unit: 'mmol/L', normalRange: '2.9-8.2' },
+  { id: '15', cnName: '肌酐', cnAliases: ['血清肌酐'], enName: 'Cr', enAliases: ['Creatinine'], description: '肾功能重要指标', unit: 'μmol/L', normalRange: '男53-106，女44-97' },
+  { id: '16', cnName: '尿酸', cnAliases: ['血尿酸'], enName: 'UA', enAliases: ['Uric Acid'], description: '痛风诊断指标', unit: 'μmol/L', normalRange: '男208-428，女155-357' },
+  { id: '17', cnName: '葡萄糖', cnAliases: ['血糖', '空腹血糖'], enName: 'GLU', enAliases: ['Glucose', 'FPG'], description: '糖尿病诊断指标', unit: 'mmol/L', normalRange: '3.9-6.1（空腹）' },
+  { id: '18', cnName: '甘油三酯', cnAliases: ['三酰甘油'], enName: 'TG', enAliases: ['Triglyceride'], description: '血脂指标', unit: 'mmol/L', normalRange: '<1.7' },
+  { id: '19', cnName: '总胆固醇', cnAliases: ['胆固醇'], enName: 'TC', enAliases: ['Total Cholesterol'], description: '血脂指标', unit: 'mmol/L', normalRange: '<5.2' },
+  { id: '20', cnName: '高密度脂蛋白胆固醇', cnAliases: ['高密度脂蛋白', '好胆固醇'], enName: 'HDL-C', enAliases: ['HDL'], description: '保护性胆固醇', unit: 'mmol/L', normalRange: '>1.0' },
+  { id: '21', cnName: '低密度脂蛋白胆固醇', cnAliases: ['低密度脂蛋白', '坏胆固醇'], enName: 'LDL-C', enAliases: ['LDL'], description: '致动脉硬化胆固醇', unit: 'mmol/L', normalRange: '<3.4' },
+  { id: '22', cnName: '钾', cnAliases: ['血清钾'], enName: 'K', enAliases: ['Potassium'], description: '电解质，影响心脏功能', unit: 'mmol/L', normalRange: '3.5-5.5' },
+  { id: '23', cnName: '钠', cnAliases: ['血清钠'], enName: 'Na', enAliases: ['Sodium'], description: '电解质，维持渗透压', unit: 'mmol/L', normalRange: '135-145' },
+  { id: '24', cnName: '氯', cnAliases: ['血清氯'], enName: 'Cl', enAliases: ['Chloride'], description: '电解质', unit: 'mmol/L', normalRange: '96-108' },
+  { id: '25', cnName: '钙', cnAliases: ['血清钙'], enName: 'Ca', enAliases: ['Calcium'], description: '骨骼健康指标', unit: 'mmol/L', normalRange: '2.1-2.7' },
+  { id: '26', cnName: '糖化血红蛋白', cnAliases: ['糖化血红蛋白A1c'], enName: 'HbA1c', enAliases: ['Glycated Hemoglobin', 'A1C'], description: '反映近3个月血糖控制', unit: '%', normalRange: '<6.5' },
+  { id: '27', cnName: '促甲状腺激素', cnAliases: ['促甲状腺素'], enName: 'TSH', enAliases: ['Thyroid Stimulating Hormone'], description: '甲状腺功能筛查', unit: 'mIU/L', normalRange: '0.27-4.2' },
+  { id: '28', cnName: '游离甲状腺素', cnAliases: ['游离T4'], enName: 'FT4', enAliases: ['Free T4'], description: '甲状腺功能指标', unit: 'pmol/L', normalRange: '12-22' },
+  { id: '29', cnName: '游离三碘甲状腺原氨酸', cnAliases: ['游离T3'], enName: 'FT3', enAliases: ['Free T3'], description: '甲状腺功能指标', unit: 'pmol/L', normalRange: '3.1-6.8' },
+  { id: '30', cnName: 'C反应蛋白', cnAliases: ['超敏C反应蛋白'], enName: 'CRP', enAliases: ['C-Reactive Protein', 'hs-CRP'], description: '炎症指标', unit: 'mg/L', normalRange: '<10' }
+];
+
+// 医学术语词汇表
 const MEDICAL_GLOSSARY = {
-  'ç™½ç»†èƒž': 'å…ç–«ç³»ç»Ÿçš„é‡è¦ç»„æˆéƒ¨åˆ†,å‡é«˜é€šå¸¸æç¤ºæ„ŸæŸ“æˆ–ç‚Žç—‡,é™ä½Žå¯èƒ½æç¤ºå…ç–«åŠ›ä½Žä¸‹ã€‚',
-  'çº¢ç»†èƒž': 'è´Ÿè´£è¿è¾“æ°§æ°”ã€‚åä½Žå¯èƒ½æç¤ºè´«è¡€,åé«˜å¯èƒ½è§äºŽç¼ºæ°§ã€‚',
-  'è¡€çº¢è›‹ç™½': 'çº¢ç»†èƒžå†…è¿è¾“æ°§æ°”çš„è›‹ç™½è´¨,æ˜¯åˆ¤æ–­è´«è¡€åŠå…¶ç¨‹åº¦çš„ä¸»è¦æŒ‡æ ‡ã€‚',
-  'è¡€ç³–': 'è¡€æ¶²ä¸­çš„è‘¡è„ç³–å«é‡ã€‚ç©ºè…¹è¡€ç³–å‡é«˜æ˜¯è¯Šæ–­ç³–å°¿ç—…çš„é‡è¦ä¾æ®ã€‚',
-  'è‚Œé…': 'è‚Œè‚‰ä»£è°¢äº§ç‰©,æ˜¯åæ˜ è‚¾åŠŸèƒ½çš„é‡è¦æŒ‡æ ‡ã€‚'
+  '白细胞': '免疫系统的重要组成部分,升高通常提示感染或炎症,降低可能提示免疫力低下。',
+  '红细胞': '负责运输氧气。偏低可能提示贫血,偏高可能见于缺氧。',
+  '血红蛋白': '红细胞内运输氧气的蛋白质,是判断贫血及其程度的主要指标。',
+  '血糖': '血液中的葡萄糖含量。空腹血糖升高是诊断糖尿病的重要依据。',
+  '肌酐': '肌肉代谢产物,是反映肾功能的重要指标。'
 };
