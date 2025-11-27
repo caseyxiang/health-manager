@@ -1,9 +1,9 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.81</title>
+  <title>健康管家 Pro v15.82</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.81";
+    const VERSION = "v15.82";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1175,6 +1175,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         } catch (e) {
           console.error('❌ [loadFromCloud] 失败:', e);
           setSyncStatus('error');
+          // 即使失败也要设置dataLoaded，否则会一直等待
+          setDataLoaded(true);
+          // 失败后从localStorage加载本地数据作为后备
+          console.log('🔄 [loadFromCloud] 云端加载失败，从localStorage加载本地数据');
         }
       };
       
@@ -1289,11 +1293,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         saveMemberData(currentMemberId, 'checkups', checkups, getUserId()); 
       }, [checkups, currentMemberId, currentUser]);
       
-      useEffect(() => { 
+      useEffect(() => {
+        console.log(`🔄 [useEffect-persist] labReports 触发:`, labReports.length, '项');
         saveMemberData(currentMemberId, 'labReports', labReports, getUserId()); 
       }, [labReports, currentMemberId, currentUser]);
       
-      useEffect(() => { 
+      useEffect(() => {
+        console.log(`🔄 [useEffect-persist] imagingReports 触发:`, imagingReports.length, '项');
         saveMemberData(currentMemberId, 'imagingReports', imagingReports, getUserId()); 
       }, [imagingReports, currentMemberId, currentUser]);
       
@@ -1403,9 +1409,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         // 优先使用本地记住的成员ID（如果该成员在恢复的列表中存在）
         if (localMemberId) {
-          const localId = JSON.parse(localMemberId);
-          if (memberIds.includes(localId)) {
-            targetMemberId = localId;
+          // localMemberId 已经是解析后的值，不需要再次 JSON.parse
+          if (memberIds.includes(localMemberId)) {
+            targetMemberId = localMemberId;
           } else if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
             targetMemberId = cloudData.currentMemberId;
           } else {
