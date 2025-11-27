@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.71</title>
+  <title>健康管家 Pro v15.72</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,14 +11,9 @@
   <meta name="apple-mobile-web-app-title" content="健康管家">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#4f46e5">
-  <meta name="application-name" content="健康管家 Pro">
   
-  <!-- 图标 -->
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234f46e5' width='100' height='100' rx='20'/><text x='50' y='68' text-anchor='middle' font-size='50'>💊</text></svg>">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
-  
-  <!-- Manifest -->
-  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22%E5%81%A5%E5%BA%B7%E7%AE%A1%E5%AE%B6%20Pro%22%2C%22short_name%22%3A%22%E5%81%A5%E5%BA%B7%E7%AE%A1%E5%AE%B6%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231e293b%22%2C%22theme_color%22%3A%22%234f46e5%22%7D">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -33,64 +28,29 @@
       background: #1e293b;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
     }
-    html {
-      height: 100%;
-      overflow: hidden;
-    }
-    body { 
-      margin: 0;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      overscroll-behavior: none;
-    }
-    #root {
-      height: 100%;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .is-safari #root > div {
-      min-height: -webkit-fill-available;
-    }
-    #root > div {
-      min-height: 100vh;
-      min-height: 100dvh;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    .animate-pulse {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
+    html { height: 100%; overflow: hidden; }
+    body { margin: 0; height: 100vh; overflow: hidden; overscroll-behavior: none; }
+    #root { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
-    // 版本号
-    const VERSION = "v15.71";
+    const VERSION = "v15.72";
     
-    // LeanCloud 配置
     const LC_CONFIG = {
       appId: 'CRfeDG3VSyidc5qcX3SVtibn-gzGzoHsz',
       appKey: 'mqv2BXZT7u9GhAwVe7mAO9PL',
       serverURL: 'https://crfedg3v.lc-cn-n1-shared.com'
     };
     
-    // SVG 图标组件
     const Icons = {
       Menu: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
       Activity: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
@@ -105,12 +65,13 @@
       LogIn: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>,
       LogOut: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
       Download: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+      Upload: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
       ChevronDown: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+      Sparkles: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>,
     };
 
-    // LeanCloud REST API 封装 - 增强版
+    // LeanCloud API 封装 - 改进的错误处理
     const LeanCloud = {
-      // 基础请求 - 添加详细的错误处理
       async request(path, method = 'GET', body = null, sessionToken = null) {
         const headers = {
           'Content-Type': 'application/json',
@@ -123,65 +84,52 @@
           method, 
           headers,
           mode: 'cors',
-          credentials: 'omit' // Safari 兼容性
+          credentials: 'omit'
         };
         if (body) options.body = JSON.stringify(body);
         
         const url = `${LC_CONFIG.serverURL}/1.1${path}`;
         
         try {
-          console.log(`[LeanCloud] 请求: ${method} ${url}`);
+          console.log(`[LeanCloud] ${method} ${url}`);
           const response = await fetch(url, options);
-          
-          // 记录响应状态
-          console.log(`[LeanCloud] 响应状态: ${response.status}`);
-          
           const data = await response.json();
           
+          // 特殊处理 101 错误（对象不存在）- 这对新用户是正常的
+          if (data.error && data.code === 101) {
+            console.log('[LeanCloud] 对象不存在（新用户正常情况）');
+            return { isNew: true, results: [] }; // 返回空结果而不是错误
+          }
+          
           if (data.error) {
-            const errorMsg = `LeanCloud错误 (${data.code}): ${data.error}`;
-            console.error(errorMsg, data);
+            const errorMsg = `${data.error} (代码: ${data.code})`;
+            console.error('[LeanCloud] API错误:', errorMsg);
             throw new Error(errorMsg);
           }
           
           if (!response.ok) {
-            throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
-          console.log(`[LeanCloud] 请求成功`);
+          console.log('[LeanCloud] 请求成功');
           return data;
         } catch (err) {
           console.error('[LeanCloud] 请求失败:', err);
-          
-          // 更详细的错误信息
           if (err.message === 'Failed to fetch') {
-            throw new Error('网络连接失败，请检查网络或稍后重试\n\n可能原因：\n- 网络未连接\n- 服务器无法访问\n- CORS跨域限制');
+            throw new Error('网络连接失败，请检查网络');
           }
-          
-          if (err.name === 'TypeError') {
-            throw new Error('网络请求错误，请确认网络连接');
-          }
-          
           throw err;
         }
       },
       
-      // 用户注册
       async signUp(username, password) {
         return this.request('/users', 'POST', { username, password });
       },
       
-      // 用户登录
       async login(username, password) {
         return this.request('/login', 'POST', { username, password });
       },
       
-      // 获取当前用户
-      async getCurrentUser(sessionToken) {
-        return this.request('/users/me', 'GET', null, sessionToken);
-      },
-      
-      // 保存用户数据
       async saveUserData(userId, sessionToken, data) {
         const query = encodeURIComponent(JSON.stringify({ userId }));
         const existing = await this.request(`/classes/UserData?where=${query}`, 'GET', null, sessionToken);
@@ -194,7 +142,6 @@
         }
       },
       
-      // 加载用户数据
       async loadUserData(userId, sessionToken) {
         const query = encodeURIComponent(JSON.stringify({ userId }));
         const result = await this.request(`/classes/UserData?where=${query}`, 'GET', null, sessionToken);
@@ -203,7 +150,6 @@
     };
 
     function App() {
-      // 用户认证状态
       const [currentUser, setCurrentUser] = useState(() => {
         const saved = localStorage.getItem('health_pro_user');
         return saved ? JSON.parse(saved) : null;
@@ -215,33 +161,26 @@
       const [loginError, setLoginError] = useState('');
       const [loginLoading, setLoginLoading] = useState(false);
       
-      // 同步状态 - 增强版
-      const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
+      const [syncStatus, setSyncStatus] = useState('');
       const [lastSyncTime, setLastSyncTime] = useState(null);
-      const [syncError, setSyncError] = useState(''); // 详细错误信息
-      const [showSyncDebug, setShowSyncDebug] = useState(false); // 调试面板
+      const [syncError, setSyncError] = useState('');
+      const [showSyncDebug, setShowSyncDebug] = useState(false);
       const [isOnline, setIsOnline] = useState(navigator.onLine);
+      const [isFirstTime, setIsFirstTime] = useState(false); // 新增：首次登录标记
       
-      // 简化的演示状态
       const [demoData] = useState({
         message: "健康管家 Pro " + VERSION,
         features: ["云端同步", "多成员管理", "用药提醒", "检查报告"]
       });
 
-      // 网络状态监听
       useEffect(() => {
         const handleOnline = () => {
-          console.log('[Network] 网络已连接');
           setIsOnline(true);
-          // 网络恢复后自动重试同步
           if (currentUser && sessionToken && syncStatus === 'error') {
-            console.log('[Network] 网络恢复，尝试重新同步');
             loadFromCloud(currentUser.objectId, sessionToken);
           }
         };
-        
         const handleOffline = () => {
-          console.log('[Network] 网络已断开');
           setIsOnline(false);
           if (syncStatus === 'syncing') {
             setSyncStatus('error');
@@ -251,14 +190,12 @@
         
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        
         return () => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
         };
       }, [currentUser, sessionToken, syncStatus]);
 
-      // 用户登录
       const handleLogin = async () => {
         if (!loginForm.username.trim() || !loginForm.password) {
           setLoginError('请输入用户名和密码');
@@ -269,30 +206,23 @@
         setLoginError('');
         
         try {
-          console.log('[Auth] 尝试登录:', loginForm.username);
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
-          console.log('[Auth] 登录成功:', user);
-          
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
-          
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
           
-          // 登录后自动尝试从云端加载
-          console.log('[Auth] 登录成功，开始加载云端数据');
+          // 登录后加载云端数据
           await loadFromCloud(user.objectId, user.sessionToken);
         } catch (e) {
-          console.error('[Auth] 登录失败:', e);
           setLoginError(e.message || '登录失败');
         } finally {
           setLoginLoading(false);
         }
       };
 
-      // 用户注册
       const handleSignUp = async () => {
         if (!loginForm.username.trim() || !loginForm.password) {
           setLoginError('请输入用户名和密码');
@@ -311,32 +241,25 @@
         setLoginError('');
         
         try {
-          console.log('[Auth] 尝试注册:', loginForm.username);
           const user = await LeanCloud.signUp(loginForm.username.trim(), loginForm.password);
-          console.log('[Auth] 注册成功:', user);
-          
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
-          
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
           
           // 注册后初始化云端数据
-          console.log('[Auth] 注册成功，初始化云端数据');
+          setIsFirstTime(true);
           await saveToCloud(user.objectId, user.sessionToken);
         } catch (e) {
-          console.error('[Auth] 注册失败:', e);
           setLoginError(e.message || '注册失败');
         } finally {
           setLoginLoading(false);
         }
       };
 
-      // 退出登录
       const handleLogout = () => {
-        console.log('[Auth] 用户退出登录');
         setCurrentUser(null);
         setSessionToken(null);
         localStorage.removeItem('health_pro_user');
@@ -344,72 +267,60 @@
         setSyncStatus('');
         setSyncError('');
         setLastSyncTime(null);
+        setIsFirstTime(false);
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
       };
 
-      // 从云端加载数据
       const loadFromCloud = async (userId, token, showDebug = false) => {
-        if (!userId || !token || userId === 'dev') {
-          console.log('[Sync] 开发模式，跳过云同步');
-          return;
-        }
-        
+        if (!userId || !token || userId === 'dev') return;
         if (!isOnline) {
-          console.log('[Sync] 离线状态，无法同步');
           setSyncStatus('error');
-          setSyncError('当前离线，无法同步云端数据');
+          setSyncError('当前离线');
           return;
         }
         
-        console.log('[Sync] 开始从云端加载数据...');
+        console.log('[Sync] 从云端加载...');
         setSyncStatus('syncing');
         setSyncError('');
+        setIsFirstTime(false);
         
         try {
           const cloudData = await LeanCloud.loadUserData(userId, token);
           
           if (cloudData) {
-            console.log('[Sync] 云端数据加载成功', cloudData);
-            
-            // 这里简化处理，实际应用需要合并数据
+            console.log('[Sync] 加载成功');
             localStorage.setItem('health_pro_cloud_data', JSON.stringify(cloudData));
-            
             setSyncStatus('synced');
             setLastSyncTime(new Date());
             setSyncError('');
-            console.log('[Sync] 数据同步完成');
           } else {
-            console.log('[Sync] 云端暂无数据');
+            // 首次使用，云端无数据
+            console.log('[Sync] 首次使用，云端暂无数据');
+            setIsFirstTime(true);
             setSyncStatus('synced');
             setLastSyncTime(new Date());
+            setSyncError('');
           }
         } catch (e) {
-          console.error('[Sync] 从云端加载失败:', e);
+          console.error('[Sync] 加载失败:', e);
           setSyncStatus('error');
-          setSyncError(e.message || '同步失败');
-          
+          setSyncError(e.message);
           if (showDebug) {
-            alert(`同步失败:\n\n${e.message}\n\n请检查网络连接或稍后重试`);
+            alert(`同步失败:\n\n${e.message}`);
           }
         }
       };
 
-      // 保存数据到云端
       const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken) => {
-        if (!userId || !token || userId === 'dev') {
-          console.log('[Sync] 开发模式，跳过云同步');
-          return;
-        }
-        
+        if (!userId || !token || userId === 'dev') return;
         if (!isOnline) {
-          console.log('[Sync] 离线状态，无法同步');
           setSyncStatus('error');
-          setSyncError('当前离线，数据将在网络恢复后同步');
+          setSyncError('当前离线');
           return;
         }
         
-        console.log('[Sync] 开始保存数据到云端...');
+        console.log('[Sync] 保存到云端...');
         setSyncStatus('syncing');
         setSyncError('');
         
@@ -420,59 +331,40 @@
           };
           
           await LeanCloud.saveUserData(userId, token, dataToSave);
-          
-          console.log('[Sync] 数据保存成功');
+          console.log('[Sync] 保存成功');
           setSyncStatus('synced');
           setLastSyncTime(new Date());
           setSyncError('');
+          setIsFirstTime(false);
         } catch (e) {
-          console.error('[Sync] 保存到云端失败:', e);
+          console.error('[Sync] 保存失败:', e);
           setSyncStatus('error');
-          setSyncError(e.message || '同步失败');
+          setSyncError(e.message);
         }
       };
 
-      // 手动同步按钮
       const handleManualSync = async () => {
         if (!currentUser || !sessionToken) {
           alert('请先登录');
           return;
         }
-        
-        console.log('[Sync] 用户触发手动同步');
         await loadFromCloud(currentUser.objectId, sessionToken, true);
       };
 
-      // 登录后自动加载
       useEffect(() => {
         if (currentUser && sessionToken && !lastSyncTime) {
-          console.log('[App] 检测到已登录用户，自动加载云端数据');
           loadFromCloud(currentUser.objectId, sessionToken);
         }
       }, [currentUser, sessionToken]);
 
-      // 渲染同步状态图标
       const renderSyncIcon = () => {
-        if (!isOnline) {
-          return <Icons.CloudOff size={14} className="text-yellow-300" title="离线"/>;
-        }
-        
-        if (syncStatus === 'syncing') {
-          return <Icons.RefreshCw size={14} className="text-white animate-spin" title="同步中"/>;
-        }
-        
-        if (syncStatus === 'error') {
-          return <Icons.CloudOff size={14} className="text-red-300" title={syncError || '同步失败'}/>;
-        }
-        
-        if (syncStatus === 'synced') {
-          return <Icons.Cloud size={14} className="text-green-300" title="已同步"/>;
-        }
-        
-        return <Icons.Cloud size={14} className="text-white/60" title="未同步"/>;
+        if (!isOnline) return <Icons.CloudOff size={14} className="text-yellow-300"/>;
+        if (syncStatus === 'syncing') return <Icons.RefreshCw size={14} className="text-white animate-spin"/>;
+        if (syncStatus === 'error') return <Icons.CloudOff size={14} className="text-red-300"/>;
+        if (syncStatus === 'synced') return <Icons.Cloud size={14} className="text-green-300"/>;
+        return <Icons.Cloud size={14} className="text-white/60"/>;
       };
 
-      // 如果未登录，显示登录界面
       if (!currentUser) {
         return (
           <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-y-auto" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
@@ -487,7 +379,6 @@
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-2">健康管家</h1>
                 <p className="text-sm" style={{color: 'rgba(255,255,255,0.7)'}}>您的私人健康数据管理助手</p>
-                <p className="text-xs mt-2" style={{color: 'rgba(255,255,255,0.5)'}}>{VERSION} - Safari优化版</p>
               </div>
               
               <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
@@ -507,39 +398,30 @@
                 </div>
                 
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">用户名</label>
-                    <input 
-                      type="text" 
-                      value={loginForm.username} 
-                      onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
-                      placeholder="请输入用户名"
-                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
+                  <input 
+                    type="text" 
+                    value={loginForm.username} 
+                    onChange={e => setLoginForm({...loginForm, username: e.target.value})} 
+                    placeholder="用户名"
+                    className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
                   
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 mb-1 block">密码</label>
-                    <input 
-                      type="password" 
-                      value={loginForm.password} 
-                      onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
-                      placeholder={isLoginMode ? "请输入密码" : "至少6位"}
-                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
+                  <input 
+                    type="password" 
+                    value={loginForm.password} 
+                    onChange={e => setLoginForm({...loginForm, password: e.target.value})} 
+                    placeholder={isLoginMode ? "密码" : "至少6位"}
+                    className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
                   
                   {!isLoginMode && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600 mb-1 block">确认密码</label>
-                      <input 
-                        type="password" 
-                        value={loginForm.confirmPassword} 
-                        onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
-                        placeholder="请再次输入密码"
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
+                    <input 
+                      type="password" 
+                      value={loginForm.confirmPassword} 
+                      onChange={e => setLoginForm({...loginForm, confirmPassword: e.target.value})} 
+                      placeholder="确认密码"
+                      className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
                   )}
                   
                   {loginError && (
@@ -551,7 +433,7 @@
                   <button 
                     onClick={isLoginMode ? handleLogin : handleSignUp}
                     disabled={loginLoading}
-                    className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"
+                    className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loginLoading ? (
                       <><Icons.RefreshCw size={18} className="animate-spin"/> 处理中...</>
@@ -562,21 +444,12 @@
                 </div>
               </div>
               
-              <div className="flex justify-center gap-6 text-xs" style={{color: 'rgba(255,255,255,0.8)'}}>
-                <div className="flex items-center gap-1">
-                  <Icons.Cloud size={14}/> 云端同步
-                </div>
-                <div className="flex items-center gap-1">
-                  <Icons.Check size={14}/> Safari优化
-                </div>
-              </div>
-              
               <button 
                 onClick={() => {
                   setCurrentUser({ username: '开发模式', objectId: 'dev' });
                   setSessionToken(null);
                 }}
-                className="mt-4 text-xs text-white/40 hover:text-white/60 transition-colors"
+                className="mt-4 text-xs text-white/40 hover:text-white/60"
               >
                 开发模式 →
               </button>
@@ -585,47 +458,33 @@
         );
       }
 
-      // 已登录，显示主界面
       return (
         <div className="w-full max-w-md mx-auto bg-slate-50 h-full flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
-          {/* Header */}
           <header className="bg-indigo-700 text-white p-4 pt-6 pb-4 shadow-lg shrink-0 z-10">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Icons.Activity size={18}/>
                 <h1 className="text-base font-bold">健康管家 {VERSION}</h1>
-                {currentUser?.objectId === 'dev' && (
-                  <span className="text-[10px] bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-bold">开发</span>
-                )}
               </div>
               
               <div className="flex items-center gap-2">
-                {/* 同步状态和手动同步按钮 */}
                 {currentUser?.objectId !== 'dev' && (
                   <div className="flex items-center gap-1">
                     <button 
                       onClick={handleManualSync}
                       disabled={syncStatus === 'syncing' || !isOnline}
                       className={`p-2 rounded-full transition-all ${
-                        syncStatus === 'syncing' ? 'bg-indigo-500/50 cursor-not-allowed' : 
-                        !isOnline ? 'bg-yellow-500/50 cursor-not-allowed' :
+                        syncStatus === 'syncing' ? 'bg-indigo-500/50' : 
+                        !isOnline ? 'bg-yellow-500/50' :
                         'bg-indigo-600 hover:bg-indigo-500'
                       }`}
-                      title={
-                        !isOnline ? '离线中' :
-                        syncStatus === 'syncing' ? '同步中...' :
-                        syncStatus === 'error' ? '同步失败，点击重试' :
-                        '点击手动同步'
-                      }
                     >
                       {renderSyncIcon()}
                     </button>
                     
-                    {/* 调试按钮 */}
                     <button 
                       onClick={() => setShowSyncDebug(!showSyncDebug)}
                       className="p-1 rounded-full bg-indigo-600/50 text-xs"
-                      title="查看同步详情"
                     >
                       <Icons.Info size={12}/>
                     </button>
@@ -638,44 +497,42 @@
               </div>
             </div>
             
-            {/* 同步状态栏 */}
             {currentUser?.objectId !== 'dev' && (
               <div className="mt-2 text-xs">
                 {!isOnline && (
                   <div className="bg-yellow-500/20 text-yellow-100 px-2 py-1 rounded flex items-center gap-1">
-                    <Icons.CloudOff size={12}/>
-                    <span>当前离线</span>
+                    <Icons.CloudOff size={12}/> 当前离线
                   </div>
                 )}
                 {isOnline && syncStatus === 'syncing' && (
-                  <div className="bg-white/20 text-white px-2 py-1 rounded flex items-center gap-1">
-                    <Icons.RefreshCw size={12} className="animate-spin"/>
-                    <span>同步中...</span>
+                  <div className="bg-white/20 px-2 py-1 rounded flex items-center gap-1">
+                    <Icons.RefreshCw size={12} className="animate-spin"/> 同步中...
                   </div>
                 )}
-                {isOnline && syncStatus === 'synced' && lastSyncTime && (
+                {isOnline && syncStatus === 'synced' && isFirstTime && (
+                  <div className="bg-blue-500/20 text-blue-100 px-2 py-1 rounded flex items-center gap-1">
+                    <Icons.Sparkles size={12}/> 首次登录，请保存数据到云端
+                  </div>
+                )}
+                {isOnline && syncStatus === 'synced' && !isFirstTime && lastSyncTime && (
                   <div className="bg-green-500/20 text-green-100 px-2 py-1 rounded flex items-center gap-1">
-                    <Icons.Check size={12}/>
-                    <span>已同步 {lastSyncTime.toLocaleTimeString()}</span>
+                    <Icons.Check size={12}/> 已同步 {lastSyncTime.toLocaleTimeString()}
                   </div>
                 )}
                 {isOnline && syncStatus === 'error' && (
                   <div className="bg-red-500/20 text-red-100 px-2 py-1 rounded flex items-center gap-1">
-                    <Icons.AlertTriangle size={12}/>
-                    <span>{syncError || '同步失败'}</span>
+                    <Icons.AlertTriangle size={12}/> {syncError}
                   </div>
                 )}
               </div>
             )}
           </header>
 
-          {/* Main Content */}
           <main className="flex-1 overflow-y-auto p-4 bg-slate-50">
             <div className="space-y-4">
               <div className="bg-white p-6 rounded-xl shadow-sm border">
                 <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
-                  <Icons.User size={20}/>
-                  欢迎回来
+                  <Icons.User size={20}/> 欢迎回来
                 </h2>
                 <p className="text-gray-600 mb-4">用户: {currentUser.username}</p>
                 
@@ -683,16 +540,30 @@
                   <h3 className="font-bold text-indigo-900 mb-2">演示数据</h3>
                   <p className="text-sm text-indigo-700 mb-2">{demoData.message}</p>
                   <div className="flex flex-wrap gap-2">
-                    {demoData.features.map((feature, i) => (
+                    {demoData.features.map((f, i) => (
                       <span key={i} className="bg-indigo-200 text-indigo-800 px-2 py-1 rounded text-xs">
-                        {feature}
+                        {f}
                       </span>
                     ))}
                   </div>
                 </div>
               </div>
               
-              {/* 网络状态卡片 */}
+              {isFirstTime && (
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-xl text-white shadow-lg">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Icons.Sparkles size={24} className="flex-shrink-0 mt-1"/>
+                    <div>
+                      <h3 className="font-bold text-lg mb-1">🎉 首次登录</h3>
+                      <p className="text-sm text-blue-50">
+                        这是您第一次使用云端同步功能。<br/>
+                        点击下方按钮保存您的数据到云端，以后就可以在任何设备上同步啦！
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className={`p-4 rounded-xl shadow-sm border ${isOnline ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
                 <div className="flex items-center gap-2 mb-2">
                   {isOnline ? (
@@ -706,7 +577,6 @@
                 </p>
               </div>
               
-              {/* 测试按钮 */}
               <div className="space-y-2">
                 <button 
                   onClick={handleManualSync}
@@ -720,21 +590,22 @@
                 <button 
                   onClick={() => saveToCloud()}
                   disabled={!isOnline || syncStatus === 'syncing'}
-                  className="w-full py-3 bg-green-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                  className={`w-full py-3 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 ${
+                    isFirstTime ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg animate-pulse' : 'bg-green-600'
+                  }`}
                 >
-                  <Icons.Cloud size={18}/>
-                  {syncStatus === 'syncing' ? '同步中...' : '保存数据到云端'}
+                  <Icons.Upload size={18}/>
+                  {syncStatus === 'syncing' ? '同步中...' : isFirstTime ? '🎯 保存数据到云端（首次）' : '保存数据到云端'}
                 </button>
               </div>
             </div>
           </main>
 
-          {/* 调试面板 */}
           {showSyncDebug && (
             <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setShowSyncDebug(false)}>
               <div className="bg-white rounded-xl p-4 max-w-sm w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold">同步调试信息</h3>
+                  <h3 className="font-bold">同步调试</h3>
                   <button onClick={() => setShowSyncDebug(false)} className="p-1 bg-gray-100 rounded-full">
                     <Icons.X size={16}/>
                   </button>
@@ -742,57 +613,38 @@
                 
                 <div className="space-y-3 text-sm">
                   <div className="bg-gray-50 p-3 rounded">
-                    <div className="font-medium text-gray-700 mb-1">用户信息</div>
+                    <div className="font-medium mb-1">用户</div>
                     <div className="text-xs text-gray-600">
-                      <div>用户名: {currentUser.username}</div>
-                      <div>用户ID: {currentUser.objectId}</div>
-                      <div>会话: {sessionToken ? '有效' : '无效'}</div>
+                      <div>{currentUser.username}</div>
+                      <div className="text-[10px] text-gray-400">{currentUser.objectId}</div>
                     </div>
                   </div>
                   
                   <div className="bg-gray-50 p-3 rounded">
-                    <div className="font-medium text-gray-700 mb-1">同步状态</div>
+                    <div className="font-medium mb-1">状态</div>
                     <div className="text-xs text-gray-600">
-                      <div>状态: {syncStatus || '未同步'}</div>
+                      <div>同步: {syncStatus || '未同步'}</div>
                       <div>网络: {isOnline ? '在线' : '离线'}</div>
-                      <div>最后同步: {lastSyncTime ? lastSyncTime.toLocaleString() : '从未'}</div>
-                      {syncError && <div className="text-red-600 mt-1">错误: {syncError}</div>}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-3 rounded">
-                    <div className="font-medium text-gray-700 mb-1">环境信息</div>
-                    <div className="text-xs text-gray-600">
-                      <div>浏览器: {navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'Safari' : '其他'}</div>
-                      <div>版本: {VERSION}</div>
-                      <div>服务器: {LC_CONFIG.serverURL}</div>
+                      <div>首次: {isFirstTime ? '是' : '否'}</div>
+                      {lastSyncTime && <div>时间: {lastSyncTime.toLocaleString()}</div>}
+                      {syncError && <div className="text-red-600 mt-1">{syncError}</div>}
                     </div>
                   </div>
                   
                   <button 
                     onClick={() => {
-                      console.log('=== 调试信息 ===');
+                      console.log('=== 调试 ===');
                       console.log('User:', currentUser);
-                      console.log('Session:', sessionToken);
-                      console.log('Sync Status:', syncStatus);
-                      console.log('Network:', isOnline);
+                      console.log('Status:', syncStatus);
                       console.log('Error:', syncError);
-                      alert('调试信息已输出到控制台\n\n请在Safari中打开:\n设置 -> Safari -> 高级 -> Web检查器');
+                      alert('已输出到控制台');
                     }}
                     className="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg font-medium"
                   >
-                    输出到控制台
+                    输出日志
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* 离线提示条 */}
-          {!isOnline && (
-            <div className="absolute top-0 left-0 right-0 z-[60] bg-yellow-500 text-yellow-900 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium">
-              <Icons.CloudOff size={16}/>
-              网络已断开，数据将在恢复连接后同步
             </div>
           )}
         </div>
