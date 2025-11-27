@@ -1,9 +1,9 @@
-﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.82</title>
+  <title>健康管家 Pro v15.83</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.82";
+    const VERSION = "v15.83";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -1197,6 +1197,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         try {
           // 从当前用户的localStorage读取数据
           const savedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+          console.log('📖 [saveToCloud] 读取到的成员列表:', savedMembers.length, '个:', savedMembers.map(m => m.name));
           
           // 收集所有成员数据
           const memberData = {};
@@ -1271,7 +1272,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 成员列表持久化（带用户隔离）
-      useEffect(() => { 
+      useEffect(() => {
+        console.log('🔄 [useEffect-persist] members 触发:', members.length, '个成员', members.map(m => m.name));
         saveData('members', members, getUserId()); 
       }, [members, currentUser]);
       
@@ -1395,6 +1397,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         // 1. 先恢复成员列表
         if (cloudData.members) {
+          console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
           setMembers(cloudData.members);
           saveData('members', cloudData.members, userId);
         }
@@ -1505,19 +1508,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           color: memberInput.color
         };
         
+        console.log('➕ [addMember] 添加新成员:', newMember.name);
+        
         // 先更新localStorage（带用户隔离）
         const updatedMembers = [...members, newMember];
         saveData('members', updatedMembers, userId);
+        console.log('💾 [addMember] 已保存到localStorage:', updatedMembers.length, '个成员');
         
         // 再更新state
         setMembers(updatedMembers);
         setMemberInput({ name: '', relation: '', color: 'indigo' });
         setShowMemberForm(false);
-        // 自动切æ¢åˆ°æ–°æˆå'˜
+        // 自动切换到新成员
         switchMember(newMember.id);
         
         // 立即同步到云端
         if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+          console.log('☁️ [addMember] 准备同步到云端...');
           setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
         }
       };
