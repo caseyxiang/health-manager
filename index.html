@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.102</title>
+  <title>健康管家 Pro v16.01</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -63,38 +63,6 @@
     #root > div {
       min-height: 100vh;
       min-height: 100dvh;
-    }
-    
-    /* 智能通知动画 */
-    @keyframes slide-down {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, 0);
-      }
-    }
-    
-    .animate-slide-down {
-      animation: slide-down 0.3s ease-out;
-    }
-    
-    /* 设备冲突对话框动画 */
-    @keyframes scale-in {
-      from {
-        opacity: 0;
-        transform: scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-    
-    .animate-scale-in {
-      animation: scale-in 0.3s ease-out;
     }
   </style>
 
@@ -278,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.102";
+    const VERSION = "v16.01";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1064,13 +1032,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
     };
 
     function App() {
+      // 🔒 强制在线和版本检查
+      const [isVersionChecked, setIsVersionChecked] = useState(false);
+      const [mustRelogin, setMustRelogin] = useState(false);
+      const [offlineError, setOfflineError] = useState(false);
+      
       // 用户认证状态
       // 用户认证状态（全局，无需隔离）
       const [currentUser, setCurrentUser] = useState(() => {
-        const saved = localStorage.getItem('health_pro_user');
-        return saved ? JSON.parse(saved) : null;
+        // 启动时先不加载localStorage的用户，等待版本检查
+        return null;
       });
-      const [sessionToken, setSessionToken] = useState(() => localStorage.getItem('health_pro_session') || null);
+      const [sessionToken, setSessionToken] = useState(() => null);
       
       // 获取当前用户ID
       const getUserId = () => currentUser?.objectId;
@@ -1085,7 +1058,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
       
-      // 网络状态
+      // 网络状态（强制在线）
       const [isOnline, setIsOnline] = useState(navigator.onLine);
       
       // 设备管理 - 单设备登录限制
@@ -1100,10 +1073,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
       const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
       const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
-      const [showDeviceConflictDialog, setShowDeviceConflictDialog] = useState(false); // 登录时设备冲突对话框
-      const [pendingLoginUser, setPendingLoginUser] = useState(null); // 待登录的用户信息
+      const [kickedOutCountdown, setKickedOutCountdown] = useState(3); // 倒计时（秒）
       
-      // Token验证和数据冲突处理
+      // Token验证和数据冲突
       const [isValidatingToken, setIsValidatingToken] = useState(false); // Token验证中
       const [showDataConflict, setShowDataConflict] = useState(false); // 显示数据冲突对话框
       const [conflictData, setConflictData] = useState(null); // 冲突的云端数据
@@ -1121,6 +1093,262 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         serverURL: ''
       });
       
+      // ===== 核心函数定义区（必须在所有useEffect之前）=====
+      
+      // 【1】保存数据到云端
+      const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken, showAlert = false) => {
+        if (!userId || !token) return;
+        if (!isOnline) {
+          setSyncStatus('error');
+          if (showAlert) alert('⚠️ 网络离线,无法同步到云端');
+          return;
+        }
+        
+        console.log('🔄 [saveToCloud] 开始同步到云端...', { userId });
+        setSyncStatus('syncing');
+        
+        try {
+          const savedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+          console.log('📖 [saveToCloud] 读取到的成员列表:', savedMembers.length, '个:', savedMembers.map(m => m.name));
+          
+          const memberData = {};
+          savedMembers.forEach(member => {
+            memberData[member.id] = {
+              meds: loadMemberData(member.id, 'meds', [], userId),
+              catalog: loadMemberData(member.id, 'catalog', [], userId),
+              checkups: loadMemberData(member.id, 'checkups', [], userId),
+              labReports: loadMemberData(member.id, 'labReports', [], userId),
+              imagingReports: loadMemberData(member.id, 'imagingReports', [], userId),
+              vitals: loadMemberData(member.id, 'vitals', [], userId)
+            };
+          });
+          
+          let totalItems = 0;
+          Object.values(memberData).forEach(data => {
+            totalItems += (data.meds?.length || 0) + (data.catalog?.length || 0) + 
+                         (data.labReports?.length || 0) + (data.vitals?.length || 0);
+          });
+          console.log('📊 [saveToCloud] 数据统计:', { 成员数: savedMembers.length, 总数据项: totalItems });
+          
+          const apiSettings = {};
+          API_PROVIDERS.forEach(p => {
+            const key = 'ai_api_key_' + p.id;
+            const val = localStorage.getItem(key);
+            if (val) apiSettings[key] = val;
+          });
+          apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
+          
+          const savedDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
+          
+          const result = await LeanCloud.saveUserData(userId, token, {
+            members: savedMembers,
+            currentMemberId: loadData('current_member', 'default', userId),
+            memberData,
+            apiSettings,
+            medicalDictionary: savedDictionary,
+            lastUpdated: new Date().toISOString(),
+            deviceId: deviceId,
+            lastActiveTime: new Date().toISOString()
+          });
+          
+          console.log('✅ [saveToCloud] 云端同步成功!', result);
+          setSyncStatus('synced');
+          setLastSyncTime(new Date());
+          localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
+          if (showAlert) alert('✅ 数据已成功同步到云端');
+        } catch (e) {
+          console.error('❌ 云端保存失败:', e);
+          setSyncStatus('error');
+          
+          let errorMsg = '同步失败';
+          if (e.message.includes('网络')) errorMsg = '网络连接失败';
+          else if (e.message.includes('Session token')) errorMsg = '登录已过期,请重新登录';
+          else if (e.message.includes('Forbidden')) errorMsg = '没有权限,请重新登录';
+          else errorMsg = e.message || '未知错误';
+          
+          if (showAlert) alert(`❌ 同步失败:${errorMsg}\n\n请检查网络连接或稍后重试`);
+        }
+      };
+      
+      // 【2】应用云端数据
+      const applyCloudData = async (cloudData) => {
+        const userId = getUserId();
+        
+        let restoredMembers = [];
+        if (cloudData.members) {
+          console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
+          const hasDefaultMember = cloudData.members.some(m => m.id === 'default');
+          if (!hasDefaultMember) {
+            console.log('⚠️ [applyCloudData] 云端数据缺少默认成员，自动添加');
+            restoredMembers = [DEFAULT_MEMBER, ...cloudData.members];
+          } else {
+            restoredMembers = cloudData.members;
+          }
+        } else {
+          console.log('📝 [applyCloudData] 云端无成员数据，使用默认成员');
+          restoredMembers = [DEFAULT_MEMBER];
+        }
+        
+        console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
+        setMembers(restoredMembers);
+        saveData('members', restoredMembers, userId);
+        
+        let targetMemberId = 'default';
+        const localMemberId = loadData('current_member', null, userId);
+        const memberIds = restoredMembers.map(m => m.id);
+        
+        if (localMemberId && memberIds.includes(localMemberId)) {
+          targetMemberId = localMemberId;
+        } else if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
+          targetMemberId = cloudData.currentMemberId;
+        } else {
+          targetMemberId = restoredMembers[0]?.id || 'default';
+        }
+        
+        setCurrentMemberId(targetMemberId);
+        saveData('current_member', targetMemberId, userId);
+        
+        console.log('📦 [applyCloudData] memberData:', cloudData.memberData ? Object.keys(cloudData.memberData) : 'null');
+        if (cloudData.memberData) {
+          Object.keys(cloudData.memberData).forEach(memberId => {
+            const data = cloudData.memberData[memberId];
+            if (data.meds) saveMemberData(memberId, 'meds', data.meds, userId);
+            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog, userId);
+            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups, userId);
+            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports, userId);
+            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports, userId);
+            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals, userId);
+          });
+        }
+        
+        if (cloudData.apiSettings) {
+          Object.keys(cloudData.apiSettings).forEach(key => {
+            localStorage.setItem(key, cloudData.apiSettings[key]);
+          });
+        }
+        
+        if (cloudData.medicalDictionary) {
+          setMedicalDictionary(cloudData.medicalDictionary);
+          saveData('medical_dictionary', cloudData.medicalDictionary, userId);
+        }
+        
+        setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS, userId));
+        setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG, userId));
+        setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
+        setLabReports(loadMemberData(targetMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
+        setImagingReports(loadMemberData(targetMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
+        setVitals(loadMemberData(targetMemberId, 'vitals', DEFAULT_VITALS, userId));
+        
+        setDataLoaded(true);
+        console.log('✅ [applyCloudData] 云端数据应用完成');
+        setSyncStatus('synced');
+        setLastSyncTime(new Date());
+      };
+      
+      // 【3】从云端加载数据
+      const loadFromCloud = async (userId, token, forceOverwrite = false) => {
+        console.log('📥 [loadFromCloud] 开始:', { userId, isOnline });
+        
+        if (!isOnline) {
+          console.error('❌ [loadFromCloud] 离线状态，拒绝加载');
+          setSyncStatus('error');
+          setLoginLoading(false);
+          throw new Error('网络未连接，无法加载数据');
+        }
+        
+        setSyncStatus('syncing');
+        try {
+          console.log('🌐 [loadFromCloud] 请求云端数据...');
+          const cloudData = await LeanCloud.loadUserData(userId, token);
+          console.log('📦 [loadFromCloud] 云端返回:', cloudData ? '有数据' : '无数据');
+          if (cloudData) {
+            console.log('✅ [loadFromCloud] 应用云端数据');
+            await applyCloudData(cloudData);
+          } else {
+            console.log('🆕 [loadFromCloud] 新用户首次登录，初始化空数据');
+            await applyCloudData({
+              members: DEFAULT_MEMBERS,
+              currentMemberId: 'default',
+              memberData: {},
+              apiSettings: {},
+              medicalDictionary: DEFAULT_MEDICAL_DICTIONARY
+            });
+            await saveToCloud(userId, token);
+          }
+          setSyncStatus('synced');
+          setLastSyncTime(new Date());
+          setLoginLoading(false);
+          console.log('✅ [loadFromCloud] 完成');
+        } catch (e) {
+          console.error('❌ [loadFromCloud] 失败:', e);
+          setSyncStatus('error');
+          setLoginLoading(false);
+          throw e;
+        }
+      };
+      
+      // 【4】执行退出操作
+      const performLogout = () => {
+        const userId = getUserId();
+        console.log('🧹 [performLogout] 清理用户数据:', userId);
+        
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`health_pro_${userId}_`)) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log('  🗑️ 删除:', key);
+        });
+        console.log(`✅ [performLogout] 已清理 ${keysToRemove.length} 项数据`);
+        
+        localStorage.removeItem('health_pro_user');
+        localStorage.removeItem('health_pro_session');
+        
+        setCurrentUser(null);
+        setSessionToken(null);
+        setSyncStatus('');
+        setLastSyncTime(null);
+        setDataLoaded(false);
+        setLoginForm({ username: '', password: '', confirmPassword: '' });
+        setLoginError('');
+        setLoginLoading(false);
+        setIsLoggingOut(false);
+        setIsLoadingUserData(false);
+        setIsValidatingToken(false);
+        setIsRegistering(false);
+        console.log('✅ [performLogout] 退出登录完成');
+      };
+      
+      // 【5】退出登录
+      const handleLogout = async () => {
+        setIsLoggingOut(true);
+        
+        const forceLogoutTimer = setTimeout(() => {
+          console.warn('⚠️ [handleLogout] 同步超时，强制退出');
+          performLogout();
+        }, 3000);
+        
+        if (currentUser && sessionToken && isOnline) {
+          setSyncStatus('syncing');
+          try {
+            await saveToCloud(currentUser.objectId, sessionToken, false);
+            console.log('✅ [handleLogout] 退出前同步成功');
+          } catch (e) {
+            console.error('❌ [handleLogout] 退出前同步失败:', e);
+          }
+        }
+        
+        clearTimeout(forceLogoutTimer);
+        performLogout();
+      };
+      
+      // ===== useEffect 区域开始 =====
+      
       // 检测是否需要首次配置测试环境
       useEffect(() => {
         if (needsTestConfig && !localStorage.getItem('health_pro_test_config_skipped')) {
@@ -1132,6 +1360,60 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }, 1000);
           return () => clearTimeout(timer);
         }
+      }, []);
+      
+      // 🔒 启动时版本检查和强制在线验证（最高优先级）
+      useEffect(() => {
+        const checkVersionAndNetwork = () => {
+          console.log('🚀 [启动] 开始版本检查和网络验证');
+          
+          // 1. 检查网络状态（强制在线）
+          if (!navigator.onLine) {
+            console.error('❌ [启动] 离线状态，禁止使用');
+            setOfflineError(true);
+            setIsVersionChecked(true);
+            return;
+          }
+          
+          // 2. 检查应用版本
+          const savedVersion = localStorage.getItem('health_pro_app_version');
+          console.log('📱 [启动] 当前版本:', VERSION, '| 上次版本:', savedVersion);
+          
+          if (savedVersion && savedVersion !== VERSION) {
+            // 版本不一致，强制重新登录
+            console.warn('⚠️ [启动] 应用已更新，清除登录状态');
+            localStorage.removeItem('health_pro_user');
+            localStorage.removeItem('health_pro_session');
+            localStorage.removeItem('health_pro_last_sync_time');
+            setMustRelogin(true);
+            setIsVersionChecked(true);
+            return;
+          }
+          
+          // 3. 更新版本号
+          localStorage.setItem('health_pro_app_version', VERSION);
+          
+          // 4. 尝试恢复登录状态
+          const savedUser = localStorage.getItem('health_pro_user');
+          const savedToken = localStorage.getItem('health_pro_session');
+          
+          if (savedUser && savedToken) {
+            try {
+              setCurrentUser(JSON.parse(savedUser));
+              setSessionToken(savedToken);
+              console.log('✅ [启动] 恢复登录状态');
+            } catch (e) {
+              console.error('❌ [启动] 登录状态损坏，清除');
+              localStorage.removeItem('health_pro_user');
+              localStorage.removeItem('health_pro_session');
+            }
+          }
+          
+          setIsVersionChecked(true);
+          console.log('✅ [启动] 版本检查完成');
+        };
+        
+        checkVersionAndNetwork();
       }, []);
       
       // 保存测试环境配置
@@ -1168,7 +1450,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         if (/\d/.test(pwd)) score++;
         if (/[^a-zA-Z0-9]/.test(pwd)) score++;
         
-        if (score <= 1) return { level: 1, text: 'å¼±', color: 'bg-red-500' };
+        if (score <= 1) return { level: 1, text: '弱', color: 'bg-red-500' };
         if (score <= 2) return { level: 2, text: '较弱', color: 'bg-orange-500' };
         if (score <= 3) return { level: 3, text: '中等', color: 'bg-yellow-500' };
         if (score <= 4) return { level: 4, text: '强', color: 'bg-green-500' };
@@ -1211,94 +1493,55 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
 
       
-      // 用户登录
+      // 🔒 用户登录（强制在线）
       const handleLogin = async () => {
+        // 🔒 强制在线检查
+        if (!navigator.onLine) {
+          setLoginError('❌ 网络未连接\n\n请连接网络后重试');
+          return;
+        }
+        
         if (!loginForm.username.trim() || !loginForm.password) {
           setLoginError('请输入用户名和密码');
           return;
         }
-        setIsKickedOut(false); // 清除之前的被踢状态
         setLoginLoading(true);
         setLoginError('');
         try {
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
+          setCurrentUser(user);
+          setSessionToken(user.sessionToken);
+          localStorage.setItem('health_pro_user', JSON.stringify(user));
+          localStorage.setItem('health_pro_session', user.sessionToken);
           
-          // 🔧 方案B：登录前检查设备冲突
-          try {
-            const cloudData = await LeanCloud.loadUserData(user.objectId, user.sessionToken);
-            if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
-              // 检测到其他设备已登录，显示确认对话框
-              console.warn('⚠️ [登录] 检测到其他设备已登录');
-              setPendingLoginUser(user);
-              setShowDeviceConflictDialog(true);
-              setLoginLoading(false);
-              return; // 暂停登录流程，等待用户确认
-            }
-          } catch (checkErr) {
-            console.warn('⚠️ [登录] 设备检查失败，继续登录:', checkErr);
-          }
+          // 关键修改：等待云端数据加载完成
+          setIsLoadingUserData(true);
+          setShowLoginModal(false);
+          await loadFromCloud(user.objectId, user.sessionToken);
           
-          // 继续正常登录流程
-          await completeLogin(user);
+          // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
+          console.log('🔐 [登录] 当前设备ID:', deviceId);
+          await saveToCloud(user.objectId, user.sessionToken, false);
+          console.log('✅ [登录] 设备ID已更新到云端，其他设备将在10秒内被踢出');
+          
+          setIsLoadingUserData(false);
+          
+          setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '登录失败');
           setLoginLoading(false);
-          setIsLoadingUserData(false);
+          setIsLoadingUserData(false); // 确保失败时也结束loading
         }
       };
       
-      // 完成登录流程（提取为独立函数）
-      const completeLogin = async (user) => {
-        setIsKickedOut(false); // 清除被踢出状态（双重保险）
-        setCurrentUser(user);
-        setSessionToken(user.sessionToken);
-        localStorage.setItem('health_pro_user', JSON.stringify(user));
-        localStorage.setItem('health_pro_session', user.sessionToken);
-        
-        // 关键修改：等待云端数据加载完成
-        setIsLoadingUserData(true);
-        setShowLoginModal(false);
-        await loadFromCloud(user.objectId, user.sessionToken);
-        
-        // 立即更新设备ID到云端，占据登录状态
-        await saveToCloud(user.objectId, user.sessionToken, false);
-        console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
-        
-        setIsLoadingUserData(false);
-        
-        setLoginForm({ username: '', password: '', confirmPassword: '' });
-      };
-      
-      // 强制登录（设备冲突时用户选择继续）
-      const handleForceLogin = async () => {
-        if (!pendingLoginUser) return;
-        
-        setShowDeviceConflictDialog(false);
-        setIsKickedOut(false); // 清除被踢出状态
-        setLoginLoading(true);
-        
-        try {
-          await completeLogin(pendingLoginUser);
-          setPendingLoginUser(null);
-          console.log('✅ [强制登录] 已占据登录状态，其他设备将被踢出');
-        } catch (e) {
-          setLoginError(e.message || '登录失败');
-          setLoginLoading(false);
-          setIsLoadingUserData(false);
-        }
-      };
-      
-      // 取消登录（设备冲突时用户选择取消）
-      const handleCancelLogin = () => {
-        setShowDeviceConflictDialog(false);
-        setPendingLoginUser(null);
-        setLoginLoading(false);
-        setIsKickedOut(false); // 清除被踢状态
-        console.log('❌ [取消登录] 用户取消强制登录');
-      };
-      
-      // 用户注册
+      // 🔒 用户注册（强制在线）
       const handleSignUp = async () => {
+        // 🔒 强制在线检查
+        if (!navigator.onLine) {
+          setLoginError('❌ 网络未连接\n\n请连接网络后重试');
+          return;
+        }
+        
         if (!loginForm.username.trim() || !loginForm.password) {
           setLoginError('请输入用户名和密码');
           return;
@@ -1335,9 +1578,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           // 添加小延迟让用户看到"初始化账号"提示
           await new Promise(resolve => setTimeout(resolve, 800));
           
-          // 立即保存初始数据和设备ID到云端
+          // 🔒 立即保存初始数据和设备ID到云端
           await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [注册] 初始数据已同步到云端');
+          console.log('✅ [注册] 初始数据和设备ID已同步到云端');
           
           setIsLoadingUserData(false);
           setIsRegistering(false); // 重置注册标记
@@ -1365,7 +1608,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 数据冲突检测函数
-      // 数据冲突检测与智能同步（方案A：自动使用最新数据）
       const checkDataConflict = async () => {
         if (!currentUser || !sessionToken || !isOnline) return null;
         
@@ -1386,18 +1628,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           const cloudTime = new Date(cloudData.lastUpdated).getTime();
           const localTime = new Date(localLastSync).getTime();
           
-          // 如果云端数据更新
+          // 如果云端数据更新，且本地也有修改（通过检测本地数据与上次同步时的差异）
           if (cloudTime > localTime) {
             // 检测本地是否有未同步的修改
             const hasLocalChanges = checkLocalChanges(currentUser.objectId);
             
             if (hasLocalChanges) {
-              // 方案C：有冲突，返回冲突数据供用户选择
-              console.warn('⚠️ [checkDataConflict] 检测到数据冲突，需要用户选择');
-              return cloudData; // 返回云端数据，等待用户选择
+              // 数据冲突！
+              console.warn('⚠️ [checkDataConflict] 检测到数据冲突');
+              return cloudData;
             } else {
-              // 只有云端更新，无冲突，自动应用
-              console.log('✅ [checkDataConflict] 云端更新，无冲突，自动应用');
+              // 只有云端更新，无冲突
+              console.log('✅ [checkDataConflict] 云端更新，无冲突');
               return { noConflict: true, cloudData };
             }
           }
@@ -1423,8 +1665,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
       
-      
-      // 撤销自动同步（恢复本地备份）
       // 处理数据冲突 - 使用云端数据
       const resolveConflictWithCloud = async () => {
         if (!conflictData) return;
@@ -1434,8 +1674,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         try {
           await applyCloudData(conflictData);
+          // 更新最后同步时间
           localStorage.setItem('health_pro_last_sync_time', conflictData.lastUpdated);
-          console.log('✅ 已从云端恢复数据');
+          alert('✅ 已从云端恢复数据');
         } catch (e) {
           console.error('❌ [resolveConflictWithCloud] 应用云端数据失败:', e);
           alert('❌ 数据恢复失败');
@@ -1453,8 +1694,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         try {
           // 直接上传本地数据到云端
           await saveToCloud(currentUser.objectId, sessionToken, false);
+          // 更新最后同步时间
           localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
-          console.log('✅ 已保存本地数据到云端');
+          alert('✅ 已保存本地数据到云端');
         } catch (e) {
           console.error('❌ [resolveConflictWithLocal] 上传本地数据失败:', e);
           alert('❌ 数据上传失败');
@@ -1464,109 +1706,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
       
-      // 退出登录
-      const handleLogout = async () => {
-        setIsLoggingOut(true);
-        
-        // 超时保护：3秒后强制退出
-        const forceLogoutTimer = setTimeout(() => {
-          console.warn('⚠️ [handleLogout] 同步超时，强制退出');
-          performLogout();
-        }, 3000);
-        
-        // 退出前先同步到云端（关键：确保数据不丢失）
-        if (currentUser && sessionToken && isOnline) {
-          setSyncStatus('syncing');
-          try {
-            await saveToCloud(currentUser.objectId, sessionToken, false);
-            console.log('✅ [handleLogout] 退出前同步成功');
-          } catch (e) {
-            console.error('❌ [handleLogout] 退出前同步失败:', e);
-          }
-        }
-        
-        clearTimeout(forceLogoutTimer);
-        performLogout();
-      };
-      
-      // 执行退出操作
-      const performLogout = () => {
-        // 关键修复：清理当前用户的所有localStorage数据
-        const userId = getUserId();
-        console.log('🧹 [performLogout] 清理用户数据:', userId);
-        
-        // 收集所有需要删除的key
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          // 清理该用户的所有数据（包括成员数据、API设置等）
-          if (key && key.startsWith(`health_pro_${userId}_`)) {
-            keysToRemove.push(key);
-          }
-        }
-        
-        // 批量删除
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
-          console.log('  🗑️ 删除:', key);
-        });
-        console.log(`✅ [performLogout] 已清理 ${keysToRemove.length} 项数据`);
-        
-        // 清理用户凭证
-        localStorage.removeItem('health_pro_user');
-        localStorage.removeItem('health_pro_session');
-        
-        // 重置state
-        setCurrentUser(null);
-        setSessionToken(null);
-        setSyncStatus('');
-        setLastSyncTime(null);
-        setDataLoaded(false);
-        setLoginForm({ username: '', password: '', confirmPassword: '' });
-        setLoginError('');
-        setIsLoggingOut(false);
-        setIsLoadingUserData(false); // 修复：重置加载状态
-        setIsValidatingToken(false); // 修复：重置验证状态
-        setIsRegistering(false);     // 修复：重置注册状态
-        console.log('✅ [performLogout] 退出登录完成');
-      };
-      
-      // 从云端加载数据
+      // 🔒 从云端加载数据（强制在线）
       const loadFromCloud = async (userId, token, forceOverwrite = false) => {
         console.log('📥 [loadFromCloud] 开始:', { userId, isOnline });
+        
+        // 🔒 强制在线：离线时拒绝加载
         if (!isOnline) {
-          console.log('❌ [loadFromCloud] 离线，从localStorage加载');
+          console.error('❌ [loadFromCloud] 离线状态，拒绝加载');
           setSyncStatus('error');
           setLoginLoading(false);
-          setDataLoaded(true);
-          
-          // 关键修复：离线时从localStorage加载数据
-          try {
-            let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
-            const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
-            if (!hasDefaultMember) {
-              loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
-              saveData('members', loadedMembers, userId);
-            }
-            setMembers(loadedMembers);
-            
-            const loadedCurrentMemberId = loadData('current_member', 'default', userId);
-            setCurrentMemberId(loadedCurrentMemberId);
-            
-            setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
-            setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
-            setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
-            setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
-            setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
-            setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
-            setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
-            
-            console.log('✅ [loadFromCloud-offline] 离线数据加载完成');
-          } catch (err) {
-            console.error('❌ [loadFromCloud-offline] 加载失败:', err);
-          }
-          return;
+          throw new Error('网络未连接，无法加载数据');
         }
+        
         setSyncStatus('syncing');
         try {
           console.log('🌐 [loadFromCloud] 请求云端数据...');
@@ -1834,19 +1985,26 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         };
       }, [currentUser, sessionToken, dataLoaded]);
       
-      // 网络状态监听
+      // 🔒 网络状态监听（强制在线）
       useEffect(() => {
         const handleOnline = () => {
+          console.log('🌐 [网络] 恢复在线');
           setIsOnline(true);
+          setOfflineError(false);
           // 恢复在线后自动重试同步
           if (currentUser && sessionToken && syncStatus === 'error') {
             saveToCloud();
           }
         };
         const handleOffline = () => {
+          console.error('❌ [网络] 检测到离线，强制退出登录');
           setIsOnline(false);
-          if (syncStatus === 'syncing') {
-            setSyncStatus('error');
+          setOfflineError(true);
+          
+          // 🔒 强制在线：离线时立即退出登录
+          if (currentUser) {
+            alert('⚠️ 网络已断开\n\n本应用需要网络连接才能使用，请连接网络后重新登录。');
+            performLogout();
           }
         };
         
@@ -1880,34 +2038,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             
             console.log('✅ [启动验证] Token有效');
             
-            // 2. 检测数据冲突并自动同步
+            // 2. 检测数据冲突
             const conflictResult = await checkDataConflict();
             
-            if (conflictResult) {
-              if (conflictResult.autoApplied) {
-                // 🎯 方案A：自动应用了云端数据
-                console.warn('⚠️ [启动验证] 已自动使用云端数据');
-                await applyCloudData(conflictResult.cloudData);
-                localStorage.setItem('health_pro_last_sync_time', conflictResult.cloudData.lastUpdated);
-                
-                // 保存备份数据（用于撤销）
-                setLastConflictData(conflictResult);
-                
-                // 显示通知
-                setSyncNotification(conflictResult.notification);
-                
-                // 5秒后自动关闭通知
-                setTimeout(() => setSyncNotification(null), 5000);
-              } else if (conflictResult.noConflict) {
-                // 只有云端更新，自动应用
-                console.log('✅ [启动验证] 云端数据更新，自动应用');
-                await applyCloudData(conflictResult.cloudData);
-                localStorage.setItem('health_pro_last_sync_time', conflictResult.cloudData.lastUpdated);
-                
-                // 显示简单通知
-                setSyncNotification(conflictResult.notification);
-                setTimeout(() => setSyncNotification(null), 3000);
-              }
+            if (conflictResult && !conflictResult.noConflict) {
+              // 有冲突，显示对话框
+              console.warn('⚠️ [启动验证] 检测到数据冲突，显示选择对话框');
+              setConflictData(conflictResult);
+              setShowDataConflict(true);
+            } else if (conflictResult?.noConflict) {
+              // 只有云端更新，自动应用
+              console.log('✅ [启动验证] 云端数据更新，自动应用');
+              await applyCloudData(conflictResult.cloudData);
+              localStorage.setItem('health_pro_last_sync_time', conflictResult.cloudData.lastUpdated);
             } else {
               console.log('✅ [启动验证] 无冲突，继续正常流程');
             }
@@ -1924,7 +2067,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return () => clearTimeout(timer);
       }, []); // 只在组件挂载时执行一次
       
-      // 设备心跳检测 - 单设备登录限制
+      // 🔒 设备心跳检测 - 单设备登录限制（强化版）
       useEffect(() => {
         if (!currentUser || !sessionToken || !isOnline) return;
         
@@ -1934,29 +2077,41 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             const cloudData = await LeanCloud.loadUserData(currentUser.objectId, sessionToken);
             
             if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
-              // 设备ID不匹配，说明在其他设备登录了
-              console.warn('⚠️ [心跳检测] 检测到其他设备登录');
-              setIsKickedOut(true);
-              setKickedOutReason('您的账号已在其他设备登录');
+              // 🔒 设备ID不匹配，立即强制退出
+              console.error('❌ [心跳] 检测到其他设备登录，立即强制退出');
               
-              // 清理本地登录状态
+              // 显示提示
+              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
+              
+              // 立即清理状态并退出
               localStorage.removeItem('health_pro_user');
               localStorage.removeItem('health_pro_session');
               setCurrentUser(null);
               setSessionToken(null);
+              console.log('✅ [心跳] 已清理状态，返回登录界面');
             }
           } catch (e) {
-            console.error('❌ [心跳检测] 失败:', e);
+            console.error('❌ [心跳] 失败:', e);
+            // 如果Token失效，也强制退出
+            if (e.message && (e.message.includes('Session') || e.message.includes('Unauthorized'))) {
+              console.error('❌ [心跳] Token失效，强制退出');
+              alert('⚠️ 登录已过期\n\n请重新登录');
+              performLogout();
+            }
           }
         };
         
-        // 首次检查
-        checkDeviceStatus();
+        // 首次检查（延迟2秒，避免与启动验证冲突）
+        const initialTimer = setTimeout(checkDeviceStatus, 2000);
         
-        // 每30秒检查一次
-        const interval = setInterval(checkDeviceStatus, 30000);
+        // 每10秒检查一次（快速检测被踢出）
+        const interval = setInterval(checkDeviceStatus, 10000);
         
-        return () => clearInterval(interval);
+        return () => {
+          clearTimeout(initialTimer);
+          clearInterval(interval);
+        };
+      }, [currentUser, sessionToken, deviceId, isOnline]);
       }, [currentUser, sessionToken, deviceId, isOnline]);
       
       // 关闭首次引导
@@ -3117,6 +3272,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return IconComponent ? <IconComponent size={size} style={{ color }} /> : null;
       };
 
+      // 🔒 版本检查中 - 最高优先级
+      if (!isVersionChecked) {
+        return (
+          <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
+            <div className="text-center">
+              <div className="w-20 h-20 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
+              <h3 className="text-2xl font-bold text-white mb-2">启动中...</h3>
+              <p className="text-white/70 text-sm">正在检查版本和网络状态</p>
+            </div>
+          </div>
+        );
+      }
+
       // 登录/注册后加载用户数据中
       if (isLoadingUserData || isValidatingToken) {
         let loadingText = '加载中...';
@@ -3152,7 +3320,41 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
             
             <div className="relative z-10 flex flex-col min-h-full justify-center p-6 py-12">
-              {/* 被踢出提示 */}
+              {/* 🔒 离线错误提示 */}
+              {offlineError && (
+                <div className="mb-6 bg-red-600 text-white rounded-2xl p-5 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Icons.CloudOff size={28}/>
+                    <h3 className="font-bold text-lg">网络未连接</h3>
+                  </div>
+                  <p className="text-sm mb-3">本应用需要网络连接才能使用</p>
+                  <div className="bg-white/10 rounded-lg p-3 text-xs">
+                    <p>📱 请检查您的网络连接：</p>
+                    <ul className="mt-2 space-y-1 ml-4 list-disc">
+                      <li>确认WiFi或移动网络已开启</li>
+                      <li>检查是否处于飞行模式</li>
+                      <li>尝试刷新页面</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+              
+              {/* 🔒 版本更新提示 */}
+              {mustRelogin && !offlineError && (
+                <div className="mb-6 bg-indigo-600 text-white rounded-2xl p-5 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Icons.RefreshCw size={28}/>
+                    <h3 className="font-bold text-lg">应用已更新</h3>
+                  </div>
+                  <p className="text-sm mb-3">检测到应用版本更新，请重新登录以获取最新数据</p>
+                  <div className="bg-white/10 rounded-lg p-3 text-xs">
+                    <p>✨ 版本: {VERSION}</p>
+                    <p className="mt-2">为了您的数据安全，版本更新后需要重新登录并从云端同步最新数据。</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* 被踢出提示（原有） */}
               {isKickedOut && (
                 <div className="mb-6 bg-red-500 text-white rounded-2xl p-4 shadow-2xl animate-pulse">
                   <div className="flex items-center gap-3 mb-2">
@@ -3289,46 +3491,29 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
               </div>
               
+              {/* 🔒 强制在线提示 */}
+              <div className="mt-4 text-center">
+                <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+                  <div className="flex items-center gap-2 text-xs text-white/90">
+                    <Icons.Cloud size={12}/>
+                    <span>需要网络连接 • 单设备登录</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 单设备登录提示 */}
+              <div className="mt-4 text-center">
+                <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl text-xs" style={{color: 'rgba(255,255,255,0.6)'}}>
+                  <Icons.Smartphone size={12}/>
+                  <span>单设备登录，后登录会踢出前设备</span>
+                </div>
+              </div>
+              
               {/* 版本号 */}
               <div className="text-center pt-6 text-xs" style={{color: 'rgba(255,255,255,0.4)'}}>
                 健康管家 Pro {VERSION}
               </div>
             </div>
-            
-            {/* 设备冲突确认对话框 */}
-            {showDeviceConflictDialog && (
-              <div className="absolute inset-0 z-[200] bg-black/80 flex items-center justify-center p-6" onClick={e => e.stopPropagation()}>
-                <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-scale-in" onClick={e => e.stopPropagation()}>
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icons.AlertTriangle size={32} className="text-yellow-600"/>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到设备冲突</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-blue-900 mb-2">
-                      该账号已在其他设备登录
-                    </p>
-                    <p className="text-xs text-blue-700">
-                      继续登录将使其他设备退出登录
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    <button 
-                      onClick={handleForceLogin}
-                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Icons.LogIn size={18}/>
-                      强制登录
-                    </button>
-                    <button 
-                      onClick={handleCancelLogin}
-                      className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all"
-                    >
-                      取消
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         );
       }
@@ -4843,25 +5028,93 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
           )}
 
+          {/* 数据冲突解决对话框 */}
+          {showDataConflict && conflictData && (
+            <div className="absolute inset-0 z-[155] bg-black/80 flex items-center justify-center p-6">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icons.AlertTriangle size={32} className="text-yellow-600"/>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到数据冲突</h3>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-blue-900 mb-3">
+                    云端数据已被其他设备更新，但您的本地也有修改。
+                  </p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">云端更新时间:</span>
+                      <span className="font-mono text-blue-900">{new Date(conflictData.lastUpdated).toLocaleString('zh-CN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">本地修改时间:</span>
+                      <span className="font-mono text-blue-900">{new Date(localStorage.getItem('health_pro_last_sync_time') || Date.now()).toLocaleString('zh-CN')}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-orange-800">
+                    ⚠️ <strong>请选择保留哪个版本</strong>：选择后将覆盖另一个版本的数据
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button 
+                    onClick={resolveConflictWithCloud}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.Cloud size={18}/>
+                    使用云端数据
+                  </button>
+                  <button 
+                    onClick={resolveConflictWithLocal}
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.Smartphone size={18}/>
+                    使用本地数据
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-400 text-center mt-4">
+                  💡 建议：如果不确定，选择"使用云端数据"更安全
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* 被其他设备踢出提示 */}
           {isKickedOut && currentUser && (
             <div className="absolute inset-0 z-[160] bg-black/80 flex items-center justify-center p-6">
               <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                   <Icons.AlertTriangle size={40} className="text-red-500"/>
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">账号已在其他设备登录</h3>
-                <p className="text-sm text-gray-600 mb-6">{kickedOutReason || '检测到您的账号在其他设备登录，当前登录已失效。'}</p>
+                <p className="text-sm text-gray-600 mb-4">{kickedOutReason || '检测到您的账号在其他设备登录，当前登录已失效。'}</p>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Icons.Clock size={18} className="text-orange-600"/>
+                    <span className="text-2xl font-bold text-orange-600">{kickedOutCountdown}</span>
+                    <span className="text-sm text-orange-600">秒后自动返回登录</span>
+                  </div>
+                </div>
+                
                 <button 
                   onClick={() => {
                     setIsKickedOut(false);
+                    setKickedOutReason('');
+                    setKickedOutCountdown(3);
                     // 清理状态，返回登录界面
+                    localStorage.removeItem('health_pro_user');
+                    localStorage.removeItem('health_pro_session');
                     setCurrentUser(null);
                     setSessionToken(null);
                   }}
                   className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700"
                 >
-                  重新登录
+                  立即返回登录
                 </button>
               </div>
             </div>
@@ -4999,17 +5252,38 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
   <script>
     // Safari 兼容性和错误监控
     window.addEventListener('error', function(e) {
-      console.error('Global error:', e.error);
-      // 在Safari中显示错误(开发时)
-      if (window.location.hostname === 'localhost' || window.location.hostname.includes('vercel')) {
-        document.body.innerHTML = '<div style="color:white;padding:20px;background:#dc2626;"><h3>加载错误</h3><p>' + e.message + '</p><p>请检查浏览器控制台</p></div>';
-      }
+      console.error('Global error:', e);
+      console.error('Error message:', e.message);
+      console.error('Error filename:', e.filename);
+      console.error('Error lineno:', e.lineno);
+      console.error('Error colno:', e.colno);
+      console.error('Error error:', e.error);
+      
+      // 始终显示错误（便于调试）
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#dc2626;color:white;padding:20px;z-index:99999;overflow:auto;';
+      errorDiv.innerHTML = `
+        <h3 style="margin:0 0 10px 0;">⚠️ 加载错误</h3>
+        <p style="margin:5px 0;"><strong>消息:</strong> ${e.message || 'Unknown error'}</p>
+        <p style="margin:5px 0;"><strong>位置:</strong> ${e.filename || 'Unknown'}:${e.lineno || '?'}:${e.colno || '?'}</p>
+        <p style="margin:5px 0;"><strong>错误对象:</strong> ${e.error ? e.error.stack || e.error.toString() : 'None'}</p>
+        <p style="margin:15px 0 5px 0;"><strong>浏览器信息:</strong></p>
+        <pre style="background:rgba(0,0,0,0.3);padding:10px;border-radius:5px;font-size:11px;overflow-x:auto;">${navigator.userAgent}</pre>
+        <p style="margin:15px 0 5px 0;font-size:12px;">请截图此错误信息并报告</p>
+      `;
+      document.body.innerHTML = '';
+      document.body.appendChild(errorDiv);
     });
     
     // 检测Safari并添加标记
     if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
       document.documentElement.classList.add('is-safari');
     }
+    
+    // 添加调试日志
+    console.log('✅ 脚本开始执行');
+    console.log('📱 用户代理:', navigator.userAgent);
+    console.log('🌐 在线状态:', navigator.onLine);
   </script>
 </body>
 </html>
