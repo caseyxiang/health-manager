@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.93";
+    const VERSION = "v15.94";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1239,19 +1239,15 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           
-          // 注册后保存当前本地数据到云端(如果有的话)
-          const hasLocalData = localStorage.getItem('health_pro_members') !== null;
-          if (hasLocalData) {
-            // 有旧数据（理论上不应该发生，但保留兼容性）
-            console.log('⚠️ [注册] 检测到旧数据，上传到云端');
-            await saveToCloud(user.objectId, user.sessionToken);
-          } else {
-            // 新用户，快速初始化（无需网络请求）
-            console.log('🆕 [注册] 新用户，执行快速初始化');
-            initializeNewUser(user.objectId);
-            // 添加小延迟让用户看到"初始化账号"提示
-            await new Promise(resolve => setTimeout(resolve, 800));
-          }
+          // 新用户，快速初始化（无需网络请求）
+          console.log('🆕 [注册] 新用户，执行快速初始化');
+          initializeNewUser(user.objectId);
+          
+          // 标记数据已加载，防止useEffect触发loadFromCloud
+          setDataLoaded(true);
+          
+          // 添加小延迟让用户看到"初始化账号"提示
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           // 立即保存初始数据和设备ID到云端
           await saveToCloud(user.objectId, user.sessionToken, false);
@@ -1886,7 +1882,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         // 初始化医学词典
         saveData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
         
-        // 更新state
+        // 更新state（不调用setDataLoaded，避免触发useEffect）
         setMembers(defaultMembers);
         setCurrentMemberId('default');
         setMeds([]);
@@ -1896,9 +1892,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setImagingReports([]);
         setVitals([]);
         setMedicalDictionary(DEFAULT_MEDICAL_DICTIONARY);
-        setDataLoaded(true);
         
-        console.log('✅ [initializeNewUser] 新用户初始化完成');
+        console.log('✅ [initializeNewUser] 新用户初始化完成（不触发useEffect）');
       };
       
       // 应用云端数据到本地
