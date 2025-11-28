@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.88</title>
+  <title>健康管家 Pro v15.90</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,14 +246,72 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.88";
+    const VERSION = "v15.90";
     
-    // LeanCloud 配置
-    const LC_CONFIG = {
+    // 🌍 环境自动检测
+    const detectEnvironment = () => {
+      const hostname = window.location.hostname;
+      
+      // 测试环境判断条件
+      const isTestEnv = 
+        hostname.includes('-test.vercel.app') ||  // Vercel 测试部署
+        hostname.includes('git-test-') ||         // Vercel 分支预览  
+        hostname.startsWith('test.') ||           // 自定义测试域名
+        hostname === 'localhost' ||               // 本地开发
+        hostname === '127.0.0.1';                 // 本地IP
+      
+      return isTestEnv ? 'test' : 'production';
+    };
+    
+    const CURRENT_ENV = detectEnvironment();
+    console.log('🌍 [环境检测] 当前环境:', CURRENT_ENV);
+    console.log('🌍 [环境检测] 域名:', window.location.hostname);
+    
+    // 📦 智能配置加载 - 优先从localStorage读取测试配置
+    const loadTestConfig = () => {
+      try {
+        const saved = localStorage.getItem('health_pro_test_leancloud_config');
+        if (saved) {
+          const config = JSON.parse(saved);
+          console.log('✅ [配置] 从localStorage加载测试配置');
+          return config;
+        }
+      } catch (e) {
+        console.warn('⚠️ [配置] localStorage读取失败:', e);
+      }
+      
+      // 默认占位符配置（触发首次配置提示）
+      console.log('📝 [配置] 使用默认占位符，需要首次配置');
+      return {
+        appId: 'cSvyDXnk78NGe5x4jYZLIVEo-gzGzoHsz',
+        appKey: 'JmlbndGNYJuT0jmwEw8sXU7v',
+        serverURL: 'https://csvydxnk.lc-cn-n1-shared.com'
+      };
+    };
+    
+    // LeanCloud 配置 - 根据环境自动选择
+    const LC_CONFIG = CURRENT_ENV === 'test' ? loadTestConfig() : {
+      // ✅ 生产环境配置
       appId: 'CRfeDG3VSyidc5qcX3SVtibn-gzGzoHsz',
       appKey: 'mqv2BXZT7u9GhAwVe7mAO9PL',
       serverURL: 'https://crfedg3v.lc-cn-n1-shared.com'
     };
+    
+    // 检测是否需要配置
+    const needsTestConfig = CURRENT_ENV === 'test' && (
+      !LC_CONFIG.appId || 
+      LC_CONFIG.appId === '你的测试AppID' ||
+      LC_CONFIG.appId.includes('占位符')
+    );
+    
+    // 在控制台显示当前配置（脱敏）
+    console.log('☁️ [LeanCloud] 环境:', CURRENT_ENV);
+    if (needsTestConfig) {
+      console.warn('⚠️ [LeanCloud] 测试环境未配置，请在设置中配置');
+    } else {
+      console.log('☁️ [LeanCloud] AppID:', LC_CONFIG.appId.substring(0, 10) + '...');
+      console.log('☁️ [LeanCloud] ServerURL:', LC_CONFIG.serverURL);
+    }
     
     // LeanCloud REST API 封装
     const LeanCloud = {
@@ -1032,10 +1090,68 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 网络状态
       const [isOnline, setIsOnline] = useState(navigator.onLine);
       
+      // 设备管理 - 单设备登录限制
+      const [deviceId] = useState(() => {
+        // 生成或读取设备唯一ID
+        let id = localStorage.getItem('health_pro_device_id');
+        if (!id) {
+          id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('health_pro_device_id', id);
+        }
+        return id;
+      });
+      const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
+      const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
+      
       // 首次使用引导
       const [showWelcomeGuide, setShowWelcomeGuide] = useState(() => {
         return !localStorage.getItem('health_pro_welcomed');
       });
+      
+      // 测试环境配置
+      const [showTestConfigModal, setShowTestConfigModal] = useState(false);
+      const [testConfigInput, setTestConfigInput] = useState({
+        appId: '',
+        appKey: '',
+        serverURL: ''
+      });
+      
+      // 检测是否需要首次配置测试环境
+      useEffect(() => {
+        if (needsTestConfig && !localStorage.getItem('health_pro_test_config_skipped')) {
+          // 延迟显示，避免与登录界面冲突
+          const timer = setTimeout(() => {
+            if (!currentUser) { // 只在未登录时显示
+              setShowTestConfigModal(true);
+            }
+          }, 1000);
+          return () => clearTimeout(timer);
+        }
+      }, []);
+      
+      // 保存测试环境配置
+      const saveTestConfig = () => {
+        if (!testConfigInput.appId || !testConfigInput.appKey || !testConfigInput.serverURL) {
+          alert('请填写完整的配置信息');
+          return;
+        }
+        
+        // 保存到localStorage
+        localStorage.setItem('health_pro_test_leancloud_config', JSON.stringify(testConfigInput));
+        setShowTestConfigModal(false);
+        alert('✅ 测试环境配置已保存！\n\n请刷新页面以应用新配置。');
+        
+        // 自动刷新页面
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      };
+      
+      // 跳过配置（使用占位符）
+      const skipTestConfig = () => {
+        localStorage.setItem('health_pro_test_config_skipped', 'true');
+        setShowTestConfigModal(false);
+      };
       
       // 密码强度计算
       const getPasswordStrength = (pwd) => {
@@ -1109,6 +1225,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           await loadFromCloud(user.objectId, user.sessionToken);
+          
+          // 立即更新设备ID到云端，占据登录状态
+          await saveToCloud(user.objectId, user.sessionToken, false);
+          console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
+          
           setIsLoadingUserData(false);
           
           setLoginForm({ username: '', password: '', confirmPassword: '' });
@@ -1154,6 +1275,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             // 新用户，加载空数据
             await loadFromCloud(user.objectId, user.sessionToken);
           }
+          
+          // 立即更新设备ID到云端
+          await saveToCloud(user.objectId, user.sessionToken, false);
+          console.log('✅ [注册] 设备ID已更新到云端:', deviceId);
           
           setIsLoadingUserData(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
@@ -1401,7 +1526,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             memberData,
             apiSettings,
             medicalDictionary: savedDictionary,
-            lastUpdated: new Date().toISOString()
+            lastUpdated: new Date().toISOString(),
+            // 设备管理字段
+            deviceId: deviceId,  // 当前设备ID
+            lastActiveTime: new Date().toISOString()  // 最后活跃时间
           });
           
           console.log('✅ [saveToCloud] 云端同步成功!', result);
@@ -1550,6 +1678,41 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           window.removeEventListener('offline', handleOffline);
         };
       }, [currentUser, sessionToken, syncStatus]);
+      
+      // 设备心跳检测 - 单设备登录限制
+      useEffect(() => {
+        if (!currentUser || !sessionToken || currentUser.objectId === 'dev' || !isOnline) return;
+        
+        const checkDeviceStatus = async () => {
+          try {
+            // 从云端加载用户数据
+            const cloudData = await LeanCloud.loadUserData(currentUser.objectId, sessionToken);
+            
+            if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
+              // 设备ID不匹配，说明在其他设备登录了
+              console.warn('⚠️ [心跳检测] 检测到其他设备登录');
+              setIsKickedOut(true);
+              setKickedOutReason('您的账号已在其他设备登录');
+              
+              // 清理本地登录状态
+              localStorage.removeItem('health_pro_user');
+              localStorage.removeItem('health_pro_session');
+              setCurrentUser(null);
+              setSessionToken(null);
+            }
+          } catch (e) {
+            console.error('❌ [心跳检测] 失败:', e);
+          }
+        };
+        
+        // 首次检查
+        checkDeviceStatus();
+        
+        // 每30秒检查一次
+        const interval = setInterval(checkDeviceStatus, 30000);
+        
+        return () => clearInterval(interval);
+      }, [currentUser, sessionToken, deviceId, isOnline]);
       
       // 关闭首次引导
       const dismissWelcomeGuide = () => {
@@ -2699,6 +2862,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
             
             <div className="relative z-10 flex flex-col min-h-full justify-center p-6 py-12">
+              {/* 被踢出提示 */}
+              {isKickedOut && (
+                <div className="mb-6 bg-red-500 text-white rounded-2xl p-4 shadow-2xl animate-pulse">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Icons.AlertTriangle size={24}/>
+                    <h3 className="font-bold text-lg">登录已失效</h3>
+                  </div>
+                  <p className="text-sm">{kickedOutReason}</p>
+                  <button 
+                    onClick={() => setIsKickedOut(false)} 
+                    className="mt-3 text-sm underline hover:no-underline"
+                  >
+                    关闭提示
+                  </button>
+                </div>
+              )}
+              
               {/* Logo 和标题 */}
               <div className="text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl" style={{backgroundColor: 'rgba(255,255,255,0.2)'}}>
@@ -2706,6 +2886,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-2">健康管家</h1>
                 <p className="text-sm" style={{color: 'rgba(255,255,255,0.7)'}}>您的私人健康数据管理助手</p>
+                {CURRENT_ENV === 'test' && (
+                  <div className="mt-3 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold inline-block animate-pulse">
+                    🧪 测试环境
+                  </div>
+                )}
               </div>
               
               {/* 登录/注册表单 */}
@@ -2837,6 +3022,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 已登录,显示主界面
       return (
         <div className="w-full max-w-md mx-auto bg-slate-50 h-full flex flex-col font-sans text-slate-800 overflow-hidden relative shadow-2xl">
+          {/* 测试环境水印 */}
+          {CURRENT_ENV === 'test' && (
+            <div className="fixed top-0 right-0 z-[9999] bg-gradient-to-r from-orange-500 to-orange-400 text-white px-4 py-1.5 text-xs font-bold shadow-lg" style={{borderBottomLeftRadius: '12px'}}>
+              🧪 测试环境
+            </div>
+          )}
+          
           {/* Header */}
           <header className="bg-indigo-700 text-white p-4 pt-6 pb-4 shadow-lg shrink-0 z-10 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -2845,6 +3037,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 <Icons.Activity size={18}/> 健康管家 
                 <span className="text-xs font-normal opacity-70">{VERSION}</span>
                 {currentUser?.objectId === 'dev' && <span className="text-[10px] bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-bold">开发</span>}
+                {CURRENT_ENV === 'test' && <span className="text-[10px] bg-orange-400 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">测试</span>}
               </h1>
               {/* 云同步状态(改进版:显示上次同步时间)*/}
               {currentUser?.objectId !== 'dev' && (
@@ -4194,6 +4387,29 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   </div>
                 </div>
 
+                {/* 测试环境配置 */}
+                {CURRENT_ENV === 'test' && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 flex items-center gap-2">
+                      🧪 测试环境配置
+                    </h4>
+                    <button 
+                      onClick={() => {
+                        // 读取当前配置
+                        const currentConfig = loadTestConfig();
+                        setTestConfigInput(currentConfig);
+                        setShowTestConfigModal(true);
+                      }} 
+                      className="w-full py-3 bg-orange-50 text-orange-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-orange-200 hover:bg-orange-100"
+                    >
+                      <Icons.Settings size={16}/> 配置测试环境LeanCloud
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      {needsTestConfig ? '⚠️ 尚未配置' : '✅ 已配置'}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">数据管理</h4>
                   <button onClick={() => setShowResetConfirm(true)} className="w-full py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-rose-100 hover:bg-rose-100">
@@ -4320,6 +4536,123 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
           )}
 
+          {/* 被其他设备踢出提示 */}
+          {isKickedOut && currentUser && (
+            <div className="absolute inset-0 z-[160] bg-black/80 flex items-center justify-center p-6">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icons.AlertTriangle size={40} className="text-red-500"/>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">账号已在其他设备登录</h3>
+                <p className="text-sm text-gray-600 mb-6">{kickedOutReason || '检测到您的账号在其他设备登录，当前登录已失效。'}</p>
+                <button 
+                  onClick={() => {
+                    setIsKickedOut(false);
+                    // 清理状态，返回登录界面
+                    setCurrentUser(null);
+                    setSessionToken(null);
+                  }}
+                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700"
+                >
+                  重新登录
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 测试环境配置模态框 */}
+          {showTestConfigModal && (
+            <div className="absolute inset-0 z-[170] bg-black/70 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      🧪
+                    </div>
+                    <h3 className="text-lg font-bold">测试环境配置</h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowTestConfigModal(false)} 
+                    className="p-1 bg-gray-100 rounded-full hover:bg-gray-200"
+                  >
+                    <Icons.X size={16}/>
+                  </button>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    <strong>首次配置</strong>：配置后将保存到浏览器，以后所有新版本都会自动使用此配置。
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 AppID *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.appId}
+                      onChange={e => setTestConfigInput({...testConfigInput, appId: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="xxxxx-gzGzoHsz"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 AppKey *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.appKey}
+                      onChange={e => setTestConfigInput({...testConfigInput, appKey: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="xxxxxxxxxxxxx"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 API 域名 *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.serverURL}
+                      onChange={e => setTestConfigInput({...testConfigInput, serverURL: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="https://xxxxx.lc-cn-n1-shared.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-blue-800">
+                    <strong>📖 如何获取：</strong><br/>
+                    1. 登录 <a href="https://console.leancloud.cn" target="_blank" className="underline">console.leancloud.cn</a><br/>
+                    2. 创建应用：「健康管家Pro-测试」<br/>
+                    3. 设置 → 应用凭证 → 复制配置
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={skipTestConfig}
+                    className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200"
+                  >
+                    稍后配置
+                  </button>
+                  <button 
+                    onClick={saveTestConfig}
+                    className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 shadow-lg"
+                  >
+                    保存配置
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Print Preview Modal */}
           {showPrintPreview && (
             <div className="absolute inset-0 z-[90] bg-white flex flex-col">
@@ -4350,6 +4683,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    
+    // 动态更新页面标题（显示环境标识）
+    if (CURRENT_ENV === 'test') {
+      document.title = `健康管家 Pro ${VERSION} [测试环境]`;
+    }
   </script>
   <script>
     // Safari 兼容性和错误监控
