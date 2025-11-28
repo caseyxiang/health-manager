@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.13</title>
+  <title>健康管家 Pro v16.14</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.13";
+    const VERSION = "v16.14";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -491,18 +491,83 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       { id: 'siliconflow', name: '硅基流动', placeholder: 'sk-...' },
     ];
     
+    // 🔐 加密/解密工具函数（用于保护敏感数据）
+    const SecureStorage = {
+      // 密钥派生：基于设备ID + 固定盐
+      _getKey() {
+        const deviceId = localStorage.getItem('health_pro_device_id') || 'default_device';
+        const salt = 'HealthManagerPro_v16';
+        return deviceId + salt;
+      },
+      
+      // 简单XOR加密 + Base64编码
+      encrypt(text) {
+        if (!text) return '';
+        try {
+          const key = this._getKey();
+          let encrypted = '';
+          for (let i = 0; i < text.length; i++) {
+            encrypted += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+          }
+          return btoa(encrypted); // Base64编码
+        } catch (e) {
+          console.error('❌ [加密失败]:', e);
+          return text; // 加密失败，返回原文（降级处理）
+        }
+      },
+      
+      // 解密：Base64解码 + XOR解密
+      decrypt(encryptedText) {
+        if (!encryptedText) return '';
+        try {
+          const key = this._getKey();
+          const encrypted = atob(encryptedText); // Base64解码
+          let decrypted = '';
+          for (let i = 0; i < encrypted.length; i++) {
+            decrypted += String.fromCharCode(encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+          }
+          return decrypted;
+        } catch (e) {
+          console.error('❌ [解密失败]:', e);
+          return encryptedText; // 解密失败，返回密文（兼容旧数据）
+        }
+      },
+      
+      // 安全存储
+      setItem(key, value) {
+        if (!value) return;
+        const encrypted = this.encrypt(value);
+        localStorage.setItem(key, encrypted);
+      },
+      
+      // 安全读取
+      getItem(key) {
+        const encrypted = localStorage.getItem(key);
+        if (!encrypted) return null;
+        return this.decrypt(encrypted);
+      },
+      
+      // 删除
+      removeItem(key) {
+        localStorage.removeItem(key);
+      }
+    };
+    
     let CURRENT_API = localStorage.getItem('ai_api_provider') || 'qwen';
     
-    // 获取指定服务商的API Key
+    // 获取指定服务商的API Key（加密存储）
     function getApiKeyFor(providerId) {
       const provider = API_PROVIDERS.find(p => p.id === providerId);
-      return localStorage.getItem('ai_api_key_' + providerId) || (provider && provider.defaultKey) || '';
+      // 🔐 使用加密读取
+      const encrypted = SecureStorage.getItem('ai_api_key_' + providerId);
+      return encrypted || (provider && provider.defaultKey) || '';
     }
     
-    // 保存指定服务商的API Key
+    // 保存指定服务商的API Key（加密存储）
     function saveApiKeyFor(providerId, key) {
       if (key) {
-        localStorage.setItem('ai_api_key_' + providerId, key);
+        // 🔐 使用加密存储
+        SecureStorage.setItem('ai_api_key_' + providerId, key);
       }
     }
 
@@ -1327,7 +1392,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 3. 尝试恢复登录状态
           const savedUser = localStorage.getItem('health_pro_user');
-          const savedToken = localStorage.getItem('health_pro_session');
+          // 🔐 加密读取 session token
+          const savedToken = SecureStorage.getItem('health_pro_session');
           
           if (savedUser && savedToken) {
             try {
@@ -1464,7 +1530,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
-          localStorage.setItem('health_pro_session', user.sessionToken);
+          // 🔐 加密存储 session token
+          SecureStorage.setItem('health_pro_session', user.sessionToken);
           
           // 加载云端数据
           await loadFromCloud(user.objectId, user.sessionToken);
@@ -1530,7 +1597,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
-          localStorage.setItem('health_pro_session', user.sessionToken);
+          // 🔐 加密存储 session token
+          SecureStorage.setItem('health_pro_session', user.sessionToken);
           
           console.log('🆕 [注册] 新用户，准备初始数据并上传到云端');
           
