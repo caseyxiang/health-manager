@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.87</title>
+  <title>健康管家 Pro v15.88</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.87";
+    const VERSION = "v15.88";
     
     // LeanCloud 配置
     const LC_CONFIG = {
@@ -302,27 +302,61 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         return this.request('/users/me', 'GET', null, sessionToken);
       },
       
-      // 保存用户数据
+      // 保存用户数据（改进版：防止重复记录）
       async saveUserData(userId, sessionToken, data) {
-        // 先查询是否已有数据
+        // 先查询所有该userId的记录
         const query = encodeURIComponent(JSON.stringify({ userId }));
         const existing = await this.request(`/classes/UserData?where=${query}`, 'GET', null, sessionToken);
         
         if (existing.results && existing.results.length > 0) {
-          // 更新现有记录
-          const objectId = existing.results[0].objectId;
-          return this.request(`/classes/UserData/${objectId}`, 'PUT', { ...data, userId }, sessionToken);
+          console.log(`📋 [saveUserData] 找到 ${existing.results.length} 条记录`);
+          
+          // 保留最新的一条记录（按updatedAt排序）
+          const sorted = existing.results.sort((a, b) => 
+            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+          );
+          const keepRecord = sorted[0];
+          const deleteRecords = sorted.slice(1);
+          
+          // 删除重复的旧记录
+          if (deleteRecords.length > 0) {
+            console.warn(`⚠️ [saveUserData] 发现 ${deleteRecords.length} 条重复记录，正在清理...`);
+            for (const record of deleteRecords) {
+              try {
+                await this.request(`/classes/UserData/${record.objectId}`, 'DELETE', null, sessionToken);
+                console.log(`🗑️ [saveUserData] 已删除重复记录: ${record.objectId}`);
+              } catch (e) {
+                console.error(`❌ [saveUserData] 删除失败:`, e);
+              }
+            }
+          }
+          
+          // 更新保留的记录
+          return this.request(`/classes/UserData/${keepRecord.objectId}`, 'PUT', { ...data, userId }, sessionToken);
         } else {
           // 创建新记录
+          console.log('🆕 [saveUserData] 创建新记录');
           return this.request('/classes/UserData', 'POST', { ...data, userId }, sessionToken);
         }
       },
       
-      // 加载用户数据
+      // 加载用户数据（改进版：自动选择最新记录）
       async loadUserData(userId, sessionToken) {
         const query = encodeURIComponent(JSON.stringify({ userId }));
         const result = await this.request(`/classes/UserData?where=${query}`, 'GET', null, sessionToken);
-        return result.results && result.results.length > 0 ? result.results[0] : null;
+        
+        if (!result.results || result.results.length === 0) return null;
+        
+        // 如果有多条记录，返回最新的一条（按updatedAt排序）
+        if (result.results.length > 1) {
+          console.warn(`⚠️ [loadUserData] 发现 ${result.results.length} 条记录，将使用最新的`);
+          const sorted = result.results.sort((a, b) => 
+            new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+          );
+          return sorted[0];
+        }
+        
+        return result.results[0];
       }
     };
     const UNITS = ['mg', 'g', 'mcg', 'ml', 'L', 'IU', '片', '粒', '支', '瓶', '盒', '包'];
