@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.92";
+    const VERSION = "v15.93";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1048,6 +1048,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [loginError, setLoginError] = useState('');
       const [loginLoading, setLoginLoading] = useState(false);
       const [isLoadingUserData, setIsLoadingUserData] = useState(false); // 登录后加载用户数据
+      const [isRegistering, setIsRegistering] = useState(false); // 标记是否在注册流程
       const [isLoggingOut, setIsLoggingOut] = useState(false); // 退出登录中
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -1234,28 +1235,36 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           localStorage.setItem('health_pro_session', user.sessionToken);
           
           // 关键修改：显示loading，等待数据初始化
+          setIsRegistering(true); // 标记为注册流程
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           
           // 注册后保存当前本地数据到云端(如果有的话)
           const hasLocalData = localStorage.getItem('health_pro_members') !== null;
           if (hasLocalData) {
+            // 有旧数据（理论上不应该发生，但保留兼容性）
+            console.log('⚠️ [注册] 检测到旧数据，上传到云端');
             await saveToCloud(user.objectId, user.sessionToken);
           } else {
-            // 新用户，加载空数据
-            await loadFromCloud(user.objectId, user.sessionToken);
+            // 新用户，快速初始化（无需网络请求）
+            console.log('🆕 [注册] 新用户，执行快速初始化');
+            initializeNewUser(user.objectId);
+            // 添加小延迟让用户看到"初始化账号"提示
+            await new Promise(resolve => setTimeout(resolve, 800));
           }
           
-          // 立即更新设备ID到云端
+          // 立即保存初始数据和设备ID到云端
           await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [注册] 设备ID已更新到云端:', deviceId);
+          console.log('✅ [注册] 初始数据已同步到云端');
           
           setIsLoadingUserData(false);
+          setIsRegistering(false); // 重置注册标记
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '注册失败');
           setLoginLoading(false);
           setIsLoadingUserData(false); // 确保失败时也结束loading
+          setIsRegistering(false); // 重置注册标记
         }
       };
       
@@ -1856,6 +1865,41 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 处理同步冲突 - 使用云端数据
+      
+      // 新用户快速初始化（无需网络请求）
+      const initializeNewUser = (userId) => {
+        console.log('🆕 [initializeNewUser] 初始化新用户数据:', userId);
+        
+        // 直接初始化默认数据到localStorage
+        const defaultMembers = DEFAULT_MEMBERS;
+        saveData('members', defaultMembers, userId);
+        saveData('current_member', 'default', userId);
+        
+        // 初始化空数据
+        saveMemberData('default', 'meds', [], userId);
+        saveMemberData('default', 'catalog', [], userId);
+        saveMemberData('default', 'checkups', [], userId);
+        saveMemberData('default', 'labReports', [], userId);
+        saveMemberData('default', 'imagingReports', [], userId);
+        saveMemberData('default', 'vitals', [], userId);
+        
+        // 初始化医学词典
+        saveData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
+        
+        // 更新state
+        setMembers(defaultMembers);
+        setCurrentMemberId('default');
+        setMeds([]);
+        setCatalog([]);
+        setCheckups([]);
+        setLabReports([]);
+        setImagingReports([]);
+        setVitals([]);
+        setMedicalDictionary(DEFAULT_MEDICAL_DICTIONARY);
+        setDataLoaded(true);
+        
+        console.log('✅ [initializeNewUser] 新用户初始化完成');
+      };
       
       // 应用云端数据到本地
       const applyCloudData = async (cloudData) => {
@@ -2975,8 +3019,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
       // 登录/注册后加载用户数据中
       if (isLoadingUserData || isValidatingToken) {
-        const loadingText = isValidatingToken ? '验证登录状态...' : '加载中...';
-        const loadingSubText = isValidatingToken ? '正在验证Token并检测数据冲突' : '正在同步您的健康数据';
+        let loadingText = '加载中...';
+        let loadingSubText = '正在同步您的健康数据';
+        
+        if (isValidatingToken) {
+          loadingText = '验证登录状态...';
+          loadingSubText = '正在验证Token并检测数据冲突';
+        } else if (isRegistering) {
+          loadingText = '初始化账号...';
+          loadingSubText = '正在为您创建健康数据空间';
+        }
         
         return (
           <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
