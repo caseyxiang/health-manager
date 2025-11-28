@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.12</title>
+  <title>健康管家 Pro v16.13</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.12";
+    const VERSION = "v16.13";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -514,45 +514,9 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     const DEFAULT_IMAGING_REPORTS = [];
     const DEFAULT_VITALS = [];
 
-    // 数据加载辅助函数（带用户隔离）
-    const loadData = (key, defaultData, userId = null) => {
-      try {
-        // 添加userId前缀实现隔离
-        const finalKey = userId ? `health_pro_${userId}_${key}` : `health_pro_${key}`;
-        const stored = localStorage.getItem(finalKey);
-        return stored ? JSON.parse(stored) : defaultData;
-      } catch (e) {
-        console.error("加载数据失败:", key, e);
-        return defaultData;
-      }
-    };
-    
-    // 保存数据辅助函数（带用户隔离）
-    const saveData = (key, data, userId = null) => {
-      const finalKey = userId ? `health_pro_${userId}_${key}` : `health_pro_${key}`;
-      localStorage.setItem(finalKey, JSON.stringify(data));
-    };
-    
-    // 加载成员特定数据（带用户隔离）
-    const loadMemberData = (memberId, dataType, defaultData, userId = null) => {
-      const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
-      try {
-        const stored = localStorage.getItem(key);
-        const result = stored ? JSON.parse(stored) : defaultData;
-        console.log(`📖 [loadMemberData] ${key}:`, result.length || 0, '项');
-        return result;
-      } catch (e) {
-        console.error("❌ [loadMemberData] 失败:", key, e);
-        return defaultData;
-      }
-    };
-    
-    // 保存成员特定数据（带用户隔离）
-    const saveMemberData = (memberId, dataType, data, userId = null) => {
-      const key = userId ? `health_pro_${userId}_${memberId}_${dataType}` : `health_pro_${memberId}_${dataType}`;
-      localStorage.setItem(key, JSON.stringify(data));
-      console.log(`💾 [saveMemberData] ${key}:`, data.length || 0, '项');
-    };
+    // 🔥 已移除 loadData/saveData/loadMemberData/saveMemberData 函数
+    // 业务数据现在全部保存在内存（allMembersData state），不再使用localStorage
+    // localStorage仅用于：登录凭证、设备ID、版本号、API配置
 
     // 计算指标异常状态的函数
     function cleanIndicatorName(name) {
@@ -1093,6 +1057,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         serverURL: ''
       });
       
+      // 🔥 辅助函数：更新指定成员的指定类型数据
+      const updateMemberData = (memberId, dataType, newData) => {
+        setAllMembersData(prev => ({
+          ...prev,
+          [memberId]: {
+            ...(prev[memberId] || {}),
+            [dataType]: newData
+          }
+        }));
+      };
+      
+      // 🔥 辅助函数：更新当前成员的数据
+      const setMeds = (newMeds) => updateMemberData(currentMemberId, 'meds', newMeds);
+      const setCatalog = (newCatalog) => updateMemberData(currentMemberId, 'catalog', newCatalog);
+      const setCheckups = (newCheckups) => updateMemberData(currentMemberId, 'checkups', newCheckups);
+      const setLabReports = (newLabReports) => updateMemberData(currentMemberId, 'labReports', newLabReports);
+      const setImagingReports = (newImagingReports) => updateMemberData(currentMemberId, 'imagingReports', newImagingReports);
+      const setVitals = (newVitals) => updateMemberData(currentMemberId, 'vitals', newVitals);
+      
       // ===== 核心函数定义区（必须在所有useEffect之前）=====
       
       // 【1】保存数据到云端
@@ -1108,28 +1091,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setSyncStatus('syncing');
         
         try {
-          const savedMembers = loadData('members', DEFAULT_MEMBERS, userId);
-          console.log('📖 [saveToCloud] 读取到的成员列表:', savedMembers.length, '个:', savedMembers.map(m => m.name));
-          
-          const memberData = {};
-          savedMembers.forEach(member => {
-            memberData[member.id] = {
-              meds: loadMemberData(member.id, 'meds', [], userId),
-              catalog: loadMemberData(member.id, 'catalog', [], userId),
-              checkups: loadMemberData(member.id, 'checkups', [], userId),
-              labReports: loadMemberData(member.id, 'labReports', [], userId),
-              imagingReports: loadMemberData(member.id, 'imagingReports', [], userId),
-              vitals: loadMemberData(member.id, 'vitals', [], userId)
-            };
-          });
+          // 🔥 直接从内存读取数据，不再使用 localStorage
+          console.log('📖 [saveToCloud] 内存成员列表:', members.length, '个:', members.map(m => m.name));
           
           let totalItems = 0;
-          Object.values(memberData).forEach(data => {
+          Object.values(allMembersData).forEach(data => {
             totalItems += (data.meds?.length || 0) + (data.catalog?.length || 0) + 
                          (data.labReports?.length || 0) + (data.vitals?.length || 0);
           });
-          console.log('📊 [saveToCloud] 数据统计:', { 成员数: savedMembers.length, 总数据项: totalItems });
+          console.log('📊 [saveToCloud] 数据统计:', { 成员数: members.length, 总数据项: totalItems });
           
+          // API设置仍从localStorage读取（配置项保留）
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
@@ -1138,15 +1110,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
           
-          const savedDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
-          
           // 构建同步数据
           const syncData = {
-            members: savedMembers,
-            currentMemberId: loadData('current_member', 'default', userId),
-            memberData,
+            members: members,
+            currentMemberId: currentMemberId,
+            memberData: allMembersData,
             apiSettings,
-            medicalDictionary: savedDictionary,
+            medicalDictionary: medicalDictionary,
             lastUpdated: new Date().toISOString(),
           };
           
@@ -1182,69 +1152,47 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 【2】应用云端数据
       const applyCloudData = async (cloudData) => {
-        const userId = getUserId();
-        
-        // 完全信任云端数据，不做任何修改
+        // 🔥 完全信任云端数据，直接设置内存state
         let restoredMembers = [];
         if (cloudData.members && cloudData.members.length > 0) {
           console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
           restoredMembers = cloudData.members;
         } else {
-          // 如果云端没有成员数据，使用空数组（这种情况不应该发生）
-          console.warn('⚠️ [applyCloudData] 云端成员数据为空！');
-          restoredMembers = [];
+          console.warn('⚠️ [applyCloudData] 云端成员数据为空！使用默认成员');
+          restoredMembers = DEFAULT_MEMBERS;
         }
         
         console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
         setMembers(restoredMembers);
-        saveData('members', restoredMembers, userId);
+        
+        // 🔥 设置所有成员数据到内存
+        const restoredMemberData = cloudData.memberData || {};
+        console.log('📦 [applyCloudData] 成员数据:', Object.keys(restoredMemberData));
+        setAllMembersData(restoredMemberData);
         
         // 确定当前成员ID
         let targetMemberId = 'default';
-        const localMemberId = loadData('current_member', null, userId);
         const memberIds = restoredMembers.map(m => m.id);
         
-        if (localMemberId && memberIds.includes(localMemberId)) {
-          targetMemberId = localMemberId;
-        } else if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
+        if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
           targetMemberId = cloudData.currentMemberId;
         } else {
           targetMemberId = restoredMembers[0]?.id || 'default';
         }
         
         setCurrentMemberId(targetMemberId);
-        saveData('current_member', targetMemberId, userId);
         
-        console.log('📦 [applyCloudData] memberData:', cloudData.memberData ? Object.keys(cloudData.memberData) : 'null');
-        if (cloudData.memberData) {
-          Object.keys(cloudData.memberData).forEach(memberId => {
-            const data = cloudData.memberData[memberId];
-            if (data.meds) saveMemberData(memberId, 'meds', data.meds, userId);
-            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog, userId);
-            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups, userId);
-            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports, userId);
-            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports, userId);
-            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals, userId);
-          });
-        }
-        
+        // API设置
         if (cloudData.apiSettings) {
           Object.keys(cloudData.apiSettings).forEach(key => {
             localStorage.setItem(key, cloudData.apiSettings[key]);
           });
         }
         
+        // 医学词典
         if (cloudData.medicalDictionary) {
           setMedicalDictionary(cloudData.medicalDictionary);
-          saveData('medical_dictionary', cloudData.medicalDictionary, userId);
         }
-        
-        setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS, userId));
-        setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG, userId));
-        setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
-        setLabReports(loadMemberData(targetMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
-        setImagingReports(loadMemberData(targetMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
-        setVitals(loadMemberData(targetMemberId, 'vitals', DEFAULT_VITALS, userId));
         
         setDataLoaded(true);
         console.log('✅ [applyCloudData] 云端数据应用完成');
@@ -1254,28 +1202,20 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 【3】执行退出操作（注：loadFromCloud 函数在后面统一定义）
       const performLogout = () => {
-        const userId = getUserId();
-        console.log('🧹 [performLogout] 清理用户数据:', userId);
+        console.log('🧹 [performLogout] 清理用户数据');
         
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(`health_pro_${userId}_`)) {
-            keysToRemove.push(key);
-          }
-        }
-        
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
-          console.log('  🗑️ 删除:', key);
-        });
-        console.log(`✅ [performLogout] 已清理 ${keysToRemove.length} 项数据`);
-        
+        // 🔥 只需清理登录凭证，业务数据在内存中会自动消失
         localStorage.removeItem('health_pro_user');
         localStorage.removeItem('health_pro_session');
+        localStorage.removeItem('health_pro_last_sync_time');
         
+        // 清理内存数据
         setCurrentUser(null);
         setSessionToken(null);
+        setMembers([]);
+        setAllMembersData({});
+        setCurrentMemberId('default');
+        setMedicalDictionary([]);
         setSyncStatus('');
         setLastSyncTime(null);
         setDataLoaded(false);
@@ -1464,13 +1404,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const currentMember = members.find(m => m.id === currentMemberId) || members[0] || null;
       const currentMemberColor = currentMember ? (MEMBER_COLORS.find(c => c.id === currentMember.color) || MEMBER_COLORS[0]) : MEMBER_COLORS[0];
 
-      // 数据state（动态加载）
-      const [meds, setMeds] = useState([]);
-      const [catalog, setCatalog] = useState([]);
-      const [checkups, setCheckups] = useState([]);
-      const [labReports, setLabReports] = useState([]);
-      const [imagingReports, setImagingReports] = useState([]);
-      const [vitals, setVitals] = useState([]);
+      // 🔥 新架构：所有成员数据保存在内存
+      const [allMembersData, setAllMembersData] = useState({});
+      
+      // 当前成员的数据（从 allMembersData 计算得出）
+      const currentMemberData = allMembersData[currentMemberId] || {
+        meds: [],
+        catalog: [],
+        checkups: [],
+        labReports: [],
+        imagingReports: [],
+        vitals: []
+      };
+      
+      const meds = currentMemberData.meds;
+      const catalog = currentMemberData.catalog;
+      const checkups = currentMemberData.checkups;
+      const labReports = currentMemberData.labReports;
+      const imagingReports = currentMemberData.imagingReports;
+      const vitals = currentMemberData.vitals;
       
       // 医学指标词典状态（动态加载）
       const [medicalDictionary, setMedicalDictionary] = useState([]);
@@ -1802,64 +1754,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 成员列表持久化（带用户隔离）
+      
+      // 🔥 自动云同步(防抖3秒)
+      // 数据变化时自动同步到云端，无需localStorage持久化
       useEffect(() => {
-        console.log('🔄 [useEffect-persist] members 触发:', members.length, '个成员', members.map(m => m.name));
-        saveData('members', members, getUserId()); 
-      }, [members, currentUser]);
-      
-      useEffect(() => { 
-        saveData('current_member', currentMemberId, getUserId()); 
-      }, [currentMemberId, currentUser]);
-
-      // 数据持久化 Effect（带用户隔离）
-      useEffect(() => { 
-        // 移除dataLoaded检查，云端加载期间也允许保存新数据
-        saveMemberData(currentMemberId, 'meds', meds, getUserId()); 
-      }, [meds, currentMemberId, currentUser]);
-      
-      useEffect(() => { 
-        saveMemberData(currentMemberId, 'catalog', catalog, getUserId()); 
-      }, [catalog, currentMemberId, currentUser]);
-      
-      useEffect(() => { 
-        saveMemberData(currentMemberId, 'checkups', checkups, getUserId()); 
-      }, [checkups, currentMemberId, currentUser]);
-      
-      useEffect(() => {
-        console.log(`🔄 [useEffect-persist] labReports 触发:`, labReports.length, '项');
-        saveMemberData(currentMemberId, 'labReports', labReports, getUserId()); 
-      }, [labReports, currentMemberId, currentUser]);
-      
-      useEffect(() => {
-        console.log(`🔄 [useEffect-persist] imagingReports 触发:`, imagingReports.length, '项');
-        saveMemberData(currentMemberId, 'imagingReports', imagingReports, getUserId()); 
-      }, [imagingReports, currentMemberId, currentUser]);
-      
-      useEffect(() => { 
-        saveMemberData(currentMemberId, 'vitals', vitals, getUserId()); 
-      }, [vitals, currentMemberId, currentUser]);
-      
-      // 词典持久化（带用户隔离）
-      useEffect(() => { 
-        saveData('medical_dictionary', medicalDictionary, getUserId()); 
-      }, [medicalDictionary, currentUser]);
-
-      
-      // 自动云同步(防抖3秒,更可靠)
-      useEffect(() => {
-        // 关键修复：只有在数据已加载完成时才触发自动同步，防止空数据覆盖云端
+        // 只有在数据已加载完成时才触发自动同步，防止空数据覆盖云端
         if (!currentUser || !sessionToken || !isOnline || !dataLoaded) return;
         
         const timer = setTimeout(() => {
           console.log('⏰ 防抖时间到,触发自动同步');
           saveToCloud();
-        }, 3000); // 改为3秒,避免频繁触发
+        }, 3000);
         
         return () => {
           console.log('⏰ 防抖计时器被清除');
           clearTimeout(timer);
         };
-      }, [meds, catalog, checkups, labReports, imagingReports, vitals, members, medicalDictionary, currentUser, sessionToken, isOnline, dataLoaded]);
+      }, [allMembersData, members, medicalDictionary, currentUser, sessionToken, isOnline, dataLoaded]);
       
       // 注释：登录/注册时已手动调用loadFromCloud，此useEffect已废弃
       // useEffect(() => {
@@ -2065,22 +1976,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 切换成员
       const switchMember = (memberId) => {
         if (memberId === currentMemberId) return;
-        const userId = getUserId();
+        console.log('🔄 [switchMember] 切换到成员:', memberId);
+        
+        // 🔥 直接切换ID即可，数据从 allMembersData 自动获取
         setCurrentMemberId(memberId);
-        // 加载新成员的数据（带用户隔离）
-        setMeds(loadMemberData(memberId, 'meds', DEFAULT_MEDS, userId));
-        setCatalog(loadMemberData(memberId, 'catalog', DEFAULT_CATALOG, userId));
-        setCheckups(loadMemberData(memberId, 'checkups', DEFAULT_CHECKUPS, userId));
-        setLabReports(loadMemberData(memberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
-        setImagingReports(loadMemberData(memberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
-        setVitals(loadMemberData(memberId, 'vitals', DEFAULT_VITALS, userId));
         setShowMemberMenu(false);
       };
       
       // 添加成员
       const addMember = () => {
         if (!memberInput.name.trim()) return;
-        const userId = getUserId();
         const newMember = {
           id: Date.now().toString(),
           name: memberInput.name.trim(),
@@ -2090,17 +1995,29 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         console.log('➕ [addMember] 添加新成员:', newMember.name);
         
-        // 先更新localStorage（带用户隔离）
+        // 🔥 直接更新内存
         const updatedMembers = [...members, newMember];
-        saveData('members', updatedMembers, userId);
-        console.log('💾 [addMember] 已保存到localStorage:', updatedMembers.length, '个成员');
-        
-        // 再更新state
         setMembers(updatedMembers);
+        
+        // 为新成员初始化空数据
+        setAllMembersData(prev => ({
+          ...prev,
+          [newMember.id]: {
+            meds: [],
+            catalog: [],
+            checkups: [],
+            labReports: [],
+            imagingReports: [],
+            vitals: []
+          }
+        }));
+        
         setMemberInput({ name: '', relation: '', color: 'indigo' });
         setShowMemberForm(false);
+        
         // 自动切换到新成员
-        switchMember(newMember.id);
+        setCurrentMemberId(newMember.id);
+        setShowMemberMenu(false);
         
         // 立即同步到云端
         if (currentUser && sessionToken) {
@@ -2112,18 +2029,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 编辑成员
       const updateMember = () => {
         if (!memberInput.name.trim() || !editingMember) return;
-        const userId = getUserId();
         
-        // 先更新localStorage（带用户隔离）
+        // 🔥 直接更新内存
         const updatedMembers = members.map(m => m.id === editingMember.id ? {
           ...m,
           name: memberInput.name.trim(),
           relation: memberInput.relation.trim() || m.relation,
           color: memberInput.color
         } : m);
-        saveData('members', updatedMembers, userId);
-        
-        // 再更新state
         setMembers(updatedMembers);
         setEditingMember(null);
         setMemberInput({ name: '', relation: '', color: 'indigo' });
@@ -2138,28 +2051,28 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 删除成员
       const deleteMember = (memberId) => {
         if (members.length <= 1) return; // 至少保留一个成员
-        const userId = getUserId();
         
         if (memberId === currentMemberId) {
           // 如果删除当前成员,切换到第一个其他成员
           const otherMember = members.find(m => m.id !== memberId);
-          if (otherMember) switchMember(otherMember.id);
+          if (otherMember) {
+            setCurrentMemberId(otherMember.id);
+            setShowMemberMenu(false);
+          }
         }
         
-        // 先更新localStorage（带用户隔离）
+        // 🔥 直接更新内存
         const updatedMembers = members.filter(m => m.id !== memberId);
-        saveData('members', updatedMembers, userId);
-        
-        // 再更新state
         setMembers(updatedMembers);
         
-        // 清理该成员的数据（带用户隔离）
-        ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'].forEach(dataType => {
-          const key = `health_pro_${userId}_${memberId}_${dataType}`;
-          localStorage.removeItem(key);
+        // 从allMembersData中删除该成员的数据
+        setAllMembersData(prev => {
+          const newData = {...prev};
+          delete newData[memberId];
+          return newData;
         });
         
-        // 立即同步到云端（不等待防抖）
+        // 立即同步到云端
         if (currentUser && sessionToken) {
           setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
         }
@@ -2181,58 +2094,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [printHtml, setPrintHtml] = useState('');
       const [apiKeyInput, setApiKeyInput] = useState(getApiKeyFor(CURRENT_API));
       
-      // 初始化数据：根据当前用户加载localStorage
+      // 🔥 初始化数据：登录后从云端加载，无需localStorage
       useEffect(() => {
-        // 如果数据已加载（登录/注册已手动调用loadFromCloud），不做任何操作
+        // 如果数据已加载，跳过
         if (dataLoaded) {
           console.log('✅ [useEffect-init] 数据已加载，跳过');
           return;
         }
         
-        const userId = getUserId();
-        console.log('🔄 [useEffect-init] 加载用户数据:', userId);
-        
-        // 如果是云端用户且是首次加载，主动从云端加载数据
+        // 如果已登录但数据未加载，主动从云端加载
         if (currentUser && sessionToken) {
           console.log('⏳ [useEffect-init] 云端用户首次加载，主动从云端加载数据...');
-          // 主动调用loadFromCloud
           loadFromCloud(currentUser.objectId, sessionToken);
           return;
         }
         
-        // 本地环境：从localStorage加载
-        console.log('💾 [useEffect-init] 本地环境，从localStorage加载');
-        
-        // 加载成员列表和当前成员 - 确保默认成员始终存在
-        let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
-        
-        // 检查是否包含默认成员
-        const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
-        if (!hasDefaultMember) {
-          console.log('⚠️ [useEffect-init] localStorage缺少默认成员，自动添加');
-          loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
-          saveData('members', loadedMembers, userId); // 修正localStorage
-        }
-        
-        console.log('📋 [useEffect-init] 加载成员列表:', loadedMembers.length, '个:', loadedMembers.map(m => m.name));
-        const loadedCurrentMemberId = loadData('current_member', 'default', userId);
-        setMembers(loadedMembers);
-        setCurrentMemberId(loadedCurrentMemberId);
-        
-        // 加载当前成员的数据
-        setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
-        setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
-        setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
-        setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
-        setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
-        setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
-        
-        // 加载医学词典
-        setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
-        
-        setDataLoaded(true);
-        console.log('✅ [useEffect-init] 用户数据加载完成');
-      }, [currentUser, dataLoaded]); // currentUser变化时重新加载
+        // 未登录状态，不加载任何数据
+        console.log('📭 [useEffect-init] 未登录，等待用户登录');
+      }, [currentUser, dataLoaded]);
+      
       const [apiProvider, setApiProvider] = useState(CURRENT_API);
       const [showApiKey, setShowApiKey] = useState(false);
       const [infoItem, setInfoItem] = useState(null);
