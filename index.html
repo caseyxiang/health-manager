@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.99-debug6 [调试版]</title>
+  <title>健康管家 Pro v15.99-debug7 [调试版]</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -298,7 +298,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.99-debug6";
+    const VERSION = "v15.99-debug7";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1297,65 +1297,58 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               };
               
               console.log('⚠️ [步骤3-A] 设置冲突设备信息:', deviceInfo);
-              setConflictDevice(deviceInfo);
+              console.log('⚠️ [步骤3-B] 使用flushSync强制同步更新状态...');
               
-              console.log('⚠️ [步骤3-B] 设置待处理登录数据');
-              setPendingLoginData({ user, sessionToken: user.sessionToken });
+              // 使用 ReactDOM.flushSync 强制同步更新状态
+              try {
+                ReactDOM.flushSync(() => {
+                  setConflictDevice(deviceInfo);
+                  setPendingLoginData({ user, sessionToken: user.sessionToken });
+                  setShowDeviceConflict(true);
+                  setLoginLoading(false);
+                });
+                console.log('✅ [步骤3-C] flushSync完成，状态已同步更新');
+              } catch (flushError) {
+                console.warn('⚠️ [步骤3-C] flushSync失败，使用普通setState:', flushError.message);
+                // 降级：使用普通setState
+                setConflictDevice(deviceInfo);
+                setPendingLoginData({ user, sessionToken: user.sessionToken });
+                setShowDeviceConflict(true);
+                setLoginLoading(false);
+              }
               
-              console.log('⚠️ [步骤3-C] 清除超时保护');
               clearTimeout(timeoutId);
-              
-              console.log('⚠️ [步骤3-D] 滚动到顶部');
               window.scrollTo({ top: 0, behavior: 'instant' });
               
-              console.log('⚠️ [步骤3-E] 设置对话框显示状态为true');
-              setShowDeviceConflict(true);
+              console.log('✅ [步骤3-D] 对话框应该已经显示');
               
-              console.log('⚠️ [步骤3-F] 结束登录loading状态');
-              setLoginLoading(false);
-              
-              console.log('✅ [步骤3-G] 所有状态已设置完成');
-              console.log('✅ [步骤3-H] 对话框应该立即显示（条件：showDeviceConflict为true）');
-              console.log('✅ [步骤3-I] 如果看不到，请截图并查看：');
-              console.log('  1. Elements标签搜索"z-[999]"');
-              console.log('  2. Console检查是否有React错误');
-              console.log('  3. 页面是否有其他遮罩层');
-              
-              // 使用 requestAnimationFrame 验证状态（下一帧）
-              requestAnimationFrame(() => {
-                console.log('🔍 [步骤3-验证] 下一帧状态检查:');
-                console.log('  - showDeviceConflict:', showDeviceConflict);
-                console.log('  - conflictDevice:', conflictDevice);
-                console.log('  - 对话框条件:', showDeviceConflict ? '✅ 满足' : '❌ 不满足');
+              // 延迟500ms验证DOM（给浏览器足够时间渲染）
+              setTimeout(() => {
+                console.log('🔍 [步骤3-验证] 500ms后DOM检查:');
+                const dialogElement = document.querySelector('[class*="z-\\[99999\\]"]') || document.querySelector('[class*="fixed"]');
                 
-                // 检查对话框DOM是否存在
-                const dialogElement = document.querySelector('[class*="z-\\[999\\]"]');
                 if (dialogElement) {
                   console.log('✅ [步骤3-验证] 找到对话框DOM');
                   const styles = window.getComputedStyle(dialogElement);
                   console.log('  - position:', styles.position);
-                  console.log('  - display:', styles.display);
-                  console.log('  - opacity:', styles.opacity);
                   console.log('  - z-index:', styles.zIndex);
-                  console.log('  - visibility:', styles.visibility);
+                  console.log('  - display:', styles.display);
+                  console.log('  - backgroundColor:', styles.backgroundColor);
                   
                   const rect = dialogElement.getBoundingClientRect();
-                  console.log('  - 位置:', {
-                    top: rect.top,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height
-                  });
+                  console.log('  - 尺寸:', rect.width + 'x' + rect.height);
+                  console.log('  - 位置:', 'top=' + rect.top + ', left=' + rect.left);
                   
-                  if (styles.position === 'fixed') {
-                    console.log('✅ [步骤3-验证] 使用fixed定位，应该覆盖全屏');
+                  if (rect.width > 0 && rect.height > 0) {
+                    console.log('✅ [步骤3-验证] 对话框有尺寸，应该可见');
                   } else {
-                    console.warn('⚠️ [步骤3-验证] 使用' + styles.position + '定位，可能被父容器限制');
+                    console.error('❌ [步骤3-验证] 对话框尺寸为0！');
                   }
                 } else {
                   console.error('❌ [步骤3-验证] 未找到对话框DOM！');
+                  console.error('请在Elements标签手动搜索"设备冲突"');
                 }
-              });
+              }, 500);
               
               return; // 等待用户确认
             } else {
@@ -5036,7 +5029,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
           {/* 设备冲突确认对话框 */}
           {showDeviceConflict && (
-            <div className="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center p-6 animate-fade-in">
+            <div className="fixed inset-0 z-[99999] bg-black/90 flex items-center justify-center p-6 animate-fade-in" style={{border: '10px solid red'}}>
               <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-4 border-orange-500 animate-scale-up">
                 <div className="w-20 h-20 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                   <Icons.AlertTriangle size={40} className="text-white"/>
