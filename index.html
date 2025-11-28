@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.100</title>
+  <title>健康管家 Pro v15.101</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -79,6 +79,22 @@
     
     .animate-slide-down {
       animation: slide-down 0.3s ease-out;
+    }
+    
+    /* 设备冲突对话框动画 */
+    @keyframes scale-in {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    .animate-scale-in {
+      animation: scale-in 0.3s ease-out;
     }
   </style>
 
@@ -262,7 +278,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.100";
+    const VERSION = "v15.101";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1084,6 +1100,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
       const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
       const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
+      const [showDeviceConflictDialog, setShowDeviceConflictDialog] = useState(false); // 登录时设备冲突对话框
+      const [pendingLoginUser, setPendingLoginUser] = useState(null); // 待登录的用户信息
       
       // Token验证和数据冲突处理
       const [isValidatingToken, setIsValidatingToken] = useState(false); // Token验证中
@@ -1203,28 +1221,77 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginError('');
         try {
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
-          setCurrentUser(user);
-          setSessionToken(user.sessionToken);
-          localStorage.setItem('health_pro_user', JSON.stringify(user));
-          localStorage.setItem('health_pro_session', user.sessionToken);
           
-          // 关键修改：等待云端数据加载完成
-          setIsLoadingUserData(true);
-          setShowLoginModal(false);
-          await loadFromCloud(user.objectId, user.sessionToken);
+          // 🔧 方案B：登录前检查设备冲突
+          try {
+            const cloudData = await LeanCloud.loadUserData(user.objectId, user.sessionToken);
+            if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
+              // 检测到其他设备已登录，显示确认对话框
+              console.warn('⚠️ [登录] 检测到其他设备已登录');
+              setPendingLoginUser(user);
+              setShowDeviceConflictDialog(true);
+              setLoginLoading(false);
+              return; // 暂停登录流程，等待用户确认
+            }
+          } catch (checkErr) {
+            console.warn('⚠️ [登录] 设备检查失败，继续登录:', checkErr);
+          }
           
-          // 立即更新设备ID到云端，占据登录状态
-          await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
-          
-          setIsLoadingUserData(false);
-          
-          setLoginForm({ username: '', password: '', confirmPassword: '' });
+          // 继续正常登录流程
+          await completeLogin(user);
         } catch (e) {
           setLoginError(e.message || '登录失败');
           setLoginLoading(false);
-          setIsLoadingUserData(false); // 确保失败时也结束loading
+          setIsLoadingUserData(false);
         }
+      };
+      
+      // 完成登录流程（提取为独立函数）
+      const completeLogin = async (user) => {
+        setCurrentUser(user);
+        setSessionToken(user.sessionToken);
+        localStorage.setItem('health_pro_user', JSON.stringify(user));
+        localStorage.setItem('health_pro_session', user.sessionToken);
+        
+        // 关键修改：等待云端数据加载完成
+        setIsLoadingUserData(true);
+        setShowLoginModal(false);
+        await loadFromCloud(user.objectId, user.sessionToken);
+        
+        // 立即更新设备ID到云端，占据登录状态
+        await saveToCloud(user.objectId, user.sessionToken, false);
+        console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
+        
+        setIsLoadingUserData(false);
+        
+        setLoginForm({ username: '', password: '', confirmPassword: '' });
+      };
+      
+      // 强制登录（设备冲突时用户选择继续）
+      const handleForceLogin = async () => {
+        if (!pendingLoginUser) return;
+        
+        setShowDeviceConflictDialog(false);
+        setLoginLoading(true);
+        
+        try {
+          await completeLogin(pendingLoginUser);
+          setPendingLoginUser(null);
+          console.log('✅ [强制登录] 已占据登录状态，其他设备将被踢出');
+        } catch (e) {
+          setLoginError(e.message || '登录失败');
+          setLoginLoading(false);
+          setIsLoadingUserData(false);
+        }
+      };
+      
+      // 取消登录（设备冲突时用户选择取消）
+      const handleCancelLogin = () => {
+        setShowDeviceConflictDialog(false);
+        setPendingLoginUser(null);
+        setLoginLoading(false);
+        setIsKickedOut(false); // 清除被踢状态
+        console.log('❌ [取消登录] 用户取消强制登录');
       };
       
       // 用户注册
@@ -3224,6 +3291,41 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 健康管家 Pro {VERSION}
               </div>
             </div>
+            
+            {/* 设备冲突确认对话框 */}
+            {showDeviceConflictDialog && (
+              <div className="absolute inset-0 z-[200] bg-black/80 flex items-center justify-center p-6" onClick={e => e.stopPropagation()}>
+                <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-scale-in" onClick={e => e.stopPropagation()}>
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Icons.AlertTriangle size={32} className="text-yellow-600"/>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到设备冲突</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-blue-900 mb-2">
+                      该账号已在其他设备登录
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      继续登录将使其他设备退出登录
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <button 
+                      onClick={handleForceLogin}
+                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Icons.LogIn size={18}/>
+                      强制登录
+                    </button>
+                    <button 
+                      onClick={handleCancelLogin}
+                      className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       }
