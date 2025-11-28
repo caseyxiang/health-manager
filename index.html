@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.99-debug3 [调试版]</title>
+  <title>健康管家 Pro v15.99-debug4 [调试版]</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -298,7 +298,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.99-debug3";
+    const VERSION = "v15.99-debug4";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1297,27 +1297,20 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               });
               setPendingLoginData({ user, sessionToken: user.sessionToken });
               clearTimeout(timeoutId);
-              // ⚠️ 保持loading状态，直到用户选择
-              // setLoginLoading(false); // 已注释，避免页面重新渲染
               
-              // 延迟显示对话框，确保React渲染完成
-              setTimeout(() => {
-                console.log('⚠️ [步骤3] 开始显示对话框...');
-                console.log('⚠️ [步骤3] showDeviceConflict状态:', showDeviceConflict);
-                
-                // 滚动到顶部
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                
-                // 显示对话框
-                setShowDeviceConflict(true);
-                
-                // 验证状态更新
-                setTimeout(() => {
-                  console.log('✅ [步骤3] 对话框应该已显示');
-                  console.log('✅ [步骤3] 当前showDeviceConflict:', showDeviceConflict);
-                  console.log('✅ [步骤3] 如果看不到对话框，请检查Elements标签');
-                }, 100);
-              }, 300);
+              // 立即显示对话框（移除setTimeout避免作用域问题）
+              console.log('⚠️ [步骤3] 准备显示对话框...');
+              console.log('⚠️ [步骤3] 冲突设备信息:', cloudData.deviceName, cloudData.lastActiveTime);
+              
+              // 滚动到顶部
+              window.scrollTo({ top: 0, behavior: 'instant' });
+              
+              // 立即设置状态
+              setShowDeviceConflict(true);
+              setLoginLoading(false); // 结束loading，显示对话框
+              
+              console.log('✅ [步骤3] 对话框状态已设置为true');
+              console.log('✅ [步骤3] 如果看不到对话框，请截图Elements标签（搜索z-[999]）');
               
               return; // 等待用户确认
             } else {
