@@ -1,9 +1,9 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.94</title>
+  <title>健康管家 Pro v15.91</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -553,41 +553,6 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       localStorage.setItem(key, JSON.stringify(data));
       console.log(`💾 [saveMemberData] ${key}:`, data.length || 0, '项');
     };
-    
-    // 迁移旧数据到开发模式（仅执行一次）
-    const migrateOldDataToDev = () => {
-      const migrationKey = 'health_pro_migration_v15_76_done';
-      if (localStorage.getItem(migrationKey)) return; // 已迁移
-      
-      const oldKeys = ['meds', 'catalog', 'checkups', 'labReports', 'imagingReports', 'vitals'];
-      const oldGlobalKeys = ['members', 'current_member', 'medical_dictionary'];
-      
-      // 迁移成员数据到dev
-      oldKeys.forEach(dataType => {
-        const oldKey = `health_pro_default_${dataType}`;
-        const newKey = `health_pro_dev_default_${dataType}`;
-        const oldData = localStorage.getItem(oldKey);
-        if (oldData && !localStorage.getItem(newKey)) {
-          localStorage.setItem(newKey, oldData);
-        }
-      });
-      
-      // 迁移全局数据到dev
-      oldGlobalKeys.forEach(dataType => {
-        const oldKey = `health_pro_${dataType}`;
-        const newKey = `health_pro_dev_${dataType}`;
-        const oldData = localStorage.getItem(oldKey);
-        if (oldData && !localStorage.getItem(newKey)) {
-          localStorage.setItem(newKey, oldData);
-        }
-      });
-      
-      localStorage.setItem(migrationKey, 'true');
-      console.log('✅ 数据已迁移到开发模式专用空间');
-    };
-    
-    // 执行数据迁移
-    migrateOldDataToDev();
 
     // 计算指标异常状态的函数
     function cleanIndicatorName(name) {
@@ -1075,14 +1040,15 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
       const [sessionToken, setSessionToken] = useState(() => localStorage.getItem('health_pro_session') || null);
       
-      // 获取当前用户ID（开发模式='dev'，注册用户=objectId）
-      const getUserId = () => currentUser?.objectId || 'dev';
+      // 获取当前用户ID
+      const getUserId = () => currentUser?.objectId;
       const [showLoginModal, setShowLoginModal] = useState(false);
       const [isLoginMode, setIsLoginMode] = useState(true);
       const [loginForm, setLoginForm] = useState({ username: '', password: '', confirmPassword: '' });
       const [loginError, setLoginError] = useState('');
       const [loginLoading, setLoginLoading] = useState(false);
       const [isLoadingUserData, setIsLoadingUserData] = useState(false); // 登录后加载用户数据
+      const [isRegistering, setIsRegistering] = useState(false); // 标记是否在注册流程
       const [isLoggingOut, setIsLoggingOut] = useState(false); // 退出登录中
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -1102,6 +1068,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
       const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
       const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
+      
+      // Token验证和数据冲突
+      const [isValidatingToken, setIsValidatingToken] = useState(false); // Token验证中
+      const [showDataConflict, setShowDataConflict] = useState(false); // 显示数据冲突对话框
+      const [conflictData, setConflictData] = useState(null); // 冲突的云端数据
       
       // 首次使用引导
       const [showWelcomeGuide, setShowWelcomeGuide] = useState(() => {
@@ -1226,9 +1197,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setShowLoginModal(false);
           await loadFromCloud(user.objectId, user.sessionToken);
           
-          // 更新设备ID到云端，占据登录状态
-          // 注：此处会重新上传完整数据（包含deviceId），存在优化空间
-          // TODO: 未来可优化为仅更新deviceId字段，减少流量
+          // 立即更新设备ID到云端，占据登录状态
           await saveToCloud(user.objectId, user.sessionToken, false);
           console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
           
@@ -1266,61 +1235,145 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           localStorage.setItem('health_pro_session', user.sessionToken);
           
           // 关键修改：显示loading，等待数据初始化
+          setIsRegistering(true); // 标记为注册流程
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           
-          // 检查开发模式是否有数据需要迁移
-          const devMembers = loadData('members', null, 'dev');
-          const hasDevData = devMembers && devMembers.length > 1; // 大于1说明有自定义成员
+          // 新用户，快速初始化（无需网络请求）
+          console.log('🆕 [注册] 新用户，执行快速初始化');
+          initializeNewUser(user.objectId);
           
-          if (hasDevData) {
-            // 迁移开发模式数据到新用户
-            console.log('🔄 [注册] 迁移开发模式数据到新用户');
-            saveData('members', devMembers, user.objectId);
-            
-            // 迁移所有成员的数据
-            devMembers.forEach(member => {
-              const memberMeds = loadMemberData(member.id, 'meds', [], 'dev');
-              const memberCatalog = loadMemberData(member.id, 'catalog', [], 'dev');
-              const memberCheckups = loadMemberData(member.id, 'checkups', [], 'dev');
-              const memberLabReports = loadMemberData(member.id, 'labReports', [], 'dev');
-              const memberImagingReports = loadMemberData(member.id, 'imagingReports', [], 'dev');
-              const memberVitals = loadMemberData(member.id, 'vitals', [], 'dev');
-              
-              if (memberMeds.length) saveMemberData(member.id, 'meds', memberMeds, user.objectId);
-              if (memberCatalog.length) saveMemberData(member.id, 'catalog', memberCatalog, user.objectId);
-              if (memberCheckups.length) saveMemberData(member.id, 'checkups', memberCheckups, user.objectId);
-              if (memberLabReports.length) saveMemberData(member.id, 'labReports', memberLabReports, user.objectId);
-              if (memberImagingReports.length) saveMemberData(member.id, 'imagingReports', memberImagingReports, user.objectId);
-              if (memberVitals.length) saveMemberData(member.id, 'vitals', memberVitals, user.objectId);
-            });
-            
-            // 迁移当前成员ID和词典
-            const devCurrentMember = loadData('current_member', 'default', 'dev');
-            saveData('current_member', devCurrentMember, user.objectId);
-            const devDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, 'dev');
-            saveData('medical_dictionary', devDictionary, user.objectId);
-            
-            // 上传到云端（包含设备ID）
-            await saveToCloud(user.objectId, user.sessionToken);
-            console.log('✅ [注册] 开发数据已迁移并上传到云端');
-            
-            // 🔴 关键修复：迁移后必须加载数据到React state
-            // 否则界面显示空白（localStorage有数据但React不知道）
-            console.log('📥 [注册] 加载迁移数据到界面...');
-            await loadFromCloud(user.objectId, user.sessionToken);
-          } else {
-            // 新用户，初始化空数据并上传（包含设备ID）
-            console.log('🆕 [注册] 新用户初始化');
-            await loadFromCloud(user.objectId, user.sessionToken);
-          }
+          // 标记数据已加载，防止useEffect触发loadFromCloud
+          setDataLoaded(true);
+          
+          // 添加小延迟让用户看到"初始化账号"提示
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // 立即保存初始数据和设备ID到云端
+          await saveToCloud(user.objectId, user.sessionToken, false);
+          console.log('✅ [注册] 初始数据已同步到云端');
           
           setIsLoadingUserData(false);
+          setIsRegistering(false); // 重置注册标记
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '注册失败');
           setLoginLoading(false);
           setIsLoadingUserData(false); // 确保失败时也结束loading
+          setIsRegistering(false); // 重置注册标记
+        }
+      };
+      
+      // Token验证函数
+      const validateSessionToken = async () => {
+        if (!currentUser || !sessionToken) return false;
+        
+        try {
+          // 验证 sessionToken 是否有效
+          const user = await LeanCloud.getCurrentUser(sessionToken);
+          return true;
+        } catch (e) {
+          console.error('❌ [validateSessionToken] Token失效:', e);
+          return false;
+        }
+      };
+      
+      // 数据冲突检测函数
+      const checkDataConflict = async () => {
+        if (!currentUser || !sessionToken || !isOnline) return null;
+        
+        try {
+          // 加载云端数据
+          const cloudData = await LeanCloud.loadUserData(currentUser.objectId, sessionToken);
+          if (!cloudData || !cloudData.lastUpdated) return null;
+          
+          // 检查本地是否有lastSyncTime
+          const localLastSync = localStorage.getItem('health_pro_last_sync_time');
+          
+          if (!localLastSync) {
+            // 首次同步，无冲突
+            return null;
+          }
+          
+          // 比较时间戳
+          const cloudTime = new Date(cloudData.lastUpdated).getTime();
+          const localTime = new Date(localLastSync).getTime();
+          
+          // 如果云端数据更新，且本地也有修改（通过检测本地数据与上次同步时的差异）
+          if (cloudTime > localTime) {
+            // 检测本地是否有未同步的修改
+            const hasLocalChanges = checkLocalChanges(currentUser.objectId);
+            
+            if (hasLocalChanges) {
+              // 数据冲突！
+              console.warn('⚠️ [checkDataConflict] 检测到数据冲突');
+              return cloudData;
+            } else {
+              // 只有云端更新，无冲突
+              console.log('✅ [checkDataConflict] 云端更新，无冲突');
+              return { noConflict: true, cloudData };
+            }
+          }
+          
+          return null;
+        } catch (e) {
+          console.error('❌ [checkDataConflict] 冲突检测失败:', e);
+          return null;
+        }
+      };
+      
+      // 检测本地是否有修改（简化版：检查数据量变化）
+      const checkLocalChanges = (userId) => {
+        try {
+          // 获取本地数据快照
+          const localMembers = loadData('members', [], userId);
+          const localMeds = loadMemberData('default', 'meds', [], userId);
+          
+          // 简单判断：如果有数据就认为有修改（更精确的方式需要记录每次操作的时间戳）
+          return localMembers.length > 1 || localMeds.length > 0;
+        } catch (e) {
+          return false;
+        }
+      };
+      
+      // 处理数据冲突 - 使用云端数据
+      const resolveConflictWithCloud = async () => {
+        if (!conflictData) return;
+        
+        setShowDataConflict(false);
+        setIsLoadingUserData(true);
+        
+        try {
+          await applyCloudData(conflictData);
+          // 更新最后同步时间
+          localStorage.setItem('health_pro_last_sync_time', conflictData.lastUpdated);
+          alert('✅ 已从云端恢复数据');
+        } catch (e) {
+          console.error('❌ [resolveConflictWithCloud] 应用云端数据失败:', e);
+          alert('❌ 数据恢复失败');
+        } finally {
+          setIsLoadingUserData(false);
+          setConflictData(null);
+        }
+      };
+      
+      // 处理数据冲突 - 使用本地数据
+      const resolveConflictWithLocal = async () => {
+        setShowDataConflict(false);
+        setIsLoadingUserData(true);
+        
+        try {
+          // 直接上传本地数据到云端
+          await saveToCloud(currentUser.objectId, sessionToken, false);
+          // 更新最后同步时间
+          localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
+          alert('✅ 已保存本地数据到云端');
+        } catch (e) {
+          console.error('❌ [resolveConflictWithLocal] 上传本地数据失败:', e);
+          alert('❌ 数据上传失败');
+        } finally {
+          setIsLoadingUserData(false);
+          setConflictData(null);
         }
       };
       
@@ -1328,14 +1381,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const handleLogout = async () => {
         setIsLoggingOut(true);
         
-        // 超时保护：8秒后强制退出（适应弱网环境）
+        // 超时保护：3秒后强制退出
         const forceLogoutTimer = setTimeout(() => {
           console.warn('⚠️ [handleLogout] 同步超时，强制退出');
           performLogout();
-        }, 8000);
+        }, 3000);
         
         // 退出前先同步到云端（关键：确保数据不丢失）
-        if (currentUser && sessionToken && currentUser.objectId !== 'dev' && isOnline) {
+        if (currentUser && sessionToken && isOnline) {
           setSyncStatus('syncing');
           try {
             await saveToCloud(currentUser.objectId, sessionToken, false);
@@ -1385,6 +1438,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
         setIsLoggingOut(false);
+        setIsLoadingUserData(false); // 修复：重置加载状态
+        setIsValidatingToken(false); // 修复：重置验证状态
+        setIsRegistering(false);     // 修复：重置注册状态
         console.log('✅ [performLogout] 退出登录完成');
       };
       
@@ -1503,7 +1559,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 保存数据到云端(改进版:更详细的错误处理)
       const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken, showAlert = false) => {
-        if (!userId || !token || userId === 'dev') return; // 开发模式跳过
+        if (!userId || !token) return;
         if (!isOnline) {
           setSyncStatus('error');
           if (showAlert) alert('⚠️ 网络离线,无法同步到云端');
@@ -1570,6 +1626,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('✅ [saveToCloud] 云端同步成功!', result);
           setSyncStatus('synced');
           setLastSyncTime(new Date());
+          // 保存最后同步时间到localStorage
+          localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
           if (showAlert) alert('✅ 数据已成功同步到云端');
         } catch (e) {
           console.error('❌ 云端保存失败:', e);
@@ -1637,7 +1695,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       }, [medicalDictionary, currentUser]);
 
       
-      // 自动云同步(防抖1.5秒,平衡性能与数据安全)
+      // 自动云同步(防抖3秒,更可靠)
       useEffect(() => {
         // 关键修复：只有在数据已加载完成时才触发自动同步，防止空数据覆盖云端
         if (!currentUser || !sessionToken || !isOnline || !dataLoaded) return;
@@ -1645,7 +1703,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         const timer = setTimeout(() => {
           console.log('⏰ 防抖时间到,触发自动同步');
           saveToCloud();
-        }, 1500); // 缩短至1.5秒，提升数据安全性
+        }, 3000); // 改为3秒,避免频繁触发
         
         return () => {
           console.log('⏰ 防抖计时器被清除');
@@ -1662,10 +1720,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // 页面关闭前强制同步（改进版：多重保障）
       useEffect(() => {
-        if (!currentUser || !sessionToken || currentUser.objectId === 'dev' || !dataLoaded) return;
+        if (!currentUser || !sessionToken || !dataLoaded) return;
         
-        // 方案1：visibilitychange - 页面即将不可见时提前同步（最可靠）
-        // 当用户切换标签页/最小化窗口时触发，此时异步请求还可以完成
+        // 方案1：visibilitychange - 页面即将不可见时提前同步（更可靠）
         const handleVisibilityChange = () => {
           if (document.hidden && dataLoaded) {
             console.log('📴 [visibilitychange] 页面隐藏，立即同步');
@@ -1673,13 +1730,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }
         };
         
-        // 方案2：beforeunload - 最后的保障（有限制）
-        // 注意：浏览器会立即关闭，异步请求可能被中断
-        // 因此依赖方案1（visibilitychange）和自动同步（1.5秒防抖）
+        // 方案2：beforeunload - 最后的保障
         const handleBeforeUnload = (e) => {
           if (dataLoaded) {
             console.log('🚪 [beforeunload] 页面关闭，尝试同步');
-            saveToCloud(); // 尽力而为，但可能被中断
+            saveToCloud();
           }
         };
         
@@ -1696,16 +1751,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       useEffect(() => {
         const handleOnline = () => {
           setIsOnline(true);
-          // 恢复在线后自动重试
+          // 恢复在线后自动重试同步
           if (currentUser && sessionToken && syncStatus === 'error') {
-            // 如果数据未加载完成，重试加载；否则重试保存
-            if (!dataLoaded && currentUser.objectId !== 'dev') {
-              console.log('🔄 [网络恢复] 重试加载云端数据');
-              loadFromCloud(currentUser.objectId, sessionToken);
-            } else {
-              console.log('🔄 [网络恢复] 重试同步到云端');
-              saveToCloud();
-            }
+            saveToCloud();
           }
         };
         const handleOffline = () => {
@@ -1722,11 +1770,61 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
         };
-      }, [currentUser, sessionToken, syncStatus, dataLoaded]);
+      }, [currentUser, sessionToken, syncStatus]);
+      
+      // 启动时验证Token和检测数据冲突
+      useEffect(() => {
+        const validateAndCheckConflict = async () => {
+          if (!currentUser || !sessionToken || !isOnline || isValidatingToken) return;
+          
+          console.log('🔐 [启动验证] 开始验证Token和检测冲突');
+          setIsValidatingToken(true);
+          
+          try {
+            // 1. 验证 Token 是否有效
+            const isTokenValid = await validateSessionToken();
+            
+            if (!isTokenValid) {
+              console.error('❌ [启动验证] Token失效，强制退出登录');
+              alert('⚠️ 登录已过期\n\n请重新登录');
+              performLogout();
+              return;
+            }
+            
+            console.log('✅ [启动验证] Token有效');
+            
+            // 2. 检测数据冲突
+            const conflictResult = await checkDataConflict();
+            
+            if (conflictResult && !conflictResult.noConflict) {
+              // 有冲突，显示对话框
+              console.warn('⚠️ [启动验证] 检测到数据冲突，显示选择对话框');
+              setConflictData(conflictResult);
+              setShowDataConflict(true);
+            } else if (conflictResult?.noConflict) {
+              // 只有云端更新，自动应用
+              console.log('✅ [启动验证] 云端数据更新，自动应用');
+              await applyCloudData(conflictResult.cloudData);
+              localStorage.setItem('health_pro_last_sync_time', conflictResult.cloudData.lastUpdated);
+            } else {
+              console.log('✅ [启动验证] 无冲突，继续正常流程');
+            }
+          } catch (e) {
+            console.error('❌ [启动验证] 验证失败:', e);
+            // 不强制退出，允许离线使用
+          } finally {
+            setIsValidatingToken(false);
+          }
+        };
+        
+        // 延迟500ms执行，避免与其他初始化冲突
+        const timer = setTimeout(validateAndCheckConflict, 500);
+        return () => clearTimeout(timer);
+      }, []); // 只在组件挂载时执行一次
       
       // 设备心跳检测 - 单设备登录限制
       useEffect(() => {
-        if (!currentUser || !sessionToken || currentUser.objectId === 'dev' || !isOnline) return;
+        if (!currentUser || !sessionToken || !isOnline) return;
         
         const checkDeviceStatus = async () => {
           try {
@@ -1766,6 +1864,40 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
       
       // 处理同步冲突 - 使用云端数据
+      
+      // 新用户快速初始化（无需网络请求）
+      const initializeNewUser = (userId) => {
+        console.log('🆕 [initializeNewUser] 初始化新用户数据:', userId);
+        
+        // 直接初始化默认数据到localStorage
+        const defaultMembers = DEFAULT_MEMBERS;
+        saveData('members', defaultMembers, userId);
+        saveData('current_member', 'default', userId);
+        
+        // 初始化空数据
+        saveMemberData('default', 'meds', [], userId);
+        saveMemberData('default', 'catalog', [], userId);
+        saveMemberData('default', 'checkups', [], userId);
+        saveMemberData('default', 'labReports', [], userId);
+        saveMemberData('default', 'imagingReports', [], userId);
+        saveMemberData('default', 'vitals', [], userId);
+        
+        // 初始化医学词典
+        saveData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
+        
+        // 更新state（不调用setDataLoaded，避免触发useEffect）
+        setMembers(defaultMembers);
+        setCurrentMemberId('default');
+        setMeds([]);
+        setCatalog([]);
+        setCheckups([]);
+        setLabReports([]);
+        setImagingReports([]);
+        setVitals([]);
+        setMedicalDictionary(DEFAULT_MEDICAL_DICTIONARY);
+        
+        console.log('✅ [initializeNewUser] 新用户初始化完成（不触发useEffect）');
+      };
       
       // 应用云端数据到本地
       const applyCloudData = async (cloudData) => {
@@ -1916,7 +2048,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         switchMember(newMember.id);
         
         // 立即同步到云端
-        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+        if (currentUser && sessionToken) {
           console.log('☁️ [addMember] 准备同步到云端...');
           setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
         }
@@ -1943,7 +2075,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setShowMemberForm(false);
         
         // 立即同步到云端
-        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+        if (currentUser && sessionToken) {
           setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
         }
       };
@@ -1973,7 +2105,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         });
         
         // 立即同步到云端（不等待防抖）
-        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
+        if (currentUser && sessionToken) {
           setTimeout(() => saveToCloud(currentUser.objectId, sessionToken, false), 0);
         }
       };
@@ -1994,48 +2126,52 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [printHtml, setPrintHtml] = useState('');
       const [apiKeyInput, setApiKeyInput] = useState(getApiKeyFor(CURRENT_API));
       
-      // 初始化数据：仅处理页面刷新场景（恢复登录状态）
+      // 初始化数据：根据当前用户加载localStorage
       useEffect(() => {
-        // 只在挂载时执行一次，避免登录时重复加载
-        if (dataLoaded) return;
-        
         const userId = getUserId();
-        console.log('🔄 [useEffect-init] 初始化:', { userId, currentUser: !!currentUser, sessionToken: !!sessionToken });
+        console.log('🔄 [useEffect-init] 加载用户数据:', userId);
         
-        // 场景1: 页面刷新，localStorage有登录凭证 → 从云端加载
-        if (currentUser && sessionToken && currentUser.objectId !== 'dev') {
-          console.log('🔄 [useEffect-init] 检测到已登录状态，从云端恢复数据');
+        // 如果是云端用户且是首次加载，主动从云端加载数据
+        if (currentUser && !dataLoaded && sessionToken) {
+          console.log('⏳ [useEffect-init] 云端用户首次加载，主动从云端加载数据...');
+          // 主动调用loadFromCloud
           loadFromCloud(currentUser.objectId, sessionToken);
           return;
         }
         
-        // 场景2: 开发模式或首次访问 → 从localStorage加载本地数据
-        console.log('💾 [useEffect-init] 从localStorage加载本地数据');
+        // 云端加载失败后，从localStorage加载
+        console.log('💾 [useEffect-init] 从localStorage加载');
         
+        // 加载成员列表和当前成员 - 确保默认成员始终存在
         let loadedMembers = loadData('members', DEFAULT_MEMBERS, userId);
+        
+        // 检查是否包含默认成员
         const hasDefaultMember = loadedMembers.some(m => m.id === 'default');
         if (!hasDefaultMember) {
-          console.log('⚠️ [useEffect-init] 添加默认成员');
+          console.log('⚠️ [useEffect-init] localStorage缺少默认成员，自动添加');
           loadedMembers = [DEFAULT_MEMBER, ...loadedMembers];
-          saveData('members', loadedMembers, userId);
+          saveData('members', loadedMembers, userId); // 修正localStorage
         }
         
-        console.log('📋 [useEffect-init] 成员:', loadedMembers.map(m => m.name));
+        console.log('📋 [useEffect-init] 加载成员列表:', loadedMembers.length, '个:', loadedMembers.map(m => m.name));
         const loadedCurrentMemberId = loadData('current_member', 'default', userId);
         setMembers(loadedMembers);
         setCurrentMemberId(loadedCurrentMemberId);
         
+        // 加载当前成员的数据
         setMeds(loadMemberData(loadedCurrentMemberId, 'meds', DEFAULT_MEDS, userId));
         setCatalog(loadMemberData(loadedCurrentMemberId, 'catalog', DEFAULT_CATALOG, userId));
         setCheckups(loadMemberData(loadedCurrentMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
         setLabReports(loadMemberData(loadedCurrentMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
         setImagingReports(loadMemberData(loadedCurrentMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
         setVitals(loadMemberData(loadedCurrentMemberId, 'vitals', DEFAULT_VITALS, userId));
+        
+        // 加载医学词典
         setMedicalDictionary(loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId));
         
         setDataLoaded(true);
-        console.log('✅ [useEffect-init] 初始化完成');
-      }, []); // 空依赖 - 仅挂载时执行一次
+        console.log('✅ [useEffect-init] 用户数据加载完成');
+      }, [currentUser, dataLoaded]); // currentUser变化时重新加载
       const [apiProvider, setApiProvider] = useState(CURRENT_API);
       const [showApiKey, setShowApiKey] = useState(false);
       const [infoItem, setInfoItem] = useState(null);
@@ -2880,13 +3016,24 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       };
 
       // 登录/注册后加载用户数据中
-      if (isLoadingUserData) {
+      if (isLoadingUserData || isValidatingToken) {
+        let loadingText = '加载中...';
+        let loadingSubText = '正在同步您的健康数据';
+        
+        if (isValidatingToken) {
+          loadingText = '验证登录状态...';
+          loadingSubText = '正在验证Token并检测数据冲突';
+        } else if (isRegistering) {
+          loadingText = '初始化账号...';
+          loadingSubText = '正在为您创建健康数据空间';
+        }
+        
         return (
           <div className="w-full max-w-md mx-auto font-sans relative shadow-2xl h-full overflow-hidden flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, #4f46e5, #4338ca, #7c3aed)'}}>
             <div className="text-center">
               <div className="w-20 h-20 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
-              <h3 className="text-2xl font-bold text-white mb-2">加载中...</h3>
-              <p className="text-white/70 text-sm">正在同步您的健康数据</p>
+              <h3 className="text-2xl font-bold text-white mb-2">{loadingText}</h3>
+              <p className="text-white/70 text-sm">{loadingSubText}</p>
             </div>
           </div>
         );
@@ -3027,28 +3174,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
               </div>
               
-              {/* 测试环境配置入口 */}
-              {CURRENT_ENV === 'test' && (
-                <div className="mb-4">
-                  <button 
-                    onClick={() => {
-                      const currentConfig = loadTestConfig();
-                      setTestConfigInput(currentConfig);
-                      setShowTestConfigModal(true);
-                    }}
-                    className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border-2 transition-all ${needsTestConfig ? 'bg-orange-500 text-white border-orange-500 animate-pulse shadow-lg' : 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50'}`}
-                  >
-                    <Icons.Settings size={16}/> 
-                    {needsTestConfig ? '⚠️ 配置测试环境（必需）' : '⚙️ 测试环境配置'}
-                  </button>
-                  {needsTestConfig && (
-                    <p className="text-xs text-center mt-2 text-yellow-200">
-                      ⚠️ 首次使用需要配置LeanCloud连接
-                    </p>
-                  )}
-                </div>
-              )}
-              
               {/* 功能亮点 */}
               <div className="flex justify-center gap-6 text-xs" style={{color: 'rgba(255,255,255,0.8)'}}>
                 <div className="flex items-center gap-1">
@@ -3061,17 +3186,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   <Icons.ScanLine size={14}/> AI识别
                 </div>
               </div>
-              
-              {/* 开发模式入口 - 将来删除此按钮即可移除 */}
-              <button 
-                onClick={() => {
-                  setCurrentUser({ username: '开发模式', objectId: 'dev' });
-                  setSessionToken(null);
-                }}
-                className="mt-4 text-xs text-white/40 hover:text-white/60 transition-colors"
-              >
-                开发模式 →
-              </button>
               
               {/* 版本号 */}
               <div className="text-center pt-6 text-xs" style={{color: 'rgba(255,255,255,0.4)'}}>
@@ -3099,11 +3213,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               <h1 className="text-base font-bold flex items-center gap-1.5">
                 <Icons.Activity size={18}/> 健康管家 
                 <span className="text-xs font-normal opacity-70">{VERSION}</span>
-                {currentUser?.objectId === 'dev' && <span className="text-[10px] bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded font-bold">开发</span>}
                 {CURRENT_ENV === 'test' && <span className="text-[10px] bg-orange-400 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">测试</span>}
               </h1>
               {/* 云同步状态(改进版:显示上次同步时间)*/}
-              {currentUser?.objectId !== 'dev' && (
+              {currentUser && (
                 <button 
                   onClick={() => saveToCloud(currentUser.objectId, sessionToken, true)} 
                   className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
@@ -3163,21 +3276,15 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl">系统菜单</div>
               <div className="px-4 py-2 text-xs text-gray-500 border-b flex items-center gap-2">
                 <Icons.User size={14}/> {currentUser?.username}
-                {currentUser?.objectId === 'dev' ? (
-                  <span className="text-yellow-600 text-[10px] bg-yellow-50 px-1.5 py-0.5 rounded">开发模式</span>
-                ) : syncStatus === 'synced' && lastSyncTime ? (
+                {syncStatus === 'synced' && lastSyncTime ? (
                   <span className="text-green-500 text-[10px]">● 已同步 {lastSyncTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</span>
                 ) : syncStatus === 'error' ? (
                   <span className="text-red-500 text-[10px]">● 同步失败</span>
                 ) : null}
               </div>
-              {currentUser?.objectId !== 'dev' && (
-                <>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(currentUser.objectId, sessionToken, true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 手动同步到云端</button>
-                  <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(confirm('确定要从云端恢复数据吗?\n本地未同步的数据可能会丢失。')) { loadFromCloud(currentUser.objectId, sessionToken); } setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
-                  <div className="border-t"></div>
-                </>
-              )}
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(currentUser.objectId, sessionToken, true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 手动同步到云端</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(confirm('确定要从云端恢复数据吗?\n本地未同步的数据可能会丢失。')) { loadFromCloud(currentUser.objectId, sessionToken); } setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
+              <div className="border-t"></div>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 备份到本地</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> 从本地恢复</button>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDictionaryModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-t"><Icons.Library size={16}/> 医学指标词典</button>
@@ -4595,6 +4702,61 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 <h3 className="text-lg font-bold text-gray-800 mb-2">退出登录中...</h3>
                 <p className="text-sm text-gray-500">正在同步数据到云端</p>
                 <p className="text-xs text-gray-400 mt-2">请稍候，最多3秒</p>
+              </div>
+            </div>
+          )}
+
+          {/* 数据冲突解决对话框 */}
+          {showDataConflict && conflictData && (
+            <div className="absolute inset-0 z-[155] bg-black/80 flex items-center justify-center p-6">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icons.AlertTriangle size={32} className="text-yellow-600"/>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到数据冲突</h3>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-blue-900 mb-3">
+                    云端数据已被其他设备更新，但您的本地也有修改。
+                  </p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">云端更新时间:</span>
+                      <span className="font-mono text-blue-900">{new Date(conflictData.lastUpdated).toLocaleString('zh-CN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">本地修改时间:</span>
+                      <span className="font-mono text-blue-900">{new Date(localStorage.getItem('health_pro_last_sync_time') || Date.now()).toLocaleString('zh-CN')}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-orange-800">
+                    ⚠️ <strong>请选择保留哪个版本</strong>：选择后将覆盖另一个版本的数据
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button 
+                    onClick={resolveConflictWithCloud}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.Cloud size={18}/>
+                    使用云端数据
+                  </button>
+                  <button 
+                    onClick={resolveConflictWithLocal}
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.Smartphone size={18}/>
+                    使用本地数据
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-400 text-center mt-4">
+                  💡 建议：如果不确定，选择"使用云端数据"更安全
+                </p>
               </div>
             </div>
           )}
