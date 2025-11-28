@@ -1438,6 +1438,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
         setIsLoggingOut(false);
+        setIsLoadingUserData(false); // 修复：重置加载状态
+        setIsValidatingToken(false); // 修复：重置验证状态
+        setIsRegistering(false);     // 修复：重置注册状态
         console.log('✅ [performLogout] 退出登录完成');
       };
       
