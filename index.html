@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.04</title>
+  <title>健康管家 Pro v16.05</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.04";
+    const VERSION = "v16.05";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1055,6 +1055,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [isLoadingUserData, setIsLoadingUserData] = useState(false); // 登录后加载用户数据
       const [isRegistering, setIsRegistering] = useState(false); // 标记是否在注册流程
       const [isLoggingOut, setIsLoggingOut] = useState(false); // 退出登录中
+      const [isJustLoggedIn, setIsJustLoggedIn] = useState(false); // 刚登录标记（防止心跳误判）
       const [syncStatus, setSyncStatus] = useState(''); // '', 'syncing', 'synced', 'error'
       const [lastSyncTime, setLastSyncTime] = useState(null);
       
@@ -1461,23 +1462,32 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
           
+          // 🔒 关键修复：先上传deviceId，再加载数据（避免iOS被误踢）
+          setIsJustLoggedIn(true); // 设置保护标记
+          console.log('🔐 [登录] 步骤1: 上传设备ID -', deviceId);
+          await saveToCloud(user.objectId, user.sessionToken, false);
+          console.log('✅ [登录] 设备ID已占据登录状态');
+          
           // 关键修改：等待云端数据加载完成
           setIsLoadingUserData(true);
           setShowLoginModal(false);
+          console.log('🔐 [登录] 步骤2: 加载云端数据');
           await loadFromCloud(user.objectId, user.sessionToken);
           
-          // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
-          console.log('🔐 [登录] 当前设备ID:', deviceId);
-          await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [登录] 设备ID已更新到云端，其他设备将在10秒内被踢出');
-          
           setIsLoadingUserData(false);
+          
+          // 5秒后清除保护标记（给心跳检测充足时间）
+          setTimeout(() => {
+            setIsJustLoggedIn(false);
+            console.log('✅ [登录] 保护标记已清除，心跳检测恢复正常');
+          }, 5000);
           
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '登录失败');
           setLoginLoading(false);
           setIsLoadingUserData(false); // 确保失败时也结束loading
+          setIsJustLoggedIn(false); // 清除保护标记
         }
       };
       
@@ -1512,6 +1522,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 关键修改：显示loading，等待数据初始化
           setIsRegistering(true); // 标记为注册流程
+          setIsJustLoggedIn(true); // 设置保护标记（防止心跳误判）
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           
@@ -1526,17 +1537,26 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           await new Promise(resolve => setTimeout(resolve, 800));
           
           // 🔒 立即保存初始数据和设备ID到云端
+          console.log('🔐 [注册] 上传设备ID -', deviceId);
           await saveToCloud(user.objectId, user.sessionToken, false);
           console.log('✅ [注册] 初始数据和设备ID已同步到云端');
           
           setIsLoadingUserData(false);
           setIsRegistering(false); // 重置注册标记
+          
+          // 5秒后清除保护标记
+          setTimeout(() => {
+            setIsJustLoggedIn(false);
+            console.log('✅ [注册] 保护标记已清除');
+          }, 5000);
+          
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           setLoginError(e.message || '注册失败');
           setLoginLoading(false);
           setIsLoadingUserData(false); // 确保失败时也结束loading
           setIsRegistering(false); // 重置注册标记
+          setIsJustLoggedIn(false); // 清除保护标记
         }
       };
       
@@ -1920,11 +1940,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return () => clearTimeout(timer);
       }, []); // 只在组件挂载时执行一次
       
-      // 🔒 设备心跳检测 - 单设备登录限制（强化版）
+      // 🔒 设备心跳检测 - 单设备登录限制（强化版 + iOS兼容）
       useEffect(() => {
         if (!currentUser || !sessionToken || !isOnline) return;
         
         const checkDeviceStatus = async () => {
+          // 🔧 iOS修复：跳过刚登录的设备（避免误踢）
+          if (isJustLoggedIn) {
+            console.log('⏭️ [心跳] 跳过检测（设备刚登录）');
+            return;
+          }
+          
           try {
             // 从云端加载用户数据
             const cloudData = await LeanCloud.loadUserData(currentUser.objectId, sessionToken);
@@ -1932,6 +1958,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
               // 🔒 设备ID不匹配，立即强制退出
               console.error('❌ [心跳] 检测到其他设备登录，立即强制退出');
+              console.error('   本地deviceId:', deviceId);
+              console.error('   云端deviceId:', cloudData.deviceId);
               
               // 显示提示
               alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
@@ -1954,8 +1982,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }
         };
         
-        // 首次检查（延迟2秒，避免与启动验证冲突）
-        const initialTimer = setTimeout(checkDeviceStatus, 2000);
+        // 🔧 iOS修复：首次检查延迟5秒（给登录流程更多时间）
+        const initialTimer = setTimeout(checkDeviceStatus, 5000);
         
         // 每10秒检查一次（快速检测被踢出）
         const interval = setInterval(checkDeviceStatus, 10000);
@@ -1964,7 +1992,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           clearTimeout(initialTimer);
           clearInterval(interval);
         };
-      }, [currentUser, sessionToken, deviceId, isOnline]);
+      }, [currentUser, sessionToken, deviceId, isOnline, isJustLoggedIn]);
       
       // 关闭首次引导
       const dismissWelcomeGuide = () => {
