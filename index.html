@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.93</title>
+  <title>健康管家 Pro v15.94</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.93";
+    const VERSION = "v15.94";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1304,6 +1304,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             // 上传到云端（包含设备ID）
             await saveToCloud(user.objectId, user.sessionToken);
             console.log('✅ [注册] 开发数据已迁移并上传到云端');
+            
+            // 🔴 关键修复：迁移后必须加载数据到React state
+            // 否则界面显示空白（localStorage有数据但React不知道）
+            console.log('📥 [注册] 加载迁移数据到界面...');
+            await loadFromCloud(user.objectId, user.sessionToken);
           } else {
             // 新用户，初始化空数据并上传（包含设备ID）
             console.log('🆕 [注册] 新用户初始化');
