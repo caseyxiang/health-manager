@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.96";
+    const VERSION = "v15.97";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -4714,49 +4714,47 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Icons.AlertTriangle size={32} className="text-yellow-600"/>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到数据冲突</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">发现数据更新</h3>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                   <p className="text-sm text-blue-900 mb-3">
-                    云端数据已被其他设备更新，但您的本地也有修改。
+                    使用哪份数据？
                   </p>
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-blue-700">云端更新时间:</span>
-                      <span className="font-mono text-blue-900">{new Date(conflictData.lastUpdated).toLocaleString('zh-CN')}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">📱 本设备:</span>
+                      <span className="font-mono text-blue-900">{new Date(localStorage.getItem('health_pro_last_sync_time') || Date.now()).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-blue-700">本地修改时间:</span>
-                      <span className="font-mono text-blue-900">{new Date(localStorage.getItem('health_pro_last_sync_time') || Date.now()).toLocaleString('zh-CN')}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">☁️ 云端:</span>
+                      <span className="font-mono text-blue-900">{new Date(conflictData.lastUpdated).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
-                  <p className="text-xs text-orange-800">
-                    ⚠️ <strong>请选择保留哪个版本</strong>：选择后将覆盖另一个版本的数据
+                  <p className="text-xs text-orange-800 text-center">
+                    ⚠️ 选择后将覆盖另一个版本的数据
                   </p>
                 </div>
                 
                 <div className="space-y-3">
                   <button 
-                    onClick={resolveConflictWithCloud}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                    onClick={resolveConflictWithLocal}
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all"
                   >
-                    <Icons.Cloud size={18}/>
-                    使用云端数据
+                    📱 本设备的数据（刚才的操作）
                   </button>
                   <button 
-                    onClick={resolveConflictWithLocal}
-                    className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                    onClick={resolveConflictWithCloud}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all"
                   >
-                    <Icons.Smartphone size={18}/>
-                    使用本地数据
+                    ☁️ 云端的数据（其他设备的操作）
                   </button>
                 </div>
                 
                 <p className="text-xs text-gray-400 text-center mt-4">
-                  💡 建议：如果不确定，选择"使用云端数据"更安全
+                  💡 提示：通常选择时间更晚的数据
                 </p>
               </div>
             </div>
