@@ -4738,48 +4738,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
           )}
 
-          {/* 数据冲突解决对话框 */}
-          {/* 智能同步通知（方案A：非阻断式通知）*/}
-          {syncNotification && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[155] w-[90%] max-w-sm animate-slide-down">
-              <div className={`rounded-2xl shadow-2xl p-4 ${syncNotification.type === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300'}`}>
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${syncNotification.type === 'warning' ? 'bg-yellow-200' : 'bg-blue-200'}`}>
-                    {syncNotification.type === 'warning' ? (
-                      <Icons.AlertTriangle size={20} className="text-yellow-700"/>
-                    ) : (
-                      <Icons.Cloud size={20} className="text-blue-700"/>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-bold text-sm mb-1 ${syncNotification.type === 'warning' ? 'text-yellow-900' : 'text-blue-900'}`}>
-                      {syncNotification.message}
-                    </div>
-                    {syncNotification.details && (
-                      <div className={`text-xs whitespace-pre-line ${syncNotification.type === 'warning' ? 'text-yellow-700' : 'text-blue-700'}`}>
-                        {syncNotification.details}
-                      </div>
-                    )}
-                    {syncNotification.type === 'warning' && lastConflictData && (
-                      <button 
-                        onClick={() => { undoAutoSync(); }}
-                        className="mt-2 text-xs font-bold underline text-yellow-800 hover:text-yellow-900"
-                      >
-                        撤销并恢复本地数据 →
-                      </button>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => setSyncNotification(null)}
-                    className={`p-1 rounded-full shrink-0 ${syncNotification.type === 'warning' ? 'hover:bg-yellow-200' : 'hover:bg-blue-200'}`}
-                  >
-                    <Icons.X size={16} className={syncNotification.type === 'warning' ? 'text-yellow-700' : 'text-blue-700'}/>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 被其他设备踢出提示 */}
           {isKickedOut && currentUser && (
             <div className="absolute inset-0 z-[160] bg-black/80 flex items-center justify-center p-6">
