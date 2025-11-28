@@ -1220,12 +1220,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const handleLogin = async () => {
         // 步骤1：验证输入
         if (!loginForm.username.trim() || !loginForm.password) {
-          alert('❌ [步骤1] 验证失败\n\n用户名或密码为空');
+          console.error('❌ [步骤1] 验证失败 - 用户名或密码为空');
           setLoginError('请输入用户名和密码');
           return;
         }
         
-        alert('✅ [步骤1] 输入验证通过\n\n准备调用登录API...');
+        console.log('✅ [步骤1] 输入验证通过');
         console.log('🔵 [登录] 开始登录流程');
         setLoginLoading(true);
         setLoginError('');
@@ -1236,31 +1236,28 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLoginLoading(false);
           setIsLoadingUserData(false);
           setLoginError('登录超时，请重试');
-          alert('⏰ [超时] 登录超时（15秒）\n\n可能原因：\n1. 网络连接不稳定\n2. 服务器响应慢\n\n请检查网络后重试');
+          alert('⏰ 登录超时（15秒）\n\n请检查网络后重试\n\n查看Eruda控制台了解详情');
         }, 15000);
         
         try {
           // 步骤2：调用登录API
-          console.log('🔵 [登录] 调用LeanCloud.login...');
-          alert('🔵 [步骤2] 正在调用登录API...\n\n这可能需要2-5秒');
+          console.log('🔵 [步骤2] 调用登录API...');
           
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
           
-          alert('✅ [步骤2] 登录验证成功！\n\nUserID: ' + user.objectId.substring(0, 8) + '...');
-          console.log('✅ [登录] 验证成功:', user.objectId);
+          console.log('✅ [步骤2] 登录验证成功:', user.objectId);
           
-          // 步骤3：检查其他设备
+          // 步骤3：检查其他设备（无alert，避免阻塞React对话框）
           let hasOtherDevice = false;
           try {
-            console.log('🔵 [登录] 检测其他设备...');
-            alert('🔵 [步骤3] 检测其他设备登录状态...');
+            console.log('🔵 [步骤3] 检测其他设备登录状态...');
             
             const cloudData = await LeanCloud.loadUserData(user.objectId, user.sessionToken);
             
             if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
-              // 发现其他设备，显示确认对话框
-              console.log('⚠️ [登录] 检测到其他设备:', cloudData.deviceName, cloudData.lastActiveTime);
-              alert('⚠️ [步骤3] 检测到其他设备\n\n设备类型: ' + (cloudData.deviceName || '未知') + '\n\n将显示确认对话框...');
+              // 发现其他设备，显示React确认对话框
+              console.log('⚠️ [步骤3] 检测到其他设备:', cloudData.deviceName, cloudData.lastActiveTime);
+              console.log('⚠️ [步骤3] 即将显示确认对话框（请在页面上操作）');
               
               hasOtherDevice = true;
               setConflictDevice({
@@ -1269,19 +1266,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               });
               setPendingLoginData({ user, sessionToken: user.sessionToken });
               setShowDeviceConflict(true);
-              clearTimeout(timeoutId); // 清除超时
+              clearTimeout(timeoutId);
               setLoginLoading(false);
+              
+              console.log('✅ [步骤3] 设备冲突对话框已触发，等待用户选择...');
               return; // 等待用户确认
             } else {
-              alert('✅ [步骤3] 无其他设备登录');
-              console.log('✅ [登录] 无其他设备');
+              console.log('✅ [步骤3] 无其他设备，继续流程');
             }
           } catch (deviceCheckError) {
-            // 设备检测失败，记录错误但继续登录
-            console.warn('⚠️ [登录] 设备检测失败（将继续登录）:', deviceCheckError.message);
-            alert('⚠️ [步骤3] 设备检测失败\n\n错误: ' + deviceCheckError.message + '\n\n将继续登录流程...');
+            console.warn('⚠️ [步骤3] 设备检测失败，将继续登录:', deviceCheckError.message);
             
-            // iOS Safari调试：显示错误详情
             if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
               console.error('🔴 [iOS调试] 设备检测错误详情:', {
                 name: deviceCheckError.name,
@@ -1292,49 +1287,40 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }
           
           // 步骤4：加载用户数据
-          console.log('🔵 [登录] 开始加载用户数据...');
-          alert('🔵 [步骤4] 正在加载云端数据...\n\n这可能需要5-10秒');
+          console.log('🔵 [步骤4] 开始加载云端数据...');
           
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
           localStorage.setItem('health_pro_session', user.sessionToken);
           
-          // 关键修改：等待云端数据加载完成
           setIsLoadingUserData(true);
           setShowLoginModal(false);
           
           try {
             await loadFromCloud(user.objectId, user.sessionToken);
-            console.log('✅ [登录] 数据加载完成');
-            alert('✅ [步骤4] 云端数据加载成功！');
+            console.log('✅ [步骤4] 云端数据加载成功');
           } catch (loadError) {
-            console.error('❌ [登录] 数据加载失败:', loadError.message);
-            alert('⚠️ [步骤4] 云端数据加载失败\n\n错误: ' + loadError.message + '\n\n将使用本地数据继续...');
-            // 数据加载失败不阻止登录，使用本地数据
+            console.error('❌ [步骤4] 数据加载失败:', loadError.message);
           }
           
           // 步骤5：保存设备信息
           try {
-            alert('🔵 [步骤5] 正在保存设备信息到云端...');
+            console.log('🔵 [步骤5] 保存设备信息到云端...');
             await saveToCloud(user.objectId, user.sessionToken, false);
-            console.log('✅ [登录] 设备ID已更新到云端:', deviceId, deviceName);
-            alert('✅ [步骤5] 设备信息已保存！');
+            console.log('✅ [步骤5] 设备信息已保存:', deviceId, deviceName);
           } catch (saveError) {
-            console.warn('⚠️ [登录] 设备ID保存失败:', saveError.message);
-            alert('⚠️ [步骤5] 设备信息保存失败\n\n错误: ' + saveError.message + '\n\n不影响使用');
-            // 保存失败不阻止登录
+            console.warn('⚠️ [步骤5] 设备信息保存失败:', saveError.message);
           }
           
-          clearTimeout(timeoutId); // 清除超时
+          clearTimeout(timeoutId);
           setIsLoadingUserData(false);
           setLoginLoading(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
-          console.log('✅ [登录] 登录流程完成');
-          alert('🎉 登录成功！\n\n所有步骤已完成，即将进入应用...');
+          console.log('🎉 [登录] 登录流程完成！');
           
         } catch (e) {
-          clearTimeout(timeoutId); // 清除超时
+          clearTimeout(timeoutId);
           console.error('❌ [登录] 登录失败:', e);
           
           // 详细错误提示
