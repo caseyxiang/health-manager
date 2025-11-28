@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.01</title>
+  <title>健康管家 Pro v16.02</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.01";
+    const VERSION = "v16.02";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1245,49 +1245,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLastSyncTime(new Date());
       };
       
-      // 【3】从云端加载数据
-      const loadFromCloud = async (userId, token, forceOverwrite = false) => {
-        console.log('📥 [loadFromCloud] 开始:', { userId, isOnline });
-        
-        if (!isOnline) {
-          console.error('❌ [loadFromCloud] 离线状态，拒绝加载');
-          setSyncStatus('error');
-          setLoginLoading(false);
-          throw new Error('网络未连接，无法加载数据');
-        }
-        
-        setSyncStatus('syncing');
-        try {
-          console.log('🌐 [loadFromCloud] 请求云端数据...');
-          const cloudData = await LeanCloud.loadUserData(userId, token);
-          console.log('📦 [loadFromCloud] 云端返回:', cloudData ? '有数据' : '无数据');
-          if (cloudData) {
-            console.log('✅ [loadFromCloud] 应用云端数据');
-            await applyCloudData(cloudData);
-          } else {
-            console.log('🆕 [loadFromCloud] 新用户首次登录，初始化空数据');
-            await applyCloudData({
-              members: DEFAULT_MEMBERS,
-              currentMemberId: 'default',
-              memberData: {},
-              apiSettings: {},
-              medicalDictionary: DEFAULT_MEDICAL_DICTIONARY
-            });
-            await saveToCloud(userId, token);
-          }
-          setSyncStatus('synced');
-          setLastSyncTime(new Date());
-          setLoginLoading(false);
-          console.log('✅ [loadFromCloud] 完成');
-        } catch (e) {
-          console.error('❌ [loadFromCloud] 失败:', e);
-          setSyncStatus('error');
-          setLoginLoading(false);
-          throw e;
-        }
-      };
-      
-      // 【4】执行退出操作
+      // 【3】执行退出操作（注：loadFromCloud 函数在后面统一定义）
       const performLogout = () => {
         const userId = getUserId();
         console.log('🧹 [performLogout] 清理用户数据:', userId);
@@ -1795,100 +1753,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
       
-      // 保存数据到云端(改进版:更详细的错误处理)
-      const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken, showAlert = false) => {
-        if (!userId || !token) return;
-        if (!isOnline) {
-          setSyncStatus('error');
-          if (showAlert) alert('⚠️ 网络离线,无法同步到云端');
-          return;
-        }
-        
-        console.log('🔄 [saveToCloud] 开始同步到云端...', { userId });
-        setSyncStatus('syncing');
-        
-        try {
-          // 从当前用户的localStorage读取数据
-          const savedMembers = loadData('members', DEFAULT_MEMBERS, userId);
-          console.log('📖 [saveToCloud] 读取到的成员列表:', savedMembers.length, '个:', savedMembers.map(m => m.name));
-          
-          // 收集所有成员数据
-          const memberData = {};
-          savedMembers.forEach(member => {
-            memberData[member.id] = {
-              meds: loadMemberData(member.id, 'meds', [], userId),
-              catalog: loadMemberData(member.id, 'catalog', [], userId),
-              checkups: loadMemberData(member.id, 'checkups', [], userId),
-              labReports: loadMemberData(member.id, 'labReports', [], userId),
-              imagingReports: loadMemberData(member.id, 'imagingReports', [], userId),
-              vitals: loadMemberData(member.id, 'vitals', [], userId)
-            };
-          });
-          
-          // 统计数据量
-          let totalItems = 0;
-          Object.values(memberData).forEach(data => {
-            totalItems += (data.meds?.length || 0) + (data.catalog?.length || 0) + 
-                         (data.labReports?.length || 0) + (data.vitals?.length || 0);
-          });
-          console.log('📊 [saveToCloud] 数据统计:', { 
-            成员数: savedMembers.length, 
-            总数据项: totalItems 
-          });
-          
-          // 收集API设置（全局，无需隔离）
-          const apiSettings = {};
-          API_PROVIDERS.forEach(p => {
-            const key = 'ai_api_key_' + p.id;
-            const val = localStorage.getItem(key);
-            if (val) apiSettings[key] = val;
-          });
-          apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
-          
-          // 读取医学词典
-          const savedDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
-          
-          // 真正执行保存
-          const result = await LeanCloud.saveUserData(userId, token, {
-            members: savedMembers,
-            currentMemberId: loadData('current_member', 'default', userId),
-            memberData,
-            apiSettings,
-            medicalDictionary: savedDictionary,
-            lastUpdated: new Date().toISOString(),
-            // 设备管理字段
-            deviceId: deviceId,  // 当前设备ID
-            lastActiveTime: new Date().toISOString()  // 最后活跃时间
-          });
-          
-          console.log('✅ [saveToCloud] 云端同步成功!', result);
-          setSyncStatus('synced');
-          setLastSyncTime(new Date());
-          // 保存最后同步时间到localStorage
-          localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
-          if (showAlert) alert('✅ 数据已成功同步到云端');
-        } catch (e) {
-          console.error('❌ 云端保存失败:', e);
-          setSyncStatus('error');
-          
-          // 显示详细的错误信息
-          let errorMsg = '同步失败';
-          if (e.message.includes('网络')) {
-            errorMsg = '网络连接失败';
-          } else if (e.message.includes('Session token')) {
-            errorMsg = '登录已过期,请重新登录';
-          } else if (e.message.includes('Forbidden')) {
-            errorMsg = '没有权限,请重新登录';
-          } else {
-            errorMsg = e.message || '未知错误';
-          }
-          
-          if (showAlert) {
-            alert(`❌ 同步失败:${errorMsg}\n\n请检查网络连接或稍后重试`);
-          }
-        }
-      };
-      
       // 成员列表持久化（带用户隔离）
       useEffect(() => {
         console.log('🔄 [useEffect-persist] members 触发:', members.length, '个成员', members.map(m => m.name));
@@ -2154,114 +2018,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setMedicalDictionary(DEFAULT_MEDICAL_DICTIONARY);
         
         console.log('✅ [initializeNewUser] 新用户初始化完成（不触发useEffect）');
-      };
-      
-      // 应用云端数据到本地
-      const applyCloudData = async (cloudData) => {
-        const userId = getUserId();
-        
-        // 1. 先恢复成员列表 - 确保默认成员始终存在
-        let restoredMembers = [];
-        if (cloudData.members) {
-          console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
-          
-          // 检查是否包含默认成员
-          const hasDefaultMember = cloudData.members.some(m => m.id === 'default');
-          
-          if (!hasDefaultMember) {
-            // 云端数据缺少默认成员，自动添加
-            console.log('⚠️ [applyCloudData] 云端数据缺少默认成员，自动添加');
-            restoredMembers = [DEFAULT_MEMBER, ...cloudData.members];
-          } else {
-            restoredMembers = cloudData.members;
-          }
-        } else {
-          // 云端无成员数据，使用默认成员
-          console.log('📝 [applyCloudData] 云端无成员数据，使用默认成员');
-          restoredMembers = [DEFAULT_MEMBER];
-        }
-        
-        console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
-        setMembers(restoredMembers);
-        saveData('members', restoredMembers, userId);
-        
-        // 2. 恢复当前成员ID
-        let targetMemberId = 'default';
-        const localMemberId = loadData('current_member', null, userId);
-        
-        // 使用前面恢复的成员列表
-        const memberIds = restoredMembers.map(m => m.id);
-        
-        // 优先使用本地记住的成员ID（如果该成员在恢复的列表中存在）
-        if (localMemberId) {
-          // localMemberId 已经是解析后的值，不需要再次 JSON.parse
-          if (memberIds.includes(localMemberId)) {
-            targetMemberId = localMemberId;
-          } else if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
-            targetMemberId = cloudData.currentMemberId;
-          } else {
-            // 如果都不存在，使用第一个成员
-            targetMemberId = restoredMembers[0]?.id || 'default';
-          }
-        } else if (cloudData.currentMemberId && memberIds.includes(cloudData.currentMemberId)) {
-          targetMemberId = cloudData.currentMemberId;
-        } else {
-          targetMemberId = restoredMembers[0]?.id || 'default';
-        }
-        
-        setCurrentMemberId(targetMemberId);
-        saveData('current_member', targetMemberId, userId);
-        
-        // 3. 写入所有成员数据到 localStorage（带用户隔离）
-        console.log('📦 [applyCloudData] memberData:', cloudData.memberData ? Object.keys(cloudData.memberData) : 'null');
-        if (cloudData.memberData) {
-          Object.keys(cloudData.memberData).forEach(memberId => {
-            const data = cloudData.memberData[memberId];
-            console.log(`📦 [applyCloudData] 成员 ${memberId} 数据:`, {
-              meds: data.meds?.length || 0,
-              catalog: data.catalog?.length || 0,
-              labReports: data.labReports?.length || 0,
-              imagingReports: data.imagingReports?.length || 0,
-              vitals: data.vitals?.length || 0
-            });
-            if (data.meds) saveMemberData(memberId, 'meds', data.meds, userId);
-            if (data.catalog) saveMemberData(memberId, 'catalog', data.catalog, userId);
-            if (data.checkups) saveMemberData(memberId, 'checkups', data.checkups, userId);
-            if (data.labReports) saveMemberData(memberId, 'labReports', data.labReports, userId);
-            if (data.imagingReports) saveMemberData(memberId, 'imagingReports', data.imagingReports, userId);
-            if (data.vitals) saveMemberData(memberId, 'vitals', data.vitals, userId);
-          });
-        } else {
-          console.warn('⚠️ [applyCloudData] 云端无memberData!');
-        }
-        
-        // 4. 恢复API设置
-        if (cloudData.apiSettings) {
-          Object.keys(cloudData.apiSettings).forEach(key => {
-            localStorage.setItem(key, cloudData.apiSettings[key]);
-          });
-        }
-        
-        // 5. 恢复医学指标词典
-        if (cloudData.medicalDictionary) {
-          setMedicalDictionary(cloudData.medicalDictionary);
-          saveData('medical_dictionary', cloudData.medicalDictionary, userId);
-        }
-        
-        // 6. 重新加载当前成员数据到 state
-        setMeds(loadMemberData(targetMemberId, 'meds', DEFAULT_MEDS, userId));
-        setCatalog(loadMemberData(targetMemberId, 'catalog', DEFAULT_CATALOG, userId));
-        setCheckups(loadMemberData(targetMemberId, 'checkups', DEFAULT_CHECKUPS, userId));
-        setLabReports(loadMemberData(targetMemberId, 'labReports', DEFAULT_LAB_REPORTS, userId));
-        setImagingReports(loadMemberData(targetMemberId, 'imagingReports', DEFAULT_IMAGING_REPORTS, userId));
-        setVitals(loadMemberData(targetMemberId, 'vitals', DEFAULT_VITALS, userId));
-        
-        // 标记数据已加载完成
-        setDataLoaded(true);
-        console.log('✅ [applyCloudData] 云端数据应用完成');
-        
-        setSyncStatus('synced');
-        setLastSyncTime(new Date());
       };
       
       // 切换成员
