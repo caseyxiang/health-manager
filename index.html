@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.10</title>
+  <title>健康管家 Pro v16.12</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.10";
+    const VERSION = "v16.12";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1096,7 +1096,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // ===== 核心函数定义区（必须在所有useEffect之前）=====
       
       // 【1】保存数据到云端
-      const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken, showAlert = false) => {
+      const saveToCloud = async (userId = currentUser?.objectId, token = sessionToken, showAlert = false, updateDeviceId = false) => {
         if (!userId || !token) return;
         if (!isOnline) {
           setSyncStatus('error');
@@ -1104,7 +1104,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           return;
         }
         
-        console.log('🔄 [saveToCloud] 开始同步到云端...', { userId });
+        console.log('🔄 [saveToCloud] 开始同步到云端...', { userId, updateDeviceId });
         setSyncStatus('syncing');
         
         try {
@@ -1140,16 +1140,26 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           const savedDictionary = loadData('medical_dictionary', DEFAULT_MEDICAL_DICTIONARY, userId);
           
-          const result = await LeanCloud.saveUserData(userId, token, {
+          // 构建同步数据
+          const syncData = {
             members: savedMembers,
             currentMemberId: loadData('current_member', 'default', userId),
             memberData,
             apiSettings,
             medicalDictionary: savedDictionary,
             lastUpdated: new Date().toISOString(),
-            deviceId: deviceId,
-            lastActiveTime: new Date().toISOString()
-          });
+          };
+          
+          // 🔒 只在登录时更新deviceId，防止自动同步覆盖其他设备的登录状态
+          if (updateDeviceId) {
+            syncData.deviceId = deviceId;
+            syncData.lastActiveTime = new Date().toISOString();
+            console.log('🔐 [saveToCloud] 更新设备ID:', deviceId);
+          } else {
+            console.log('📦 [saveToCloud] 仅同步数据，不更新设备ID');
+          }
+          
+          const result = await LeanCloud.saveUserData(userId, token, syncData);
           
           console.log('✅ [saveToCloud] 云端同步成功!', result);
           setSyncStatus('synced');
@@ -1306,6 +1316,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       }, []);
       
+      // 版本号比较函数
+      const compareVersions = (v1, v2) => {
+        // 解析版本号 "v16.10" -> [16, 10]
+        const parse = (v) => {
+          const match = v.match(/v?(\d+)\.(\d+)/);
+          if (!match) return [0, 0];
+          return [parseInt(match[1]), parseInt(match[2])];
+        };
+        
+        const [major1, minor1] = parse(v1);
+        const [major2, minor2] = parse(v2);
+        
+        if (major1 > major2) return 1;  // v1 更新
+        if (major1 < major2) return -1; // v1 更旧
+        if (minor1 > minor2) return 1;  // v1 更新
+        if (minor1 < minor2) return -1; // v1 更旧
+        return 0; // 相同
+      };
+      
       // 🔒 启动时版本检查和强制在线验证（最高优先级）
       useEffect(() => {
         const checkVersionAndNetwork = () => {
@@ -1324,20 +1353,39 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📱 [启动] 当前版本:', VERSION, '| 上次版本:', savedVersion);
           
           if (savedVersion && savedVersion !== VERSION) {
-            // 版本不一致，强制重新登录
-            console.warn('⚠️ [启动] 应用已更新，清除登录状态');
-            localStorage.removeItem('health_pro_user');
-            localStorage.removeItem('health_pro_session');
-            localStorage.removeItem('health_pro_last_sync_time');
-            setMustRelogin(true);
-            setIsVersionChecked(true);
-            return;
+            const comparison = compareVersions(VERSION, savedVersion);
+            
+            if (comparison > 0) {
+              // 当前版本更新，正常更新
+              console.log('✅ [启动] 检测到版本升级:', savedVersion, '->', VERSION);
+              localStorage.setItem('health_pro_app_version', VERSION);
+              // 版本升级时强制重新登录以确保数据同步
+              localStorage.removeItem('health_pro_user');
+              localStorage.removeItem('health_pro_session');
+              localStorage.removeItem('health_pro_last_sync_time');
+              setMustRelogin(true);
+              setIsVersionChecked(true);
+              return;
+            } else if (comparison < 0) {
+              // 当前版本更旧，给出警告但允许继续
+              console.warn('⚠️ [启动] 当前版本较旧:', VERSION, '<', savedVersion, '- 允许继续但有风险');
+              if (confirm(`⚠️ 版本警告\n\n当前版本: ${VERSION}\n已存在版本: ${savedVersion}\n\n当前版本较旧，可能存在兼容性问题。\n\n是否继续使用？`)) {
+                // 用户选择继续，不更新版本号
+                setIsVersionChecked(true);
+              } else {
+                // 用户选择停止
+                alert('请使用最新版本');
+                setOfflineError(true); // 复用离线错误界面阻止使用
+                setIsVersionChecked(true);
+                return;
+              }
+            }
+          } else {
+            // 首次使用或版本相同
+            localStorage.setItem('health_pro_app_version', VERSION);
           }
           
-          // 3. 更新版本号
-          localStorage.setItem('health_pro_app_version', VERSION);
-          
-          // 4. 尝试恢复登录状态
+          // 3. 尝试恢复登录状态
           const savedUser = localStorage.getItem('health_pro_user');
           const savedToken = localStorage.getItem('health_pro_session');
           
@@ -1471,8 +1519,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
           console.log('🔐 [登录] 当前设备ID:', deviceId);
-          await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [登录] 设备ID已更新到云端，其他设备将在10秒内被踢出');
+          await saveToCloud(user.objectId, user.sessionToken, false, true);  // updateDeviceId=true
+          console.log('✅ [登录] 设备ID已更新到云端，其他设备将被踢出');
           
           setIsLoadingUserData(false);
           
@@ -1820,19 +1868,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       //   }
       // }, [currentUser, sessionToken]);
       
-      // 页面关闭前强制同步（改进版：多重保障）
+      // 页面关闭前强制同步（改进版：只在真正关闭时同步）
       useEffect(() => {
         if (!currentUser || !sessionToken || !dataLoaded) return;
         
-        // 方案1：visibilitychange - 页面即将不可见时提前同步（更可靠）
-        const handleVisibilityChange = () => {
-          if (document.hidden && dataLoaded) {
-            console.log('📴 [visibilitychange] 页面隐藏，立即同步');
-            saveToCloud();
-          }
-        };
-        
-        // 方案2：beforeunload - 最后的保障
+        // beforeunload - 页面真正关闭时同步
         const handleBeforeUnload = (e) => {
           if (dataLoaded) {
             console.log('🚪 [beforeunload] 页面关闭，尝试同步');
@@ -1840,11 +1880,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           }
         };
         
-        document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('beforeunload', handleBeforeUnload);
         
         return () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
           window.removeEventListener('beforeunload', handleBeforeUnload);
         };
       }, [currentUser, sessionToken, dataLoaded]);
@@ -1968,8 +2006,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         // 首次检查（延迟2秒，避免与启动验证冲突）
         const initialTimer = setTimeout(checkDeviceStatus, 2000);
         
-        // 每10秒检查一次（快速检测被踢出）
-        const interval = setInterval(checkDeviceStatus, 10000);
+        // 每5秒检查一次（快速检测被踢出）
+        const interval = setInterval(checkDeviceStatus, 5000);
         
         return () => {
           clearTimeout(initialTimer);
