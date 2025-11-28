@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.95</title>
+  <title>健康管家 Pro v15.96</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.95";
+    const VERSION = "v15.96";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1437,6 +1437,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setDataLoaded(false);
         setLoginForm({ username: '', password: '', confirmPassword: '' });
         setLoginError('');
+        setLoginLoading(false);      // 修复：重置登录按钮loading状态
         setIsLoggingOut(false);
         setIsLoadingUserData(false); // 修复：重置加载状态
         setIsValidatingToken(false); // 修复：重置验证状态
