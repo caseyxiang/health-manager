@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.98</title>
+  <title>健康管家 Pro v15.99</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.98";
+    const VERSION = "v15.99";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1199,31 +1199,66 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLoginError('请输入用户名和密码');
           return;
         }
+        
+        console.log('🔵 [登录] 开始登录流程');
         setLoginLoading(true);
         setLoginError('');
+        
+        // iOS Safari超时保护：15秒后自动重置
+        const timeoutId = setTimeout(() => {
+          console.error('⏰ [登录] 超时保护触发（15秒）');
+          setLoginLoading(false);
+          setIsLoadingUserData(false);
+          setLoginError('登录超时，请重试');
+          
+          // iOS调试提示
+          if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            alert('登录超时（15秒）\n可能原因：\n1. 网络连接不稳定\n2. 服务器响应慢\n\n请检查网络后重试');
+          }
+        }, 15000);
+        
         try {
+          console.log('🔵 [登录] 调用LeanCloud.login...');
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
+          console.log('✅ [登录] 验证成功:', user.objectId);
           
           // 检查云端是否有其他设备登录
+          let hasOtherDevice = false;
           try {
+            console.log('🔵 [登录] 检测其他设备...');
             const cloudData = await LeanCloud.loadUserData(user.objectId, user.sessionToken);
+            
             if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
               // 发现其他设备，显示确认对话框
               console.log('⚠️ [登录] 检测到其他设备:', cloudData.deviceName, cloudData.lastActiveTime);
+              hasOtherDevice = true;
               setConflictDevice({
                 deviceName: cloudData.deviceName || '未知设备',
                 lastActiveTime: cloudData.lastActiveTime || '未知时间'
               });
               setPendingLoginData({ user, sessionToken: user.sessionToken });
               setShowDeviceConflict(true);
+              clearTimeout(timeoutId); // 清除超时
               setLoginLoading(false);
               return; // 等待用户确认
+            } else {
+              console.log('✅ [登录] 无其他设备');
             }
-          } catch (e) {
-            console.warn('⚠️ [登录] 检测设备信息失败，继续登录:', e);
+          } catch (deviceCheckError) {
+            // 设备检测失败，记录错误但继续登录
+            console.warn('⚠️ [登录] 设备检测失败（将继续登录）:', deviceCheckError.message);
+            // iOS Safari调试：显示错误详情
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+              console.error('🔴 [iOS调试] 设备检测错误详情:', {
+                name: deviceCheckError.name,
+                message: deviceCheckError.message,
+                stack: deviceCheckError.stack
+              });
+            }
           }
           
           // 没有其他设备或检测失败，继续登录
+          console.log('🔵 [登录] 开始加载用户数据...');
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
@@ -1232,19 +1267,49 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           // 关键修改：等待云端数据加载完成
           setIsLoadingUserData(true);
           setShowLoginModal(false);
-          await loadFromCloud(user.objectId, user.sessionToken);
+          
+          try {
+            await loadFromCloud(user.objectId, user.sessionToken);
+            console.log('✅ [登录] 数据加载完成');
+          } catch (loadError) {
+            console.error('❌ [登录] 数据加载失败:', loadError.message);
+            // 数据加载失败不阻止登录，使用本地数据
+          }
           
           // 立即更新设备ID到云端，占据登录状态
-          await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [登录] 设备ID已更新到云端:', deviceId, deviceName);
+          try {
+            await saveToCloud(user.objectId, user.sessionToken, false);
+            console.log('✅ [登录] 设备ID已更新到云端:', deviceId, deviceName);
+          } catch (saveError) {
+            console.warn('⚠️ [登录] 设备ID保存失败:', saveError.message);
+            // 保存失败不阻止登录
+          }
           
+          clearTimeout(timeoutId); // 清除超时
           setIsLoadingUserData(false);
-          
+          setLoginLoading(false);
           setLoginForm({ username: '', password: '', confirmPassword: '' });
+          console.log('✅ [登录] 登录流程完成');
+          
         } catch (e) {
+          clearTimeout(timeoutId); // 清除超时
+          console.error('❌ [登录] 登录失败:', e);
+          
+          // iOS Safari调试：显示详细错误
+          if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            console.error('🔴 [iOS调试] 错误详情:', {
+              name: e.name,
+              message: e.message,
+              stack: e.stack
+            });
+            
+            // 显示用户友好的错误提示
+            alert(`登录失败\n\n错误信息：${e.message}\n\n如果持续失败，请尝试：\n1. 检查网络连接\n2. 刷新页面重试\n3. 清除浏览器缓存`);
+          }
+          
           setLoginError(e.message || '登录失败');
           setLoginLoading(false);
-          setIsLoadingUserData(false); // 确保失败时也结束loading
+          setIsLoadingUserData(false);
         }
       };
       
@@ -3244,6 +3309,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   )}
                   
                   <button 
+                    type="button"
                     onClick={isLoginMode ? handleLogin : handleSignUp}
                     disabled={loginLoading || (!isLoginMode && loginForm.password !== loginForm.confirmPassword)}
                     className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
