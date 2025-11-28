@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v15.97</title>
+  <title>健康管家 Pro v15.98</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v15.97";
+    const VERSION = "v15.98";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1066,8 +1066,24 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
         return id;
       });
+      
+      // 获取设备名称
+      const [deviceName] = useState(() => {
+        const ua = navigator.userAgent;
+        if (/iPhone/.test(ua)) return 'iPhone';
+        if (/iPad/.test(ua)) return 'iPad';
+        if (/Android/.test(ua)) return 'Android设备';
+        if (/Mac/.test(ua)) return 'Mac';
+        if (/Windows/.test(ua)) return 'Windows电脑';
+        if (/Linux/.test(ua)) return 'Linux电脑';
+        return '未知设备';
+      });
+      
       const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
       const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
+      const [showDeviceConflict, setShowDeviceConflict] = useState(false); // 显示设备冲突对话框
+      const [conflictDevice, setConflictDevice] = useState(null); // 冲突的设备信息
+      const [pendingLoginData, setPendingLoginData] = useState(null); // 待处理的登录数据
       
       // Token验证和数据冲突
       const [isValidatingToken, setIsValidatingToken] = useState(false); // Token验证中
@@ -1187,6 +1203,27 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginError('');
         try {
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
+          
+          // 检查云端是否有其他设备登录
+          try {
+            const cloudData = await LeanCloud.loadUserData(user.objectId, user.sessionToken);
+            if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
+              // 发现其他设备，显示确认对话框
+              console.log('⚠️ [登录] 检测到其他设备:', cloudData.deviceName, cloudData.lastActiveTime);
+              setConflictDevice({
+                deviceName: cloudData.deviceName || '未知设备',
+                lastActiveTime: cloudData.lastActiveTime || '未知时间'
+              });
+              setPendingLoginData({ user, sessionToken: user.sessionToken });
+              setShowDeviceConflict(true);
+              setLoginLoading(false);
+              return; // 等待用户确认
+            }
+          } catch (e) {
+            console.warn('⚠️ [登录] 检测设备信息失败，继续登录:', e);
+          }
+          
+          // 没有其他设备或检测失败，继续登录
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
@@ -1199,7 +1236,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 立即更新设备ID到云端，占据登录状态
           await saveToCloud(user.objectId, user.sessionToken, false);
-          console.log('✅ [登录] 设备ID已更新到云端:', deviceId);
+          console.log('✅ [登录] 设备ID已更新到云端:', deviceId, deviceName);
           
           setIsLoadingUserData(false);
           
@@ -1209,6 +1246,50 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLoginLoading(false);
           setIsLoadingUserData(false); // 确保失败时也结束loading
         }
+      };
+      
+      // 确认继续登录（踢出其他设备）
+      const confirmLoginAndKickOther = async () => {
+        if (!pendingLoginData) return;
+        
+        setShowDeviceConflict(false);
+        setLoginLoading(true);
+        
+        try {
+          const { user, sessionToken } = pendingLoginData;
+          
+          setCurrentUser(user);
+          setSessionToken(sessionToken);
+          localStorage.setItem('health_pro_user', JSON.stringify(user));
+          localStorage.setItem('health_pro_session', sessionToken);
+          
+          setIsLoadingUserData(true);
+          setShowLoginModal(false);
+          await loadFromCloud(user.objectId, sessionToken);
+          
+          // 立即更新设备ID到云端，踢出其他设备
+          await saveToCloud(user.objectId, sessionToken, false);
+          console.log('✅ [登录] 已踢出其他设备，当前设备:', deviceId, deviceName);
+          
+          setIsLoadingUserData(false);
+          setLoginLoading(false);
+          setLoginForm({ username: '', password: '', confirmPassword: '' });
+          setPendingLoginData(null);
+          setConflictDevice(null);
+        } catch (e) {
+          setLoginError(e.message || '登录失败');
+          setLoginLoading(false);
+          setIsLoadingUserData(false);
+        }
+      };
+      
+      // 取消登录
+      const cancelLoginDueToConflict = () => {
+        setShowDeviceConflict(false);
+        setPendingLoginData(null);
+        setConflictDevice(null);
+        setLoginLoading(false);
+        console.log('❌ [登录] 用户取消登录');
       };
       
       // 用户注册
@@ -1621,6 +1702,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             lastUpdated: new Date().toISOString(),
             // 设备管理字段
             deviceId: deviceId,  // 当前设备ID
+            deviceName: deviceName,  // 设备名称
             lastActiveTime: new Date().toISOString()  // 最后活跃时间
           });
           
@@ -4756,6 +4838,70 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 <p className="text-xs text-gray-400 text-center mt-4">
                   💡 提示：通常选择时间更晚的数据
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* 设备冲突确认对话框 */}
+          {showDeviceConflict && conflictDevice && (
+            <div className="absolute inset-0 z-[165] bg-black/80 flex items-center justify-center p-6">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icons.Smartphone size={32} className="text-orange-600"/>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">检测到其他设备登录</h3>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Icons.Smartphone size={20} className="text-blue-600"/>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-blue-900">{conflictDevice.deviceName}</div>
+                      <div className="text-xs text-blue-600">
+                        {(() => {
+                          try {
+                            const time = new Date(conflictDevice.lastActiveTime);
+                            return time.toLocaleString('zh-CN', {
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+                          } catch (e) {
+                            return '未知时间';
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-blue-800">
+                    您的账号已在上述设备登录
+                  </p>
+                </div>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-orange-800 flex items-start gap-2">
+                    <Icons.AlertTriangle size={16} className="shrink-0 mt-0.5"/>
+                    <span>继续登录将<strong>踢出</strong>该设备，该设备将需要重新登录</span>
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button 
+                    onClick={confirmLoginAndKickOther}
+                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.LogIn size={18}/>
+                    继续登录（踢出其他设备）
+                  </button>
+                  <button 
+                    onClick={cancelLoginDueToConflict}
+                    className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                  >
+                    取消
+                  </button>
+                </div>
               </div>
             </div>
           )}
