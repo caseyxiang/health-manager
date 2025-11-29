@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.17</title>
+  <title>健康管家 Pro v16.18</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -193,7 +193,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
   </script>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     // Inline SVG Icons
     const Icons = {
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.17";
+    const VERSION = "v16.18";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1128,6 +1128,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       });
       const [isKickedOut, setIsKickedOut] = useState(false); // 被其他设备踢出
       const [kickedOutReason, setKickedOutReason] = useState(''); // 被踢原因
+      
+      // 🔒 saveToCloud锁机制：防止并发请求竞争
+      const saveToCloudLock = useRef(null);
       const [kickedOutCountdown, setKickedOutCountdown] = useState(3); // 倒计时（秒）
       
       // Token验证和数据冲突
@@ -1177,6 +1180,25 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           if (showAlert) alert('⚠️ 网络离线,无法同步到云端');
           return;
         }
+        
+        // 🔒 并发控制：防止自动同步和登录更新冲突
+        if (updateDeviceId) {
+          // 登录操作：取消之前的请求，强制执行
+          if (saveToCloudLock.current) {
+            console.log(`⚠️ [saveToCloud][${getTimestamp()}] 登录操作取消之前的同步请求`);
+            saveToCloudLock.current = null;
+          }
+        } else {
+          // 自动同步：如果有锁就跳过
+          if (saveToCloudLock.current) {
+            console.log(`⏭️ [saveToCloud][${getTimestamp()}] 已有同步进行中，跳过本次自动同步`);
+            return;
+          }
+        }
+        
+        // 创建锁
+        let releaseLock;
+        saveToCloudLock.current = new Promise(resolve => { releaseLock = resolve; });
         
         console.log('🔄 [saveToCloud] 开始同步到云端...', { userId, updateDeviceId });
         setSyncStatus('syncing');
@@ -1228,6 +1250,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLastSyncTime(new Date());
           localStorage.setItem('health_pro_last_sync_time', new Date().toISOString());
           if (showAlert) alert('✅ 数据已成功同步到云端');
+          
+          // 🔓 释放锁
+          releaseLock();
+          saveToCloudLock.current = null;
         } catch (e) {
           console.error('❌ 云端保存失败:', e);
           setSyncStatus('error');
@@ -1239,6 +1265,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           else errorMsg = e.message || '未知错误';
           
           if (showAlert) alert(`❌ 同步失败:${errorMsg}\n\n请检查网络连接或稍后重试`);
+          
+          // 🔓 释放锁
+          releaseLock();
+          saveToCloudLock.current = null;
         }
       };
       
