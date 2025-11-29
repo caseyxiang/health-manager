@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.18</title>
+  <title>健康管家 Pro v16.19</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.18";
+    const VERSION = "v16.19";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -395,14 +395,27 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
           }
           
           // 更新保留的记录
-          // 🔒 智能合并：保留云端的deviceId（如果本次未更新）
-          const updateData = { ...data, userId };
-          if (!updateData.deviceId && keepRecord.deviceId) {
-            updateData.deviceId = keepRecord.deviceId;
-            updateData.lastActiveTime = keepRecord.lastActiveTime;
-            console.log('🔐 [saveUserData] 保留云端deviceId:', keepRecord.deviceId);
-          }
-          console.log('🔄 [saveUserData] PUT更新 - 包含deviceId:', !!updateData.deviceId);
+          // 🔒 智能合并：保留云端所有字段，只更新data中提供的字段
+          const updateData = {
+            userId,
+            // 从云端记录中保留所有字段
+            members: keepRecord.members,
+            currentMemberId: keepRecord.currentMemberId,
+            memberData: keepRecord.memberData,
+            apiSettings: keepRecord.apiSettings,
+            medicalDictionary: keepRecord.medicalDictionary,
+            lastUpdated: keepRecord.lastUpdated,
+            deviceId: keepRecord.deviceId,
+            lastActiveTime: keepRecord.lastActiveTime,
+          };
+          
+          // 用data中提供的字段覆盖
+          Object.keys(data).forEach(key => {
+            updateData[key] = data[key];
+          });
+          
+          console.log('🔄 [saveUserData] PUT更新 - 更新字段:', Object.keys(data).join(', '));
+          console.log('🔄 [saveUserData] PUT更新 - deviceId:', updateData.deviceId);
           return this.request(`/classes/UserData/${keepRecord.objectId}`, 'PUT', updateData, sessionToken);
         } else {
           // 创建新记录
@@ -1223,24 +1236,26 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
           
-          // 构建同步数据
-          const syncData = {
-            members: members,
-            currentMemberId: currentMemberId,
-            memberData: allMembersData,
-            apiSettings,
-            medicalDictionary: medicalDictionary,
-            lastUpdated: new Date().toISOString(),
-          };
-          
-          // 🔒 只在登录时更新deviceId，防止自动同步覆盖其他设备的登录状态
+          // 🔒 登录时只更新deviceId，不覆盖业务数据（避免setState异步导致的数据丢失）
+          let syncData;
           if (updateDeviceId) {
-            syncData.deviceId = deviceId;
-            syncData.lastActiveTime = new Date().toISOString();
-            console.log(`🔐 [saveToCloud][${getTimestamp()}] 更新设备ID:`, deviceId);
+            // 登录模式：仅更新deviceId和lastActiveTime
+            syncData = {
+              deviceId: deviceId,
+              lastActiveTime: new Date().toISOString(),
+            };
+            console.log(`🔐 [saveToCloud][${getTimestamp()}] 登录模式：仅更新设备ID`);
           } else {
-            console.log(`📦 [saveToCloud][${getTimestamp()}] 仅同步数据，不更新deviceId`);
-            console.log('📦 [saveToCloud] syncData包含deviceId字段:', 'deviceId' in syncData);
+            // 正常同步：更新所有业务数据
+            syncData = {
+              members: members,
+              currentMemberId: currentMemberId,
+              memberData: allMembersData,
+              apiSettings,
+              medicalDictionary: medicalDictionary,
+              lastUpdated: new Date().toISOString(),
+            };
+            console.log(`📦 [saveToCloud][${getTimestamp()}] 同步模式：更新业务数据`);
           }
           
           const result = await LeanCloud.saveUserData(userId, token, syncData);
