@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.21</title>
+  <title>健康管家 Pro v16.22</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.21";
+    const VERSION = "v16.22";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1251,10 +1251,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📊 [saveToCloud] 数据统计:', { 成员数: members.length, 总数据项: totalItems });
           
           // API设置仍从localStorage读取（配置项保留）
+          // 🔐 修复：云端存储API Key明文，本地加密
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
-            const val = localStorage.getItem(key);
+            // ✅ 使用SecureStorage解密后再上传（确保云端是明文）
+            const val = SecureStorage.getItem(key);
             if (val) apiSettings[key] = val;
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
@@ -1343,10 +1345,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setCurrentMemberId(targetMemberId);
         
         // API设置
+        // 🔐 修复：从云端下载明文，用本地deviceId重新加密存储
         if (cloudData.apiSettings) {
           Object.keys(cloudData.apiSettings).forEach(key => {
-            localStorage.setItem(key, cloudData.apiSettings[key]);
+            // API Key使用加密存储
+            if (key.startsWith('ai_api_key_')) {
+              SecureStorage.setItem(key, cloudData.apiSettings[key]);
+            } else {
+              // 其他配置项（如provider）明文存储
+              localStorage.setItem(key, cloudData.apiSettings[key]);
+            }
           });
+          console.log('🔐 [applyCloudData] API设置已加密存储');
         }
         
         // 医学词典
