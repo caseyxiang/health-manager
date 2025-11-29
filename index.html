@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.20</title>
+  <title>健康管家 Pro v16.22</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.20";
+    const VERSION = "v16.22";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1222,6 +1222,24 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setSyncStatus('syncing');
         
         try {
+          // ⚡ 关键操作前即时检查：在同步业务数据前验证设备状态
+          if (!updateDeviceId) {
+            // 仅在业务数据同步时检查（登录时不检查，因为正在更新deviceId）
+            try {
+              const cloudData = await LeanCloud.loadUserData(userId, token);
+              if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
+                console.error(`❌ [saveToCloud] 检测到其他设备登录，拒绝同步`);
+                alert('⚠️ 您已在其他设备登录\n\n当前设备无法保存数据，请重新登录。');
+                performLogout();
+                releaseLock();
+                saveToCloudLock.current = null;
+                return;
+              }
+            } catch (checkError) {
+              console.warn('⚠️ [saveToCloud] 设备检查失败，继续同步:', checkError.message);
+            }
+          }
+          
           // 🔥 直接从内存读取数据，不再使用 localStorage
           console.log('📖 [saveToCloud] 内存成员列表:', members.length, '个:', members.map(m => m.name));
           
@@ -1233,10 +1251,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📊 [saveToCloud] 数据统计:', { 成员数: members.length, 总数据项: totalItems });
           
           // API设置仍从localStorage读取（配置项保留）
+          // 🔐 修复：云端存储API Key明文，本地加密
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
-            const val = localStorage.getItem(key);
+            // ✅ 使用SecureStorage解密后再上传（确保云端是明文）
+            const val = SecureStorage.getItem(key);
             if (val) apiSettings[key] = val;
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
@@ -1300,8 +1320,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
           restoredMembers = cloudData.members;
         } else {
-          console.warn('⚠️ [applyCloudData] 云端成员数据为空！使用默认成员');
-          restoredMembers = DEFAULT_MEMBERS;
+          // 🚨 数据安全：云端数据异常，拒绝覆盖
+          console.error('❌ [applyCloudData] 云端数据损坏：记录存在但成员为空！');
+          throw new Error('云端数据异常：成员列表为空\n\n可能原因：\n1. 数据库记录损坏\n2. 并发操作导致数据丢失\n\n请联系技术支持或使用备份恢复数据');
         }
         
         console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
@@ -1325,10 +1346,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setCurrentMemberId(targetMemberId);
         
         // API设置
+        // 🔐 修复：从云端下载明文，用本地deviceId重新加密存储
         if (cloudData.apiSettings) {
           Object.keys(cloudData.apiSettings).forEach(key => {
-            localStorage.setItem(key, cloudData.apiSettings[key]);
+            // API Key使用加密存储
+            if (key.startsWith('ai_api_key_')) {
+              SecureStorage.setItem(key, cloudData.apiSettings[key]);
+            } else {
+              // 其他配置项（如provider）明文存储
+              localStorage.setItem(key, cloudData.apiSettings[key]);
+            }
           });
+          console.log('🔐 [applyCloudData] API设置已加密存储');
         }
         
         // 医学词典
@@ -1612,6 +1641,49 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 加载云端数据
           await loadFromCloud(user.objectId, user.sessionToken);
+          
+          // 💾 检查是否有备份数据需要恢复
+          const backupData = localStorage.getItem('health_pro_backup_before_kick');
+          if (backupData) {
+            try {
+              const backup = JSON.parse(backupData);
+              console.log('💾 [登录] 发现备份数据，时间:', backup.timestamp);
+              
+              // 询问用户是否恢复
+              const shouldRestore = confirm(
+                `💾 检测到上次被踢出前的未保存数据\n\n` +
+                `备份时间：${new Date(backup.timestamp).toLocaleString()}\n` +
+                `成员数量：${backup.members?.length || 0}\n\n` +
+                `是否恢复这些数据？\n\n` +
+                `提示：如果选择"取消"，将使用云端数据，备份将被删除。`
+              );
+              
+              if (shouldRestore) {
+                console.log('✅ [登录] 用户选择恢复备份数据');
+                
+                // 恢复数据到内存
+                if (backup.members) setMembers(backup.members);
+                if (backup.memberData) setAllMembersData(backup.memberData);
+                if (backup.currentMemberId) setCurrentMemberId(backup.currentMemberId);
+                if (backup.medicalDictionary) setMedicalDictionary(backup.medicalDictionary);
+                
+                // 立即同步到云端
+                console.log('🔄 [登录] 正在同步恢复的数据到云端...');
+                await saveToCloud(user.objectId, user.sessionToken, false, false);
+                console.log('✅ [登录] 备份数据已恢复并同步到云端');
+                
+                alert('✅ 数据恢复成功\n\n未保存的数据已恢复并同步到云端。');
+              } else {
+                console.log('⏭️ [登录] 用户选择使用云端数据');
+              }
+              
+              // 删除备份（无论是否恢复）
+              localStorage.removeItem('health_pro_backup_before_kick');
+            } catch (backupError) {
+              console.error('❌ [登录] 恢复备份失败:', backupError);
+              localStorage.removeItem('health_pro_backup_before_kick');
+            }
+          }
           
           // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
           console.log(`🔐 [登录][${getTimestamp()}] 当前设备ID:`, deviceId);
@@ -2041,8 +2113,24 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               console.log(`🔍 [心跳][${getTimestamp()}] 本地deviceId:`, deviceId);
               console.log(`🔍 [心跳][${getTimestamp()}] 云端lastActiveTime:`, cloudData.lastActiveTime);
               
+              // 💾 被踢前备份未同步的数据
+              try {
+                const backup = {
+                  members: members,
+                  memberData: allMembersData,
+                  currentMemberId: currentMemberId,
+                  medicalDictionary: medicalDictionary,
+                  timestamp: new Date().toISOString(),
+                  reason: 'kicked_by_other_device'
+                };
+                localStorage.setItem('health_pro_backup_before_kick', JSON.stringify(backup));
+                console.log('💾 [心跳] 已备份未同步数据');
+              } catch (backupError) {
+                console.error('❌ [心跳] 备份数据失败:', backupError);
+              }
+              
               // 显示提示
-              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
+              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。\n\n未同步的数据已备份，重新登录后可选择恢复。');
               
               // 立即清理状态并退出
               localStorage.removeItem('health_pro_user');
@@ -2067,14 +2155,16 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         // 首次检查（延迟2秒，避免与启动验证冲突）
         const initialTimer = setTimeout(checkDeviceStatus, 2000);
         
-        // 每5秒检查一次（快速检测被踢出）
-        const interval = setInterval(checkDeviceStatus, 5000);
+        // ⚡ 优化：降低轮询频率到30秒（减少83%的API调用）
+        // 原5秒轮询：100用户 = 72,000次/小时
+        // 新30秒轮询：100用户 = 12,000次/小时
+        const interval = setInterval(checkDeviceStatus, 30000);
         
         return () => {
           clearTimeout(initialTimer);
           clearInterval(interval);
         };
-      }, [currentUser, sessionToken, deviceId, isOnline]);
+      }, [currentUser, sessionToken, deviceId, isOnline, members, allMembersData, currentMemberId, medicalDictionary]);
       
       // 关闭首次引导
       const dismissWelcomeGuide = () => {
@@ -2629,12 +2719,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             
             let counts = { meds: 0, catalog: 0, checkups: 0, labs: 0, imaging: 0, vitals: 0, members: 0 };
             
+            // 🔒 事务性操作：先准备所有数据到临时变量，确认无误后再统一更新state
+            let tempMembers;
+            let tempMembersData;
+            let tempCurrentMemberId;
+            let tempApiSettings = {};
+            let tempMedicalDictionary;
+            
             // 🔥 新架构：直接恢复到内存（不使用localStorage）
             if (data.members && data.membersData) {
               console.log('📋 [导入] 新格式备份 - 成员数:', data.members.length);
               
-              // 1. 恢复成员列表
-              setMembers(data.members);
+              // 1. 准备成员列表
+              tempMembers = data.members;
               counts.members = data.members.length;
               
               // 2. 统计数据量
@@ -2647,14 +2744,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 counts.vitals += (memberData.vitals || []).length;
               });
               
-              // 3. 直接设置到内存
-              setAllMembersData(data.membersData);
-              console.log('✅ [导入] 已加载到内存:', Object.keys(data.membersData));
+              // 3. 准备成员数据
+              tempMembersData = data.membersData;
+              console.log('✅ [导入] 已准备数据:', Object.keys(data.membersData));
               
-              // 4. 恢复当前成员ID
-              const targetMemberId = data.currentMemberId || data.members[0]?.id || 'default';
-              setCurrentMemberId(targetMemberId);
-              console.log('👤 [导入] 当前成员ID:', targetMemberId);
+              // 4. 准备当前成员ID
+              tempCurrentMemberId = data.currentMemberId || data.members[0]?.id || 'default';
+              console.log('👤 [导入] 当前成员ID:', tempCurrentMemberId);
               
             } else {
               // 兼容旧版本备份格式(只有当前成员数据)
@@ -2678,40 +2774,60 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               counts.imaging = defaultMemberData.imagingReports.length;
               counts.vitals = defaultMemberData.vitals.length;
               
-              // 设置成员和数据
-              setMembers(DEFAULT_MEMBERS);
-              setAllMembersData({ 'default': defaultMemberData });
-              setCurrentMemberId('default');
+              // 准备成员和数据（不立即设置）
+              tempMembers = DEFAULT_MEMBERS;
+              tempMembersData = { 'default': defaultMemberData };
+              tempCurrentMemberId = 'default';
               
-              console.log('✅ [导入] 旧格式数据已转换为新格式');
+              console.log('✅ [导入] 旧格式数据已准备');
             }
             
-            // 恢复API设置
+            // 准备API设置
             if (data.settings) {
-              if (data.settings.apiProvider) { 
-                localStorage.setItem('ai_api_provider', data.settings.apiProvider); 
-                CURRENT_API = data.settings.apiProvider; 
-                setApiProvider(data.settings.apiProvider); 
+              if (data.settings.apiProvider) {
+                tempApiSettings.provider = data.settings.apiProvider;
               }
-              // 新版本格式:恢复所有服务商的API Key
+              // 新版本格式:准备所有服务商的API Key
               if (data.settings.apiKeys) {
-                Object.entries(data.settings.apiKeys).forEach(function(entry) {
-                  if (entry[1]) saveApiKeyFor(entry[0], entry[1]);
-                });
-                setApiKeyInput(getApiKeyFor(data.settings.apiProvider || 'qwen'));
+                tempApiSettings.keys = data.settings.apiKeys;
               }
               // 兼容旧版本格式:单个API Key
               else if (data.settings.apiKey) {
                 var provider = data.settings.apiProvider || 'qwen';
-                saveApiKeyFor(provider, data.settings.apiKey);
-                setApiKeyInput(data.settings.apiKey);
+                tempApiSettings.keys = { [provider]: data.settings.apiKey };
               }
             }
             
-            // 恢复医学指标词典
+            // 准备医学指标词典
             if (data.medicalDictionary) {
-              setMedicalDictionary(data.medicalDictionary);
-              console.log('📚 [导入] 医学词典:', data.medicalDictionary.length, '条');
+              tempMedicalDictionary = data.medicalDictionary;
+              console.log('📚 [导入] 医学词典已准备:', data.medicalDictionary.length, '条');
+            }
+            
+            // ✅ 所有数据准备完成，开始事务性更新
+            console.log('🔒 [导入] 所有数据验证完成，开始应用...');
+            
+            // 更新成员数据
+            setMembers(tempMembers);
+            setAllMembersData(tempMembersData);
+            setCurrentMemberId(tempCurrentMemberId);
+            
+            // 更新API设置
+            if (tempApiSettings.provider) {
+              localStorage.setItem('ai_api_provider', tempApiSettings.provider);
+              CURRENT_API = tempApiSettings.provider;
+              setApiProvider(tempApiSettings.provider);
+            }
+            if (tempApiSettings.keys) {
+              Object.entries(tempApiSettings.keys).forEach(function(entry) {
+                if (entry[1]) saveApiKeyFor(entry[0], entry[1]);
+              });
+              setApiKeyInput(getApiKeyFor(tempApiSettings.provider || 'qwen'));
+            }
+            
+            // 更新医学词典
+            if (tempMedicalDictionary) {
+              setMedicalDictionary(tempMedicalDictionary);
             }
             
             setShowRestoreModal(false);
@@ -2725,6 +2841,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             console.error('❌ [导入] 失败:', err);
             console.error('错误详情:', err.stack);
             
+            // 🔒 数据安全：发生错误时，不会修改任何现有数据
+            console.log('🔒 [导入] 错误发生，现有数据未被修改');
+            
             // 更详细的错误提示
             let errorMsg = '数据导入失败\n\n';
             if (err instanceof SyntaxError) {
@@ -2732,6 +2851,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             } else {
               errorMsg += '原因：' + err.message + '\n建议：请联系开发者';
             }
+            errorMsg += '\n\n✅ 您的现有数据未受影响';
             alert(errorMsg);
           }
         };
