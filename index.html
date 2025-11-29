@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.16</title>
+  <title>健康管家 Pro v16.17</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.16";
+    const VERSION = "v16.17";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -315,6 +315,11 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     
     // LeanCloud REST API 封装
     const LeanCloud = {
+      // ⏱️ 时间戳工具函数
+      _getTimestamp() {
+        return new Date().toISOString().slice(11, 23);
+      },
+      
       // 基础请求
       async request(path, method = 'GET', body = null, sessionToken = null) {
         const headers = {
@@ -423,12 +428,12 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
             new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
           );
           const latest = sorted[0];
-          console.log('📦 [loadUserData] 返回数据 - deviceId:', latest.deviceId || '无');
+          console.log(`📦 [loadUserData][${this._getTimestamp()}] 返回数据 - deviceId:`, latest.deviceId || '无');
           return latest;
         }
         
         const data = result.results[0];
-        console.log('📦 [loadUserData] 返回数据 - deviceId:', data.deviceId || '无');
+        console.log(`📦 [loadUserData][${this._getTimestamp()}] 返回数据 - deviceId:`, data.deviceId || '无');
         return data;
       }
     };
@@ -1075,6 +1080,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       );
     };
 
+    // ⏱️ 时间戳工具函数 - 用于精确调试
+    const getTimestamp = () => {
+      const now = new Date();
+      return now.toISOString().slice(11, 23); // HH:MM:SS.mmm
+    };
+
     function App() {
       // 🔒 强制在线和版本检查
       const [isVersionChecked, setIsVersionChecked] = useState(false);
@@ -1204,9 +1215,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           if (updateDeviceId) {
             syncData.deviceId = deviceId;
             syncData.lastActiveTime = new Date().toISOString();
-            console.log('🔐 [saveToCloud] 更新设备ID:', deviceId);
+            console.log(`🔐 [saveToCloud][${getTimestamp()}] 更新设备ID:`, deviceId);
           } else {
-            console.log('📦 [saveToCloud] 仅同步数据，不更新deviceId');
+            console.log(`📦 [saveToCloud][${getTimestamp()}] 仅同步数据，不更新deviceId`);
             console.log('📦 [saveToCloud] syncData包含deviceId字段:', 'deviceId' in syncData);
           }
           
@@ -1553,9 +1564,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           await loadFromCloud(user.objectId, user.sessionToken);
           
           // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
-          console.log('🔐 [登录] 当前设备ID:', deviceId);
+          console.log(`🔐 [登录][${getTimestamp()}] 当前设备ID:`, deviceId);
           await saveToCloud(user.objectId, user.sessionToken, false, true);  // updateDeviceId=true
-          console.log('✅ [登录] 设备ID已更新到云端，其他设备将被踢出');
+          console.log(`✅ [登录][${getTimestamp()}] 设备ID已更新到云端，其他设备将被踢出`);
           
           setIsLoadingUserData(false);
           
@@ -1975,10 +1986,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             
             if (cloudData && cloudData.deviceId && cloudData.deviceId !== deviceId) {
               // 🔒 设备ID不匹配，立即强制退出
-              console.error('❌ [心跳] 检测到其他设备登录，立即强制退出');
-              console.log('🔍 [心跳] 云端deviceId:', cloudData.deviceId);
-              console.log('🔍 [心跳] 本地deviceId:', deviceId);
-              console.log('🔍 [心跳] 云端lastActiveTime:', cloudData.lastActiveTime);
+              console.error(`❌ [心跳][${getTimestamp()}] 检测到其他设备登录，立即强制退出`);
+              console.log(`🔍 [心跳][${getTimestamp()}] 云端deviceId:`, cloudData.deviceId);
+              console.log(`🔍 [心跳][${getTimestamp()}] 本地deviceId:`, deviceId);
+              console.log(`🔍 [心跳][${getTimestamp()}] 云端lastActiveTime:`, cloudData.lastActiveTime);
               
               // 显示提示
               alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
@@ -1988,9 +1999,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               localStorage.removeItem('health_pro_session');
               setCurrentUser(null);
               setSessionToken(null);
-              console.log('✅ [心跳] 已清理状态，返回登录界面');
+              console.log(`✅ [心跳][${getTimestamp()}] 已清理状态，返回登录界面`);
             } else if (cloudData && cloudData.deviceId) {
-              console.log('✅ [心跳] 设备ID匹配，继续运行');
+              console.log(`✅ [心跳][${getTimestamp()}] 设备ID匹配，继续运行`);
             }
           } catch (e) {
             console.error('❌ [心跳] 失败:', e);
