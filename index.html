@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.26";
+    const VERSION = "v16.27";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -3525,7 +3525,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
           {/* Tab Bar */}
           <div className="bg-white border-b flex p-1 shrink-0 overflow-x-auto">
-            {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'plan',label:'用药',Icon:Icons.Clock},{id:'labs',label:'检测',Icon:Icons.FileSpreadsheet},{id:'imaging',label:'检查',Icon:Icons.FileImage}].map(tab => (
+            {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'plan',label:'我的药品',Icon:Icons.Library},{id:'labs',label:'检测',Icon:Icons.FileSpreadsheet},{id:'imaging',label:'检查',Icon:Icons.FileImage}].map(tab => (
               <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); setShowMenu(false); }} className={`flex-1 min-w-[60px] py-3 text-xs font-bold flex flex-col items-center gap-1 border-b-2 transition-colors ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400'}`}>
                 <tab.Icon size={18}/>{tab.label}
               </button>
@@ -3724,112 +3724,225 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               </div>
             )}
 
-            {/* Plan Tab - 用药管理 */}
+            {/* Plan Tab - 我的药品（三分组）*/}
             {activeTab === 'plan' && (
-              <div className="pb-24">
-                {activeMeds.map(m => {
-                  const catalogItem = catalog.find(c => c.name === m.name);
-                  const isExpanded = expandedMeds[m.id];
-                  return (
-                    <div key={m.id} className="bg-white rounded-xl shadow-sm border mb-3 overflow-hidden">
-                      {/* 主卡片 - 点击编辑 */}
-                      <div onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="p-4 cursor-pointer hover:bg-gray-50 transition-colors relative">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 pr-2">
-                            <div className="font-bold text-lg mb-1">{m.name}</div>
-                            <div className="text-sm text-gray-700 font-medium mb-1">{m.method}</div>
-                            <div className="text-xs text-gray-400">{m.startTime} 开始 {m.endTime && `· ${m.endTime} 结束`}</div>
+              <div className="pb-32">
+                {/* 🟢 正在服用分组 */}
+                {activeMeds.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3 px-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <h3 className="text-sm font-bold text-gray-700">正在服用</h3>
+                      <span className="text-xs text-gray-400">({activeMeds.length})</span>
+                    </div>
+                    <div className="space-y-3">
+                      {activeMeds.map(m => {
+                        const catalogItem = catalog.find(c => c.name === m.name);
+                        const isExpanded = expandedMeds[m.id];
+                        return (
+                          <div key={m.id} className="bg-white rounded-xl shadow-sm border border-green-100 overflow-hidden">
+                            {/* 主卡片 - 点击编辑 */}
+                            <div onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="p-4 cursor-pointer hover:bg-gray-50 transition-colors relative">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 pr-2">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-bold text-lg">{m.name}</span>
+                                    {catalogItem && <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{catalogItem.brand || '库存'}</span>}
+                                  </div>
+                                  <div className="text-sm text-gray-700 mb-1">{m.method}</div>
+                                  <div className="text-xs text-gray-400">{m.startTime} 开始 {m.endTime && `· ${m.endTime} 结束`}</div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                  <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                    {m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}
+                                    {m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}
+                                  </span>
+                                  <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500">
+                                    <Icons.Trash2 size={16}/>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 展开按钮 */}
+                            {catalogItem && (
+                              <div className="border-t">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setExpandedMeds(p => ({...p, [m.id]: !p[m.id]})); }} 
+                                  className="w-full px-4 py-2 flex items-center justify-center gap-1 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                >
+                                  {isExpanded ? <Icons.ChevronUp size={14}/> : <Icons.ChevronDown size={14}/>}
+                                  {isExpanded ? '收起药品详情' : '查看药品详情'}
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* 展开的药品详情 */}
+                            {isExpanded && catalogItem && (
+                              <div className="px-4 pb-4 bg-indigo-50 border-t">
+                                <div className="mt-3 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 w-16">品牌：</span>
+                                    <span className="text-sm font-medium text-indigo-700">{catalogItem.brand || '-'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 w-16">剂型：</span>
+                                    <span className="text-sm">{catalogItem.dosageForm || '-'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 w-16">规格：</span>
+                                    <span className="text-sm font-medium">{catalogItem.strength}{catalogItem.unit}</span>
+                                  </div>
+                                  {catalogItem.packageSize && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 w-16">包装：</span>
+                                      <span className="text-sm">{catalogItem.packageSize} {catalogItem.dosageForm}</span>
+                                    </div>
+                                  )}
+                                  {catalogItem.price && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 w-16">价格：</span>
+                                      <span className="text-base font-bold text-green-600">¥{catalogItem.price}</span>
+                                    </div>
+                                  )}
+                                  <button 
+                                    onClick={() => { setCatalogInput({...catalogItem}); setEditingId(catalogItem.id); setShowCatalogForm(true); }}
+                                    className="w-full mt-2 py-2 bg-white text-indigo-600 rounded-lg text-xs font-medium border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                                  >
+                                    编辑药品信息
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                              {m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}
-                              {m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}
-                            </span>
-                            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500">
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ⚪ 库存药品分组（未在服用的）*/}
+                {(() => {
+                  const unusedCatalog = catalog.filter(c => !activeMeds.some(m => m.name === c.name));
+                  return unusedCatalog.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3 px-2">
+                        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                        <h3 className="text-sm font-bold text-gray-700">库存药品</h3>
+                        <span className="text-xs text-gray-400">({unusedCatalog.length})</span>
+                      </div>
+                      <div className="space-y-3">
+                        {unusedCatalog.map(item => (
+                          <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="font-bold text-base mb-1">{item.name}</div>
+                                {item.brand && (
+                                  <div className="text-xs text-indigo-600 mb-1">{item.brand}</div>
+                                )}
+                                <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
+                                  {item.dosageForm && (
+                                    <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">
+                                      {item.dosageForm}
+                                    </span>
+                                  )}
+                                  <span>{item.strength}{item.unit}</span>
+                                  {item.packageSize && (
+                                    <span className="text-gray-400">×{item.packageSize}</span>
+                                  )}
+                                </div>
+                              </div>
+                              {item.price && (
+                                <div className="text-base font-bold text-green-600 ml-2">
+                                  ¥{item.price}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* 快捷操作按钮 */}
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  // 预填充表单，开始服用
+                                  setMedInput({
+                                    name: item.name,
+                                    startTime: getLocalDateStr(new Date()),
+                                    endTime: '',
+                                    frequency: '1',
+                                    dosagePerTime: '1',
+                                    relation: '无关',
+                                    timePeriods: [],
+                                    isLongTerm: true,
+                                    cycleEnabled: false,
+                                    cycleDays: '',
+                                    cycleRestDays: ''
+                                  });
+                                  setEditingId(null);
+                                  setShowMedForm(true);
+                                }}
+                                className="flex-1 py-2 bg-green-50 text-green-600 rounded-lg text-xs font-bold border border-green-200 hover:bg-green-100 transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Icons.Plus size={14}/>
+                                开始服用
+                              </button>
+                              <button 
+                                onClick={() => { 
+                                  setCatalogInput({...item}); 
+                                  setEditingId(item.id); 
+                                  setShowCatalogForm(true); 
+                                }}
+                                className="px-4 py-2 bg-gray-50 text-gray-600 rounded-lg text-xs font-medium border border-gray-200 hover:bg-gray-100 transition-colors"
+                              >
+                                <Icons.Edit size={14}/>
+                              </button>
+                              <button 
+                                onClick={() => setShowDeleteConfirm(item.id)}
+                                className="px-4 py-2 bg-rose-50 text-rose-500 rounded-lg text-xs font-medium border border-rose-200 hover:bg-rose-100 transition-colors"
+                              >
+                                <Icons.Trash2 size={14}/>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                
+                {/* 🔵 已结束分组 */}
+                {endedMeds.length > 0 && (
+                  <div className="mb-6">
+                    <div 
+                      onClick={() => setIsEndedExpanded(!isEndedExpanded)} 
+                      className="flex items-center gap-2 mb-3 px-2 cursor-pointer hover:text-indigo-600 transition-colors"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                      <h3 className="text-sm font-bold text-gray-700">已结束</h3>
+                      <span className="text-xs text-gray-400">({endedMeds.length})</span>
+                      {isEndedExpanded ? <Icons.ChevronDown size={14} className="text-gray-400"/> : <Icons.ChevronRight size={14} className="text-gray-400"/>}
+                    </div>
+                    {isEndedExpanded && (
+                      <div className="space-y-2">
+                        {endedMeds.map(m => (
+                          <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-gray-50 p-3 rounded-xl border border-gray-200 opacity-70 hover:opacity-100 hover:shadow-md cursor-pointer transition-all relative">
+                            <div className="font-medium text-gray-700">{m.name}</div>
+                            <div className="text-xs text-gray-500 mt-1">{m.startTime} - {m.endTime}</div>
+                            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="absolute bottom-3 right-3 text-gray-300 hover:text-rose-500">
                               <Icons.Trash2 size={16}/>
                             </button>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                      
-                      {/* 展开按钮 */}
-                      {catalogItem && (
-                        <div className="border-t">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setExpandedMeds(p => ({...p, [m.id]: !p[m.id]})); }} 
-                            className="w-full px-4 py-2 flex items-center justify-center gap-1 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          >
-                            {isExpanded ? <Icons.ChevronUp size={14}/> : <Icons.ChevronDown size={14}/>}
-                            {isExpanded ? '收起药品详情' : '查看药品详情'}
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* 展开的药品详情 */}
-                      {isExpanded && catalogItem && (
-                        <div className="px-4 pb-4 bg-indigo-50 border-t">
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 w-16">品牌：</span>
-                              <span className="text-sm font-medium text-indigo-700">{catalogItem.brand || '-'}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 w-16">剂型：</span>
-                              <span className="text-sm">{catalogItem.dosageForm || '-'}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 w-16">规格：</span>
-                              <span className="text-sm font-medium">{catalogItem.strength}{catalogItem.unit}</span>
-                            </div>
-                            {catalogItem.packageSize && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 w-16">包装：</span>
-                                <span className="text-sm">{catalogItem.packageSize} {catalogItem.dosageForm}</span>
-                              </div>
-                            )}
-                            {catalogItem.price && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 w-16">价格：</span>
-                                <span className="text-base font-bold text-green-600">¥{catalogItem.price}</span>
-                              </div>
-                            )}
-                            <button 
-                              onClick={() => { setCatalogInput({...catalogItem}); setEditingId(catalogItem.id); setShowCatalogForm(true); }}
-                              className="w-full mt-2 py-2 bg-white text-indigo-600 rounded-lg text-xs font-medium border border-indigo-200 hover:bg-indigo-100 transition-colors"
-                            >
-                              编辑药品信息
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                
-                {/* 已结束的药品 */}
-                {endedMeds.length > 0 && (
-                  <div className="mt-6">
-                    <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer hover:text-indigo-600">
-                      {isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} 已结束 ({endedMeds.length})
-                    </div>
-                    {isEndedExpanded && endedMeds.map(m => (
-                      <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70 hover:opacity-100 hover:shadow-md cursor-pointer transition-all relative">
-                        <div className="font-medium text-gray-700">{m.name}</div>
-                        <div className="text-xs text-gray-500 mt-1">{m.startTime} - {m.endTime}</div>
-                        <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="absolute bottom-3 right-3 text-gray-300 hover:text-rose-500">
-                          <Icons.Trash2 size={16}/>
-                        </button>
-                      </div>
-                    ))}
+                    )}
                   </div>
                 )}
                 
                 {/* 空状态 */}
-                {meds.length === 0 && (
+                {meds.length === 0 && catalog.length === 0 && (
                   <div className="text-center text-gray-400 mt-16">
-                    <div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div>
-                    <p className="mb-4">暂无服药计划</p>
-                    <p className="text-xs text-gray-400">点击下方按钮添加用药</p>
+                    <div className="opacity-20 mx-auto mb-2 w-12"><Icons.Library size={48}/></div>
+                    <p className="mb-4">还没有任何药品</p>
+                    <p className="text-xs text-gray-400">点击下方按钮添加药品</p>
                   </div>
                 )}
                 
@@ -3844,18 +3957,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       className="flex-1 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-indigo-200 hover:bg-indigo-100 transition-colors"
                     >
                       <Icons.Library size={18}/>
-                      从药箱添加
+                      从库存开始服用
                     </button>
                     <button 
                       onClick={() => { 
                         setEditingId(null); 
-                        setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); 
-                        setShowMedForm(true); 
+                        setCatalogInput({name:'',brand:'',dosageForm:'片剂',price:'',strength:'',unit:'mg',packageSize:''}); 
+                        setShowCatalogForm(true); 
                       }}
                       className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 transition-colors"
                     >
                       <Icons.Plus size={18}/>
-                      新药品
+                      添加新药品
                     </button>
                   </div>
                 </div>
