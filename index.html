@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.19</title>
+  <title>健康管家 Pro v16.20</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.19";
+    const VERSION = "v16.20";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1196,10 +1196,15 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         // 🔒 并发控制：防止自动同步和登录更新冲突
         if (updateDeviceId) {
-          // 登录操作：取消之前的请求，强制执行
+          // 登录操作：等待之前的请求完成，避免覆盖
           if (saveToCloudLock.current) {
-            console.log(`⚠️ [saveToCloud][${getTimestamp()}] 登录操作取消之前的同步请求`);
-            saveToCloudLock.current = null;
+            console.log(`⏳ [saveToCloud][${getTimestamp()}] 登录操作等待之前的同步完成...`);
+            try {
+              await saveToCloudLock.current;
+              console.log(`✅ [saveToCloud][${getTimestamp()}] 之前的同步已完成`);
+            } catch (e) {
+              console.log(`⚠️ [saveToCloud][${getTimestamp()}] 之前的同步失败，继续登录`);
+            }
           }
         } else {
           // 自动同步：如果有锁就跳过
