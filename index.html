@@ -3453,7 +3453,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   <Icons.BarChart2 size={18}/>
                 </button>
               )}
-              {activeTab === 'plan' && <button onClick={() => setShowCatalogDrawer(true)} className="bg-indigo-600 p-2 rounded-full border border-indigo-500" title="药箱"><Icons.Library size={18}/></button>}
+              {activeTab === 'plan' && <button onClick={() => setShowCatalogDrawer(true)} className="bg-indigo-600 px-3 py-2 rounded-full border border-indigo-500 flex items-center gap-1.5 text-white text-sm font-medium" title="打开药箱"><Icons.Library size={16}/> 药箱</button>}
               {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'æ— å…³',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'appointment' && <button onClick={() => { setEditingId(null); setCheckupInput({date:'',items:'',notes:''}); setShowCheckupForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
               {activeTab === 'labs' && <button onClick={() => { setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.ScanLine size={20}/></button>}
