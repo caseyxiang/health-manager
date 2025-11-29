@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.14</title>
+  <title>健康管家 Pro v16.15</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.14";
+    const VERSION = "v16.15";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -2543,48 +2543,68 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target.result);
+            console.log('📥 [导入] 解析JSON成功，备份版本:', data.version);
+            
             let counts = { meds: 0, catalog: 0, checkups: 0, labs: 0, imaging: 0, vitals: 0, members: 0 };
             
-            const userId = getUserId();
-            
-            // 恢复成员列表和所有成员数据(新版本备份格式)
+            // 🔥 新架构：直接恢复到内存（不使用localStorage）
             if (data.members && data.membersData) {
-              // 恢复成员列表
+              console.log('📋 [导入] 新格式备份 - 成员数:', data.members.length);
+              
+              // 1. 恢复成员列表
               setMembers(data.members);
               counts.members = data.members.length;
               
-              // 恢复每个成员的数据到 localStorage（带用户隔离）
+              // 2. 统计数据量
               Object.entries(data.membersData).forEach(([memberId, memberData]) => {
-                if (memberData.meds) { saveMemberData(memberId, 'meds', memberData.meds, userId); counts.meds += memberData.meds.length; }
-                if (memberData.catalog) { saveMemberData(memberId, 'catalog', memberData.catalog, userId); counts.catalog += memberData.catalog.length; }
-                if (memberData.checkups) { saveMemberData(memberId, 'checkups', memberData.checkups, userId); counts.checkups += memberData.checkups.length; }
-                if (memberData.labReports) { saveMemberData(memberId, 'labReports', memberData.labReports, userId); counts.labs += memberData.labReports.length; }
-                if (memberData.imagingReports) { saveMemberData(memberId, 'imagingReports', memberData.imagingReports, userId); counts.imaging += memberData.imagingReports.length; }
-                if (memberData.vitals) { saveMemberData(memberId, 'vitals', memberData.vitals, userId); counts.vitals += memberData.vitals.length; }
+                counts.meds += (memberData.meds || []).length;
+                counts.catalog += (memberData.catalog || []).length;
+                counts.checkups += (memberData.checkups || []).length;
+                counts.labs += (memberData.labReports || []).length;
+                counts.imaging += (memberData.imagingReports || []).length;
+                counts.vitals += (memberData.vitals || []).length;
               });
               
-              // 恢复当前成员ID并加载对应数据
+              // 3. 直接设置到内存
+              setAllMembersData(data.membersData);
+              console.log('✅ [导入] 已加载到内存:', Object.keys(data.membersData));
+              
+              // 4. 恢复当前成员ID
               const targetMemberId = data.currentMemberId || data.members[0]?.id || 'default';
               setCurrentMemberId(targetMemberId);
-              const targetData = data.membersData[targetMemberId] || {};
-              setMeds(targetData.meds || []);
-              setCatalog(targetData.catalog || []);
-              setCheckups(targetData.checkups || []);
-              setLabReports(targetData.labReports || []);
-              setImagingReports(targetData.imagingReports || []);
-              setVitals(targetData.vitals || []);
+              console.log('👤 [导入] 当前成员ID:', targetMemberId);
+              
             } else {
               // 兼容旧版本备份格式(只有当前成员数据)
-              if (data.meds) { setMeds(data.meds.map(m => ({...m, id: m.id || Date.now() + Math.random().toString()}))); counts.meds = data.meds.length; }
-              if (data.catalog) { setCatalog(data.catalog.map(c => ({...c, id: c.id || Date.now() + Math.random().toString()}))); counts.catalog = data.catalog.length; }
-              if (data.checkups) { setCheckups(data.checkups.map(c => ({...c, id: c.id || Date.now() + Math.random().toString()}))); counts.checkups = data.checkups.length; }
-              if (data.labReports) { setLabReports(data.labReports.map(r => ({...r, id: r.id || Date.now() + Math.random().toString()}))); counts.labs = data.labReports.length; }
-              if (data.imagingReports) { setImagingReports(data.imagingReports.map(r => ({...r, id: r.id || Date.now() + Math.random().toString()}))); counts.imaging = data.imagingReports.length; }
-              if (data.vitals) { setVitals(data.vitals.map(v => ({...v, id: v.id || Date.now() + Math.random().toString()}))); counts.vitals = data.vitals.length; }
-              if (Array.isArray(data) && data[0]?.items) { setLabReports(data.map(r => ({...r, id: r.id || Date.now() + Math.random().toString()}))); counts.labs = data.length; }
+              console.log('📋 [导入] 旧格式备份 - 兼容模式');
+              
+              // 构建单成员数据结构
+              const defaultMemberData = {
+                meds: (data.meds || []).map(m => ({...m, id: m.id || Date.now() + Math.random().toString()})),
+                catalog: (data.catalog || []).map(c => ({...c, id: c.id || Date.now() + Math.random().toString()})),
+                checkups: (data.checkups || []).map(c => ({...c, id: c.id || Date.now() + Math.random().toString()})),
+                labReports: (data.labReports || []).map(r => ({...r, id: r.id || Date.now() + Math.random().toString()})),
+                imagingReports: (data.imagingReports || []).map(r => ({...r, id: r.id || Date.now() + Math.random().toString()})),
+                vitals: (data.vitals || []).map(v => ({...v, id: v.id || Date.now() + Math.random().toString()}))
+              };
+              
+              // 统计
+              counts.meds = defaultMemberData.meds.length;
+              counts.catalog = defaultMemberData.catalog.length;
+              counts.checkups = defaultMemberData.checkups.length;
+              counts.labs = defaultMemberData.labReports.length;
+              counts.imaging = defaultMemberData.imagingReports.length;
+              counts.vitals = defaultMemberData.vitals.length;
+              
+              // 设置成员和数据
+              setMembers(DEFAULT_MEMBERS);
+              setAllMembersData({ 'default': defaultMemberData });
+              setCurrentMemberId('default');
+              
+              console.log('✅ [导入] 旧格式数据已转换为新格式');
             }
             
-            // 恢复设置
+            // 恢复API设置
             if (data.settings) {
               if (data.settings.apiProvider) { 
                 localStorage.setItem('ai_api_provider', data.settings.apiProvider); 
@@ -2609,14 +2629,28 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             // 恢复医学指标词典
             if (data.medicalDictionary) {
               setMedicalDictionary(data.medicalDictionary);
+              console.log('📚 [导入] 医学词典:', data.medicalDictionary.length, '条');
             }
             
             setShowRestoreModal(false);
+            
             const membersInfo = counts.members > 0 ? `\n• 家庭成员: ${counts.members}人` : '';
-            alert(`数据已导入并覆盖原有数据!${membersInfo}\n• 服药计划: ${counts.meds}条\n• 药品目录: ${counts.catalog}条\n• 预约检查: ${counts.checkups}条\n• 检测报告: ${counts.labs}条\n• 影像报告: ${counts.imaging}条\n• 健康指标: ${counts.vitals}条`);
+            alert(`✅ 数据导入成功！${membersInfo}\n• 服药计划: ${counts.meds}条\n• 药品目录: ${counts.catalog}条\n• 预约检查: ${counts.checkups}条\n• 检测报告: ${counts.labs}条\n• 影像报告: ${counts.imaging}条\n• 健康指标: ${counts.vitals}条`);
+            
+            console.log('✅ [导入] 完成！');
+            
           } catch (err) {
-            console.error('恢复失败:', err);
-            alert('文件格式错误,请选择有效的JSON备份文件');
+            console.error('❌ [导入] 失败:', err);
+            console.error('错误详情:', err.stack);
+            
+            // 更详细的错误提示
+            let errorMsg = '数据导入失败\n\n';
+            if (err instanceof SyntaxError) {
+              errorMsg += '原因：JSON格式错误\n建议：请检查文件是否完整';
+            } else {
+              errorMsg += '原因：' + err.message + '\n建议：请联系开发者';
+            }
+            alert(errorMsg);
           }
         };
         reader.readAsText(file);
