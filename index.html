@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.22</title>
+  <title>健康管家 Pro v16.25</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.22";
+    const VERSION = "v16.25";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1642,49 +1642,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           // 加载云端数据
           await loadFromCloud(user.objectId, user.sessionToken);
           
-          // 💾 检查是否有备份数据需要恢复
-          const backupData = localStorage.getItem('health_pro_backup_before_kick');
-          if (backupData) {
-            try {
-              const backup = JSON.parse(backupData);
-              console.log('💾 [登录] 发现备份数据，时间:', backup.timestamp);
-              
-              // 询问用户是否恢复
-              const shouldRestore = confirm(
-                `💾 检测到上次被踢出前的未保存数据\n\n` +
-                `备份时间：${new Date(backup.timestamp).toLocaleString()}\n` +
-                `成员数量：${backup.members?.length || 0}\n\n` +
-                `是否恢复这些数据？\n\n` +
-                `提示：如果选择"取消"，将使用云端数据，备份将被删除。`
-              );
-              
-              if (shouldRestore) {
-                console.log('✅ [登录] 用户选择恢复备份数据');
-                
-                // 恢复数据到内存
-                if (backup.members) setMembers(backup.members);
-                if (backup.memberData) setAllMembersData(backup.memberData);
-                if (backup.currentMemberId) setCurrentMemberId(backup.currentMemberId);
-                if (backup.medicalDictionary) setMedicalDictionary(backup.medicalDictionary);
-                
-                // 立即同步到云端
-                console.log('🔄 [登录] 正在同步恢复的数据到云端...');
-                await saveToCloud(user.objectId, user.sessionToken, false, false);
-                console.log('✅ [登录] 备份数据已恢复并同步到云端');
-                
-                alert('✅ 数据恢复成功\n\n未保存的数据已恢复并同步到云端。');
-              } else {
-                console.log('⏭️ [登录] 用户选择使用云端数据');
-              }
-              
-              // 删除备份（无论是否恢复）
-              localStorage.removeItem('health_pro_backup_before_kick');
-            } catch (backupError) {
-              console.error('❌ [登录] 恢复备份失败:', backupError);
-              localStorage.removeItem('health_pro_backup_before_kick');
-            }
-          }
-          
           // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
           console.log(`🔐 [登录][${getTimestamp()}] 当前设备ID:`, deviceId);
           await saveToCloud(user.objectId, user.sessionToken, false, true);  // updateDeviceId=true
@@ -2113,24 +2070,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               console.log(`🔍 [心跳][${getTimestamp()}] 本地deviceId:`, deviceId);
               console.log(`🔍 [心跳][${getTimestamp()}] 云端lastActiveTime:`, cloudData.lastActiveTime);
               
-              // 💾 被踢前备份未同步的数据
-              try {
-                const backup = {
-                  members: members,
-                  memberData: allMembersData,
-                  currentMemberId: currentMemberId,
-                  medicalDictionary: medicalDictionary,
-                  timestamp: new Date().toISOString(),
-                  reason: 'kicked_by_other_device'
-                };
-                localStorage.setItem('health_pro_backup_before_kick', JSON.stringify(backup));
-                console.log('💾 [心跳] 已备份未同步数据');
-              } catch (backupError) {
-                console.error('❌ [心跳] 备份数据失败:', backupError);
-              }
-              
               // 显示提示
-              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。\n\n未同步的数据已备份，重新登录后可选择恢复。');
+              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
               
               // 立即清理状态并退出
               localStorage.removeItem('health_pro_user');
