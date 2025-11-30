@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.31</title>
+  <title>健康管家 Pro v16.22</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -63,24 +63,6 @@
     #root > div {
       min-height: 100vh;
       min-height: 100dvh;
-    }
-    
-    /* 日历样式 */
-    .calendar-wrapper {
-      position: relative;
-    }
-    .calendar-container {
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      scroll-behavior: smooth;
-    }
-    .calendar-container::-webkit-scrollbar {
-      display: none;
-    }
-    .calendar-week {
-      scroll-snap-align: center;
     }
   </style>
 
@@ -232,7 +214,6 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       BarChart2: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>,
       ChevronDown: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
       ChevronUp: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>,
-      ChevronLeft: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
       ChevronRight: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
       Check: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
       AlertTriangle: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
@@ -265,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.31";
+    const VERSION = "v16.22";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -357,21 +338,6 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         
         try {
           const response = await fetch(`${LC_CONFIG.serverURL}/1.1${path}`, options);
-          
-          // 检查HTTP状态码
-          if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            if (response.status === 401) {
-              throw new Error(data.error || '用户名或密码错误');
-            } else if (response.status === 404) {
-              throw new Error(data.error || '请求的资源不存在');
-            } else if (response.status >= 500) {
-              throw new Error('服务器错误，请稍后重试');
-            } else {
-              throw new Error(data.error || `请求失败 (${response.status})`);
-            }
-          }
-          
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           return data;
@@ -558,20 +524,83 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       { id: 'siliconflow', name: '硅基流动', placeholder: 'sk-...' },
     ];
     
-
+    // 🔐 加密/解密工具函数（用于保护敏感数据）
+    const SecureStorage = {
+      // 密钥派生：基于设备ID + 固定盐
+      _getKey() {
+        const deviceId = localStorage.getItem('health_pro_device_id') || 'default_device';
+        const salt = 'HealthManagerPro_v16';
+        return deviceId + salt;
+      },
+      
+      // 简单XOR加密 + Base64编码
+      encrypt(text) {
+        if (!text) return '';
+        try {
+          const key = this._getKey();
+          let encrypted = '';
+          for (let i = 0; i < text.length; i++) {
+            encrypted += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+          }
+          return btoa(encrypted); // Base64编码
+        } catch (e) {
+          console.error('❌ [加密失败]:', e);
+          return text; // 加密失败，返回原文（降级处理）
+        }
+      },
+      
+      // 解密：Base64解码 + XOR解密
+      decrypt(encryptedText) {
+        if (!encryptedText) return '';
+        try {
+          const key = this._getKey();
+          const encrypted = atob(encryptedText); // Base64解码
+          let decrypted = '';
+          for (let i = 0; i < encrypted.length; i++) {
+            decrypted += String.fromCharCode(encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+          }
+          return decrypted;
+        } catch (e) {
+          console.error('❌ [解密失败]:', e);
+          return encryptedText; // 解密失败，返回密文（兼容旧数据）
+        }
+      },
+      
+      // 安全存储
+      setItem(key, value) {
+        if (!value) return;
+        const encrypted = this.encrypt(value);
+        localStorage.setItem(key, encrypted);
+      },
+      
+      // 安全读取
+      getItem(key) {
+        const encrypted = localStorage.getItem(key);
+        if (!encrypted) return null;
+        return this.decrypt(encrypted);
+      },
+      
+      // 删除
+      removeItem(key) {
+        localStorage.removeItem(key);
+      }
+    };
+    
     let CURRENT_API = localStorage.getItem('ai_api_provider') || 'qwen';
     
-    // 获取指定服务商的API Key（明文存储）
+    // 获取指定服务商的API Key（加密存储）
     function getApiKeyFor(providerId) {
       const provider = API_PROVIDERS.find(p => p.id === providerId);
-      const key = localStorage.getItem('ai_api_key_' + providerId);
-      return key || (provider && provider.defaultKey) || '';
+      // 🔐 使用加密读取
+      const encrypted = SecureStorage.getItem('ai_api_key_' + providerId);
+      return encrypted || (provider && provider.defaultKey) || '';
     }
     
-    // 保存指定服务商的API Key（明文存储）
+    // 保存指定服务商的API Key（加密存储）
     function saveApiKeyFor(providerId, key) {
       if (key) {
-        localStorage.setItem('ai_api_key_' + providerId, key);
+        // 🔐 使用加密存储
+        SecureStorage.setItem('ai_api_key_' + providerId, key);
       }
     }
 
@@ -1222,10 +1251,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📊 [saveToCloud] 数据统计:', { 成员数: members.length, 总数据项: totalItems });
           
           // API设置仍从localStorage读取（配置项保留）
+          // 🔐 修复：云端存储API Key明文，本地加密
           const apiSettings = {};
           API_PROVIDERS.forEach(p => {
             const key = 'ai_api_key_' + p.id;
-            const val = localStorage.getItem(key);
+            // ✅ 使用SecureStorage解密后再上传（确保云端是明文）
+            const val = SecureStorage.getItem(key);
             if (val) apiSettings[key] = val;
           });
           apiSettings['ai_api_provider'] = localStorage.getItem('ai_api_provider') || 'qwen';
@@ -1289,9 +1320,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           console.log('📥 [applyCloudData] 云端成员数据:', cloudData.members.length, '个:', cloudData.members.map(m => m.name));
           restoredMembers = cloudData.members;
         } else {
-          // 🚨 数据安全：云端数据异常，拒绝覆盖
-          console.error('❌ [applyCloudData] 云端数据损坏：记录存在但成员为空！');
-          throw new Error('云端数据异常：成员列表为空\n\n可能原因：\n1. 数据库记录损坏\n2. 并发操作导致数据丢失\n\n请联系技术支持或使用备份恢复数据');
+          console.warn('⚠️ [applyCloudData] 云端成员数据为空！使用默认成员');
+          restoredMembers = DEFAULT_MEMBERS;
         }
         
         console.log('✅ [applyCloudData] 最终成员列表:', restoredMembers.length, '个:', restoredMembers.map(m => m.name));
@@ -1315,11 +1345,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setCurrentMemberId(targetMemberId);
         
         // API设置
+        // 🔐 修复：从云端下载明文，用本地deviceId重新加密存储
         if (cloudData.apiSettings) {
           Object.keys(cloudData.apiSettings).forEach(key => {
-            localStorage.setItem(key, cloudData.apiSettings[key]);
+            // API Key使用加密存储
+            if (key.startsWith('ai_api_key_')) {
+              SecureStorage.setItem(key, cloudData.apiSettings[key]);
+            } else {
+              // 其他配置项（如provider）明文存储
+              localStorage.setItem(key, cloudData.apiSettings[key]);
+            }
           });
-          console.log('✅ [applyCloudData] API设置已保存');
+          console.log('🔐 [applyCloudData] API设置已加密存储');
         }
         
         // 医学词典
@@ -1460,7 +1497,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           // 3. 尝试恢复登录状态
           const savedUser = localStorage.getItem('health_pro_user');
-          const savedToken = localStorage.getItem('health_pro_session');
+          // 🔐 加密读取 session token
+          const savedToken = SecureStorage.getItem('health_pro_session');
           
           if (savedUser && savedToken) {
             try {
@@ -1525,12 +1563,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [activeTab, setActiveTab] = useState('vitals');
       const [viewMode, setViewMode] = useState('list');
       
-      // 子Tab状态
-      const [medSubTab, setMedSubTab] = useState('plan'); // 'plan' | 'catalog'
-      const [examSubTab, setExamSubTab] = useState('appointment'); // 'appointment' | 'reports'
-      const [calendarWeekOffset, setCalendarWeekOffset] = useState(0); // 日历周偏移
-      const calendarRef = useRef(null); // 日历容器引用
-      
       // 成员管理状态（动态加载）
       const [members, setMembers] = useState([]);
       const [currentMemberId, setCurrentMemberId] = useState('default');
@@ -1591,13 +1623,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginLoading(true);
         setLoginError('');
         try {
-          console.log('🔐 [登录] 开始登录...');
-          console.log('🌐 [登录] 环境:', CURRENT_ENV);
-          console.log('🌐 [登录] ServerURL:', LC_CONFIG.serverURL);
-          console.log('🌐 [登录] AppID:', LC_CONFIG.appId.substring(0, 10) + '...');
-          
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
-          console.log('✅ [登录] 登录成功');
           
           // 先设置loading状态和数据加载标记，再设置用户信息
           // 这样可以避免短暂显示默认成员"我"的问题
@@ -1609,10 +1635,54 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
-          localStorage.setItem('health_pro_session', user.sessionToken);
+          // 🔐 加密存储 session token
+          SecureStorage.setItem('health_pro_session', user.sessionToken);
           
           // 加载云端数据
           await loadFromCloud(user.objectId, user.sessionToken);
+          
+          // 💾 检查是否有备份数据需要恢复
+          const backupData = localStorage.getItem('health_pro_backup_before_kick');
+          if (backupData) {
+            try {
+              const backup = JSON.parse(backupData);
+              console.log('💾 [登录] 发现备份数据，时间:', backup.timestamp);
+              
+              // 询问用户是否恢复
+              const shouldRestore = confirm(
+                `💾 检测到上次被踢出前的未保存数据\n\n` +
+                `备份时间：${new Date(backup.timestamp).toLocaleString()}\n` +
+                `成员数量：${backup.members?.length || 0}\n\n` +
+                `是否恢复这些数据？\n\n` +
+                `提示：如果选择"取消"，将使用云端数据，备份将被删除。`
+              );
+              
+              if (shouldRestore) {
+                console.log('✅ [登录] 用户选择恢复备份数据');
+                
+                // 恢复数据到内存
+                if (backup.members) setMembers(backup.members);
+                if (backup.memberData) setAllMembersData(backup.memberData);
+                if (backup.currentMemberId) setCurrentMemberId(backup.currentMemberId);
+                if (backup.medicalDictionary) setMedicalDictionary(backup.medicalDictionary);
+                
+                // 立即同步到云端
+                console.log('🔄 [登录] 正在同步恢复的数据到云端...');
+                await saveToCloud(user.objectId, user.sessionToken, false, false);
+                console.log('✅ [登录] 备份数据已恢复并同步到云端');
+                
+                alert('✅ 数据恢复成功\n\n未保存的数据已恢复并同步到云端。');
+              } else {
+                console.log('⏭️ [登录] 用户选择使用云端数据');
+              }
+              
+              // 删除备份（无论是否恢复）
+              localStorage.removeItem('health_pro_backup_before_kick');
+            } catch (backupError) {
+              console.error('❌ [登录] 恢复备份失败:', backupError);
+              localStorage.removeItem('health_pro_backup_before_kick');
+            }
+          }
           
           // 🔒 立即更新设备ID到云端，占据登录状态（踢出其他设备）
           console.log(`🔐 [登录][${getTimestamp()}] 当前设备ID:`, deviceId);
@@ -1624,12 +1694,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           console.error('❌ [登录] 失败:', e);
-          console.error('❌ [登录] 错误详情:', {
-            message: e.message,
-            env: CURRENT_ENV,
-            serverURL: LC_CONFIG.serverURL,
-            appId: LC_CONFIG.appId.substring(0, 10) + '...'
-          });
           
           // 清理用户状态
           localStorage.removeItem('health_pro_user');
@@ -1681,7 +1745,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setCurrentUser(user);
           setSessionToken(user.sessionToken);
           localStorage.setItem('health_pro_user', JSON.stringify(user));
-          localStorage.setItem('health_pro_session', user.sessionToken);
+          // 🔐 加密存储 session token
+          SecureStorage.setItem('health_pro_session', user.sessionToken);
           
           console.log('🆕 [注册] 新用户，准备初始数据并上传到云端');
           
@@ -2047,8 +2112,24 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               console.log(`🔍 [心跳][${getTimestamp()}] 本地deviceId:`, deviceId);
               console.log(`🔍 [心跳][${getTimestamp()}] 云端lastActiveTime:`, cloudData.lastActiveTime);
               
+              // 💾 被踢前备份未同步的数据
+              try {
+                const backup = {
+                  members: members,
+                  memberData: allMembersData,
+                  currentMemberId: currentMemberId,
+                  medicalDictionary: medicalDictionary,
+                  timestamp: new Date().toISOString(),
+                  reason: 'kicked_by_other_device'
+                };
+                localStorage.setItem('health_pro_backup_before_kick', JSON.stringify(backup));
+                console.log('💾 [心跳] 已备份未同步数据');
+              } catch (backupError) {
+                console.error('❌ [心跳] 备份数据失败:', backupError);
+              }
+              
               // 显示提示
-              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。');
+              alert('⚠️ 账号在其他设备登录\n\n当前设备已被强制退出，请重新登录。\n\n未同步的数据已备份，重新登录后可选择恢复。');
               
               // 立即清理状态并退出
               localStorage.removeItem('health_pro_user');
@@ -2346,23 +2427,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
 
-      // 日历周切换
-      const scrollToWeek = (offset) => {
-        if (calendarRef.current) {
-          const weekWidth = calendarRef.current.offsetWidth;
-          calendarRef.current.scrollTo({
-            left: (offset + 1) * weekWidth,
-            behavior: 'smooth'
-          });
-          setCalendarWeekOffset(offset);
-        }
-      };
-
-      // 点击标题定位今天
-      const scrollToToday = () => {
-        scrollToWeek(0);
-      };
-
       const setAutoRangeForSelectedItems = () => {
         if (selectedTrendItems.length === 0) return;
         let minDate = null;
@@ -2654,19 +2718,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             
             let counts = { meds: 0, catalog: 0, checkups: 0, labs: 0, imaging: 0, vitals: 0, members: 0 };
             
-            // 🔒 事务性操作：先准备所有数据到临时变量，确认无误后再统一更新state
-            let tempMembers;
-            let tempMembersData;
-            let tempCurrentMemberId;
-            let tempApiSettings = {};
-            let tempMedicalDictionary;
-            
             // 🔥 新架构：直接恢复到内存（不使用localStorage）
             if (data.members && data.membersData) {
               console.log('📋 [导入] 新格式备份 - 成员数:', data.members.length);
               
-              // 1. 准备成员列表
-              tempMembers = data.members;
+              // 1. 恢复成员列表
+              setMembers(data.members);
               counts.members = data.members.length;
               
               // 2. 统计数据量
@@ -2679,13 +2736,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 counts.vitals += (memberData.vitals || []).length;
               });
               
-              // 3. 准备成员数据
-              tempMembersData = data.membersData;
-              console.log('✅ [导入] 已准备数据:', Object.keys(data.membersData));
+              // 3. 直接设置到内存
+              setAllMembersData(data.membersData);
+              console.log('✅ [导入] 已加载到内存:', Object.keys(data.membersData));
               
-              // 4. 准备当前成员ID
-              tempCurrentMemberId = data.currentMemberId || data.members[0]?.id || 'default';
-              console.log('👤 [导入] 当前成员ID:', tempCurrentMemberId);
+              // 4. 恢复当前成员ID
+              const targetMemberId = data.currentMemberId || data.members[0]?.id || 'default';
+              setCurrentMemberId(targetMemberId);
+              console.log('👤 [导入] 当前成员ID:', targetMemberId);
               
             } else {
               // 兼容旧版本备份格式(只有当前成员数据)
@@ -2709,60 +2767,40 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               counts.imaging = defaultMemberData.imagingReports.length;
               counts.vitals = defaultMemberData.vitals.length;
               
-              // 准备成员和数据（不立即设置）
-              tempMembers = DEFAULT_MEMBERS;
-              tempMembersData = { 'default': defaultMemberData };
-              tempCurrentMemberId = 'default';
+              // 设置成员和数据
+              setMembers(DEFAULT_MEMBERS);
+              setAllMembersData({ 'default': defaultMemberData });
+              setCurrentMemberId('default');
               
-              console.log('✅ [导入] 旧格式数据已准备');
+              console.log('✅ [导入] 旧格式数据已转换为新格式');
             }
             
-            // 准备API设置
+            // 恢复API设置
             if (data.settings) {
-              if (data.settings.apiProvider) {
-                tempApiSettings.provider = data.settings.apiProvider;
+              if (data.settings.apiProvider) { 
+                localStorage.setItem('ai_api_provider', data.settings.apiProvider); 
+                CURRENT_API = data.settings.apiProvider; 
+                setApiProvider(data.settings.apiProvider); 
               }
-              // 新版本格式:准备所有服务商的API Key
+              // 新版本格式:恢复所有服务商的API Key
               if (data.settings.apiKeys) {
-                tempApiSettings.keys = data.settings.apiKeys;
+                Object.entries(data.settings.apiKeys).forEach(function(entry) {
+                  if (entry[1]) saveApiKeyFor(entry[0], entry[1]);
+                });
+                setApiKeyInput(getApiKeyFor(data.settings.apiProvider || 'qwen'));
               }
               // 兼容旧版本格式:单个API Key
               else if (data.settings.apiKey) {
                 var provider = data.settings.apiProvider || 'qwen';
-                tempApiSettings.keys = { [provider]: data.settings.apiKey };
+                saveApiKeyFor(provider, data.settings.apiKey);
+                setApiKeyInput(data.settings.apiKey);
               }
             }
             
-            // 准备医学指标词典
+            // 恢复医学指标词典
             if (data.medicalDictionary) {
-              tempMedicalDictionary = data.medicalDictionary;
-              console.log('📚 [导入] 医学词典已准备:', data.medicalDictionary.length, '条');
-            }
-            
-            // ✅ 所有数据准备完成，开始事务性更新
-            console.log('🔒 [导入] 所有数据验证完成，开始应用...');
-            
-            // 更新成员数据
-            setMembers(tempMembers);
-            setAllMembersData(tempMembersData);
-            setCurrentMemberId(tempCurrentMemberId);
-            
-            // 更新API设置
-            if (tempApiSettings.provider) {
-              localStorage.setItem('ai_api_provider', tempApiSettings.provider);
-              CURRENT_API = tempApiSettings.provider;
-              setApiProvider(tempApiSettings.provider);
-            }
-            if (tempApiSettings.keys) {
-              Object.entries(tempApiSettings.keys).forEach(function(entry) {
-                if (entry[1]) saveApiKeyFor(entry[0], entry[1]);
-              });
-              setApiKeyInput(getApiKeyFor(tempApiSettings.provider || 'qwen'));
-            }
-            
-            // 更新医学词典
-            if (tempMedicalDictionary) {
-              setMedicalDictionary(tempMedicalDictionary);
+              setMedicalDictionary(data.medicalDictionary);
+              console.log('📚 [导入] 医学词典:', data.medicalDictionary.length, '条');
             }
             
             setShowRestoreModal(false);
@@ -2776,9 +2814,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             console.error('❌ [导入] 失败:', err);
             console.error('错误详情:', err.stack);
             
-            // 🔒 数据安全：发生错误时，不会修改任何现有数据
-            console.log('🔒 [导入] 错误发生，现有数据未被修改');
-            
             // 更详细的错误提示
             let errorMsg = '数据导入失败\n\n';
             if (err instanceof SyntaxError) {
@@ -2786,7 +2821,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             } else {
               errorMsg += '原因：' + err.message + '\n建议：请联系开发者';
             }
-            errorMsg += '\n\n✅ 您的现有数据未受影响';
             alert(errorMsg);
           }
         };
@@ -3454,6 +3488,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           {/* Header */}
           <header className="bg-indigo-700 text-white p-4 pt-6 pb-4 shadow-lg shrink-0 z-10 flex justify-between items-center">
             <div className="flex items-center gap-2">
+              <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); setShowMemberMenu(false); }} className="bg-indigo-600 p-2 rounded-full border border-indigo-500"><Icons.Menu size={18}/></button>
               <h1 className="text-base font-bold flex items-center gap-1.5">
                 <Icons.Activity size={18}/> 健康管家 
                 <span className="text-xs font-normal opacity-70">{VERSION}</span>
@@ -3481,7 +3516,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               {currentMember ? (
                 <button 
                   type="button" 
-                  onClick={(e) => { e.stopPropagation(); setShowMemberMenu(!showMemberMenu); }} 
+                  onClick={(e) => { e.stopPropagation(); setShowMemberMenu(!showMemberMenu); setShowMenu(false); }} 
                   className="flex items-center gap-1 px-2 py-1.5 rounded-full border border-white/30 hover:bg-white/10 transition-all"
                   style={{ backgroundColor: currentMemberColor.hex + '33' }}
                 >
@@ -3492,9 +3527,55 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               ) : (
                 <div className="px-2 py-1.5 text-xs text-white/50">加载中...</div>
               )}
+              {activeTab === 'labs' && (
+                <button 
+                  onClick={() => { 
+                    if (selectedTrendItems.length > 0) {
+                      setAutoRangeForSelectedItems(); 
+                      setSelectedMeds(meds.map(m => m.id)); 
+                      setShowTrendModal(true); 
+                    }
+                  }} 
+                  className={`p-2 rounded-full transition-all ${selectedTrendItems.length > 0 ? 'bg-white text-indigo-700 shadow-lg' : 'bg-indigo-500/50 text-indigo-300 cursor-not-allowed'}`}
+                  title={selectedTrendItems.length > 0 ? `查看趋势分析 (已选${selectedTrendItems.length}项)` : '请先选择指标'}
+                >
+                  <Icons.BarChart2 size={18}/>
+                </button>
+              )}
+              {activeTab === 'plan' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
+              {activeTab === 'plan' && <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'æ— å…³',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'appointment' && <button onClick={() => { setEditingId(null); setCheckupInput({date:'',items:'',notes:''}); setShowCheckupForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'catalog' && <button onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')} className="bg-indigo-600 p-2 rounded-full border border-indigo-500">{viewMode === 'card' ? <Icons.LayoutList size={18}/> : <Icons.LayoutGrid size={18}/>}</button>}
+              {activeTab === 'catalog' && <button onClick={() => { setEditingId(null); setCatalogInput({name:'',brand:'',dosageForm:'片剂',price:'',strength:'',unit:'mg',packageSize:''}); setShowCatalogForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
+              {activeTab === 'labs' && <button onClick={() => { setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.ScanLine size={20}/></button>}
+              {activeTab === 'imaging' && <button onClick={() => { setScanType('imaging'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.ScanLine size={20}/></button>}
+              {activeTab === 'vitals' && <button onClick={() => { setEditingId(null); setVitalsInput({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' }); setShowVitalsForm(true); }} className="bg-white text-indigo-700 p-2 rounded-full shadow-lg"><Icons.Plus size={20}/></button>}
             </div>
           </header>
 
+          {/* Menu */}
+          {showMenu && (
+            <div className="absolute left-4 top-20 w-48 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
+              <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl">系统菜单</div>
+              <div className="px-4 py-2 text-xs text-gray-500 border-b flex items-center gap-2">
+                <Icons.User size={14}/> {currentUser?.username}
+                {syncStatus === 'synced' && lastSyncTime ? (
+                  <span className="text-green-500 text-[10px]">● 已同步 {lastSyncTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</span>
+                ) : syncStatus === 'error' ? (
+                  <span className="text-red-500 text-[10px]">● 同步失败</span>
+                ) : null}
+              </div>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCloud(currentUser.objectId, sessionToken, true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Cloud size={16}/> 手动同步到云端</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(confirm('确定要从云端恢复数据吗?\n本地未同步的数据可能会丢失。')) { loadFromCloud(currentUser.objectId, sessionToken); } setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 从云端恢复</button>
+              <div className="border-t"></div>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleBackup(); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Download size={16}/> 备份到本地</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRestoreModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.FileJson size={16}/> 从本地恢复</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDictionaryModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-t"><Icons.Library size={16}/> 医学指标词典</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsModal(true); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2"><Icons.Settings size={16}/> 设置</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLogout(); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-red-500 rounded-b-xl border-t"><Icons.LogOut size={16}/> 退出登录</button>
+            </div>
+          )}
+          
           {/* 成员切换下拉菜单 */}
           {showMemberMenu && (
             <div className="absolute right-4 top-20 w-56 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
@@ -3546,252 +3627,18 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             </div>
           )}
 
+          {/* Tab Bar */}
+          <div className="bg-white border-b flex p-1 shrink-0 overflow-x-auto">
+            {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'plan',label:'计划',Icon:Icons.Clock},{id:'catalog',label:'药箱',Icon:Icons.Library},{id:'labs',label:'检测',Icon:Icons.FileSpreadsheet},{id:'imaging',label:'检查',Icon:Icons.FileImage}].map(tab => (
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); setShowMenu(false); }} className={`flex-1 min-w-[60px] py-3 text-xs font-bold flex flex-col items-center gap-1 border-b-2 transition-colors ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400'}`}>
+                <tab.Icon size={18}/>{tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto p-4 bg-slate-50">
+          <main className="flex-1 overflow-y-auto p-4 bg-slate-50" onClick={() => setShowMenu(false)}>
             
-            {/* Exams Tab - 检查/查验 */}
-            {activeTab === 'exams' && (
-              <>
-                {/* 滑动标题栏 */}
-                <div className="flex items-center justify-between mb-4">
-                  <button 
-                    onClick={() => setExamSubTab('appointment')}
-                    disabled={examSubTab === 'appointment'}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30"
-                  >
-                    <Icons.ChevronLeft size={20} className={examSubTab === 'appointment' ? 'text-gray-300' : 'text-gray-600'} />
-                  </button>
-                  <h2 className="text-lg font-bold text-gray-800">
-                    {examSubTab === 'appointment' ? '查验预约' : '查验报告'}
-                  </h2>
-                  <button 
-                    onClick={() => setExamSubTab('reports')}
-                    disabled={examSubTab === 'reports'}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30"
-                  >
-                    <Icons.ChevronRight size={20} className={examSubTab === 'reports' ? 'text-gray-300' : 'text-gray-600'} />
-                  </button>
-                </div>
-                
-                {/* 预约内容 */}
-                {examSubTab === 'appointment' && (
-                  <>
-                    {/* 周视图日历 */}
-                    <div className="calendar-wrapper mb-4">
-                      {/* 日历左右箭头 */}
-                      <button 
-                        onClick={() => scrollToWeek(calendarWeekOffset - 1)}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 p-2 rounded-r-lg shadow hover:bg-white transition-colors"
-                      >
-                        <Icons.ChevronLeft size={20} className="text-gray-600" />
-                      </button>
-                      <button 
-                        onClick={() => scrollToWeek(calendarWeekOffset + 1)}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 p-2 rounded-l-lg shadow hover:bg-white transition-colors"
-                      >
-                        <Icons.ChevronRight size={20} className="text-gray-600" />
-                      </button>
-
-                      <div 
-                        ref={calendarRef}
-                        className="calendar-container"
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
-                        onTouchEnd={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex">
-                          {[-1, 0, 1].map(offset => {
-                            const today = new Date();
-                            const weekStart = new Date(today);
-                            weekStart.setDate(today.getDate() - today.getDay() + offset * 7);
-                            
-                            return (
-                              <div key={offset} className="calendar-week flex-shrink-0 w-full bg-white rounded-2xl p-4 shadow-sm" style={{ marginRight: offset < 1 ? '16px' : '0' }}>
-                                <div 
-                                  onClick={offset === 0 ? undefined : () => scrollToToday()}
-                                  className={`text-center font-bold text-sm mb-3 text-gray-700 ${offset !== 0 ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
-                                >
-                                  {weekStart.getMonth() + 1}月 {offset === 0 ? '本周' : offset > 0 ? '下周' : '上周'}
-                                </div>
-                                <div className="grid grid-cols-7 gap-1">
-                                  {['日','一','二','三','四','五','六'].map((d, i) => (
-                                    <div key={i} className="text-center text-xs text-gray-400 mb-2">{d}</div>
-                                  ))}
-                                  {[...Array(7)].map((_, i) => {
-                                    const day = new Date(weekStart);
-                                    day.setDate(weekStart.getDate() + i);
-                                    const isToday = day.toDateString() === today.toDateString();
-                                    const dateStr = getLocalDateStr(day);
-                                    const hasAppointment = checkups.some(c => c.date === dateStr);
-                                    return (
-                                      <div
-                                        key={i}
-                                        className={`text-center py-2 rounded-lg text-sm relative ${
-                                          isToday ? 'bg-indigo-600 text-white font-bold' : 
-                                          hasAppointment ? 'bg-orange-50 text-orange-600 font-medium' : 
-                                          'text-gray-600'
-                                        }`}
-                                      >
-                                        {day.getDate()}
-                                        {hasAppointment && !isToday && (
-                                          <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-orange-500 rounded-full"></div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 预约列表 */}
-                    {checkups.map(c => (
-                      <div key={c.id} onClick={() => { setCheckupInput({...c}); setEditingId(c.id); setShowCheckupForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 cursor-pointer hover:shadow-md transition-shadow relative">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="font-bold text-base mb-1">{c.items}</div>
-                            <div className="text-sm text-gray-500">{c.date}</div>
-                            {c.notes && <div className="text-xs text-gray-400 mt-1">{c.notes}</div>}
-                          </div>
-                          <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(c.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
-                        </div>
-                      </div>
-                    ))}
-                    {checkups.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Calendar size={48}/></div><p>暂无预约</p></div>}
-                    
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
-                      <button onClick={() => { setEditingId(null); setCheckupInput({date:'',items:'',notes:''}); setShowCheckupForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
-                        <Icons.Plus size={24}/>
-                      </button>
-                    </div>
-                  </>
-                )}
-                
-                {/* 报告内容 */}
-                {examSubTab === 'reports' && (
-                  <div className="space-y-4">
-                    {/* 检测报告组 */}
-                    {labReports.length > 0 && (
-                      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                        <div className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b">
-                          <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                            <Icons.FileSpreadsheet size={18} className="text-indigo-600"/>
-                            检测报告 ({labReports.length})
-                          </h3>
-                          <button onClick={() => { setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors">
-                            <Icons.ScanLine size={18}/>
-                          </button>
-                        </div>
-                        <div className="divide-y">
-                          {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
-                            const isExpanded = expandedReports[report.id];
-                            const abnormalCount = report.items.filter(i => i.flag !== 'Normal').length;
-                            return (
-                              <div key={report.id}>
-                                <div onClick={() => setExpandedReports(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                  <div className="flex-1">
-                                    <div className="font-bold text-sm mb-0.5">{report.date}</div>
-                                    <div className="text-xs text-gray-500">{report.hospital}</div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {abnormalCount > 0 ? (
-                                      <div className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded flex items-center gap-1">
-                                        <Icons.AlertTriangle size={12}/>{abnormalCount}项
-                                      </div>
-                                    ) : (
-                                      <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
-                                        <Icons.Check size={12}/>正常
-                                      </div>
-                                    )}
-                                    <div className="text-gray-400">
-                                      {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
-                                    </div>
-                                  </div>
-                                </div>
-                                {isExpanded && (
-                                  <div className="px-2 pb-2 border-t bg-slate-50">
-                                    {report.items.map((item, idx) => {
-                                      const isSelected = selectedTrendItems.includes(item.name);
-                                      const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : '';
-                                      return (
-                                        <div key={idx} onClick={(e) => toggleTrendItem(item.name, e)} className={`flex justify-between items-center p-2.5 text-xs border-b last:border-0 cursor-pointer rounded-lg mb-0.5 ${isSelected ? 'bg-indigo-50 ring-1 ring-indigo-500' : 'hover:bg-gray-50'}`}>
-                                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'}`}>{isSelected && <Icons.Check size={10} className="text-white"/>}</div>
-                                            <span className={`truncate text-sm ${item.flag !== 'Normal' ? flagColor + ' font-bold' : 'text-slate-700 font-normal'}`}>{item.name}</span>
-                                            {hasInfo(item.name) && <button onClick={(e) => handleInfoClick(item.name, e)} className="text-gray-400 hover:text-indigo-500 shrink-0"><Icons.Info size={12}/></button>}
-                                            <span className="text-[10px] text-gray-400 shrink-0 ml-1 font-normal">{item.refRange} {item.unit}</span>
-                                          </div>
-                                          <div className="flex items-center gap-0.5 shrink-0">
-                                            <span className={`text-sm ${item.flag !== 'Normal' ? 'font-bold ' + flagColor : 'font-normal text-slate-700'}`}>{item.result}</span>
-                                            {item.flag === 'High' && <span className={`${flagColor} text-xs font-bold`}>↑</span>}
-                                            {item.flag === 'Low' && <span className={`${flagColor} text-xs font-bold`}>↓</span>}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 检查报告组 */}
-                    {imagingReports.length > 0 && (
-                      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                        <div className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b">
-                          <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                            <Icons.FileImage size={18} className="text-blue-600"/>
-                            检查报告 ({imagingReports.length})
-                          </h3>
-                          <button onClick={() => { setScanType('imaging'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors">
-                            <Icons.ScanLine size={18}/>
-                          </button>
-                        </div>
-                        <div className="divide-y">
-                          {imagingReports.map(report => {
-                            const isExpanded = expandedImaging[report.id];
-                            return (
-                              <div key={report.id}>
-                                <div onClick={() => setExpandedImaging(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                  <div>
-                                    <div className="flex items-center gap-2"><span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{report.modality}</span><span className="font-bold text-sm">{report.region}</span></div>
-                                    <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
-                                  </div>
-                                  <div className="text-gray-400">
-                                    {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
-                                  </div>
-                                </div>
-                                {isExpanded && (
-                                  <div className="p-4 text-sm border-t bg-slate-50">
-                                    <div className="mb-4"><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">影像所见</h4><p className="text-gray-700">{report.findings}</p></div>
-                                    <div><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">诊断意见</h4><p className="bg-indigo-50 p-3 rounded-lg font-medium text-indigo-900">{report.impression}</p></div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {labReports.length === 0 && imagingReports.length === 0 && (
-                      <div className="text-center text-gray-400 mt-16">
-                        <div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div>
-                        <p>暂无报告</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
             {/* Vitals Tab - 健康指标 */}
             {activeTab === 'vitals' && (
               <div className="space-y-4">
@@ -3816,49 +3663,40 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   ))}
                 </div>
 
-                {/* 指标概览卡片 - 网格优化 */}
+                {/* 指标概览卡片 */}
                 {selectedVitalType === null && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      {VITAL_TYPES.map(type => {
-                        const latest = getLatestVital(type.id);
-                        const history = getVitalHistory(type.id);
-                        return (
-                          <div 
-                            key={type.id} 
-                            onClick={() => setSelectedVitalType(type.id)}
-                            className="bg-white p-3 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-all"
-                            style={{ borderLeft: `4px solid ${type.color}` }}
-                          >
-                            <div className="flex items-center gap-1.5 mb-2">
-                              {renderVitalIcon(type.icon, 16, type.color)}
-                              <span className="text-xs font-bold text-gray-700">{type.name}</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    {VITAL_TYPES.map(type => {
+                      const latest = getLatestVital(type.id);
+                      const history = getVitalHistory(type.id);
+                      return (
+                        <div 
+                          key={type.id} 
+                          onClick={() => setSelectedVitalType(type.id)}
+                          className="bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {renderVitalIcon(type.icon, 18, type.color)}
+                              <span className="text-sm font-bold text-gray-700">{type.name}</span>
                             </div>
-                            {latest ? (
-                              <>
-                                <div className="flex items-baseline gap-1 mb-1">
-                                  <span className="text-xl font-bold" style={{ color: type.color }}>
-                                    {type.hasTwo ? `${latest.value1}/${latest.value2}` : latest.value1}
-                                  </span>
-                                  <span className="text-xs text-gray-400">{type.unit}</span>
-                                </div>
-                                <div className="text-[10px] text-gray-400">{latest.date} {latest.time}</div>
-                              </>
-                            ) : (
-                              <div className="text-xs text-gray-400">暂无数据</div>
-                            )}
+                            <VitalMiniChart data={history} color={type.color} />
                           </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
-                      <button onClick={() => { setEditingId(null); setVitalsInput({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' }); setShowVitalsForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
-                        <Icons.Plus size={24}/>
-                      </button>
-                    </div>
-                  </>
+                          {latest ? (
+                            <>
+                              <div className="text-2xl font-bold" style={{ color: type.color }}>
+                                {type.hasTwo ? `${latest.value1}/${latest.value2}` : latest.value1}
+                                <span className="text-xs font-normal text-gray-400 ml-1">{type.unit}</span>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">{latest.date} {latest.time}</div>
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-400">暂无数据</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
 
                 {/* 指标详细列表 */}
@@ -3939,7 +3777,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   );
                 })()}
 
-                {/* 全部视图下的最近记录 */}
+                {/* 全部视图下的历史记录 */}
                 {selectedVitalType === null && (
                   <>
                     <h3 className="text-xs font-bold text-gray-400 uppercase mt-4 mb-2">最近记录</h3>
@@ -3990,320 +3828,186 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               </div>
             )}
 
-
-            {activeTab === 'meds' && (
+            {/* Plan Tab */}
+            {activeTab === 'plan' && (
               <>
-                {/* 滑动标题栏 */}
-                <div className="flex items-center justify-between mb-4">
-                  <button 
-                    onClick={() => setMedSubTab('plan')}
-                    disabled={medSubTab === 'plan'}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30"
-                  >
-                    <Icons.ChevronLeft size={20} className={medSubTab === 'plan' ? 'text-gray-300' : 'text-gray-600'} />
-                  </button>
-                  <h2 className="text-lg font-bold text-gray-800">
-                    {medSubTab === 'plan' ? '用药计划' : '药品目录'}
-                  </h2>
-                  <button 
-                    onClick={() => setMedSubTab('catalog')}
-                    disabled={medSubTab === 'catalog'}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-30"
-                  >
-                    <Icons.ChevronRight size={20} className={medSubTab === 'catalog' ? 'text-gray-300' : 'text-gray-600'} />
-                  </button>
-                </div>
-                
-                {/* 用药计划内容 */}
-                {medSubTab === 'plan' && (
-                  <>
-                    {activeMeds.map(m => (
-                      <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 relative cursor-pointer hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="font-bold text-lg mb-1">{m.name}</div>
-                            <div className="text-sm text-gray-500">{m.startTime} 开始 | {m.relation}</div>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}</span>
-                            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
-                          </div>
+                {viewMode === 'card' ? (
+                  activeMeds.map(m => (
+                    <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 relative cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-1">{m.name}</div>
+                          <div className="text-sm text-gray-500">{m.startTime} 开始 | {m.relation}</div>
                         </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}</span>
+                          <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  activeMeds.map(m => {
+                    const catalogItem = catalog.find(c => c.name === m.name);
+                    return (
+                    <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 relative cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-1">{m.name}</div>
+                          {catalogItem && (<div className="text-xs text-gray-500 mb-2">{catalogItem.brand && <span className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded mr-2">{catalogItem.brand}</span>}<span>{catalogItem.strength}{catalogItem.unit}</span></div>)}
+                          <div className="text-sm text-gray-700 font-medium mb-1">{m.method}</div>
+                          <div className="text-xs text-gray-400">开始: {m.startTime} {m.endTime && `-> 结束: ${m.endTime}`}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>{m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}{m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天剩余` : '长期'}</span>
+                          <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
+                        </div>
+                      </div>
+                    </div>
+                    )
+                  })
+                )}
+                {endedMeds.length > 0 && (
+                  <div className="mt-6">
+                    <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer hover:text-indigo-600">{isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} 已结束 ({endedMeds.length})</div>
+                    {isEndedExpanded && endedMeds.map(m => (
+                      <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70 hover:opacity-100 hover:shadow-md cursor-pointer transition-all relative">
+                        <div className="font-medium text-gray-700">{m.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{m.startTime} - {m.endTime}</div>
+                        <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="absolute bottom-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
                       </div>
                     ))}
-                    {endedMeds.length > 0 && (
-                      <div className="mt-6">
-                        <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer hover:text-indigo-600">{isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} 已结束 ({endedMeds.length})</div>
-                        {isEndedExpanded && endedMeds.map(m => (
-                          <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70 hover:opacity-100 hover:shadow-md cursor-pointer transition-all relative">
-                            <div className="font-medium text-gray-700">{m.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">{m.startTime} - {m.endTime}</div>
-                            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(m.id); }} className="absolute bottom-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {meds.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div><p>暂无服药计划</p></div>}
-                    
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
-                      <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
-                        <Icons.Plus size={24}/>
-                      </button>
-                    </div>
-                  </>
+                  </div>
                 )}
-                
-                {/* 药品目录内容 */}
-                {medSubTab === 'catalog' && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      {catalog.map(i => (
-                        <div key={i.id} onClick={() => { setCatalogInput({...i}); setEditingId(i.id); setShowCatalogForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow relative">
-                          <div className="font-bold text-base mb-1">{i.name}</div>
-                          {i.brand && <div className="text-xs text-indigo-600 mb-1">{i.brand}</div>}
-                          <div className="text-sm text-gray-500">{i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{i.dosageForm}</span>}{i.strength}{i.unit}{i.packageSize && <span className="text-gray-400"> ×{i.packageSize}</span>}</div>
-                          {i.price && <div className="text-sm font-bold text-green-600 mt-1">¥{i.price}</div>}
-                          <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
-                        </div>
-                      ))}
-                    </div>
-                    {catalog.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Library size={48}/></div><p>暂无药品</p></div>}
-                    
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
-                      <button onClick={() => { setEditingId(null); setCatalogInput({name:'',brand:'',dosageForm:'片剂',price:'',strength:'',unit:'mg',packageSize:''}); setShowCatalogForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
-                        <Icons.Plus size={24}/>
-                      </button>
-                    </div>
-                  </>
-                )}
+                {meds.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div><p>暂无服药计划</p></div>}
               </>
             )}
 
-
-            {/* Settings Tab - 设置 */}
-            {activeTab === 'settings' && (
-              <div className="space-y-4">
-                {/* 用户信息卡片 */}
-                <div className="bg-white rounded-xl shadow-sm border p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <Icons.User size={24} className="text-indigo-600"/>
+            {/* Catalog Tab */}
+            {activeTab === 'catalog' && (
+              viewMode === 'card' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {catalog.map(i => (
+                    <div key={i.id} onClick={() => { setCatalogInput({...i}); setEditingId(i.id); setShowCatalogForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow relative">
+                      <div className="font-bold text-base mb-1">{i.name}</div>
+                      {i.brand && <div className="text-xs text-indigo-600 mb-1">{i.brand}</div>}
+                      <div className="text-sm text-gray-500">{i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{i.dosageForm}</span>}{i.strength}{i.unit}{i.packageSize && <span className="text-gray-400"> ×{i.packageSize}</span>}</div>
+                      {i.price && <div className="text-sm font-bold text-green-600 mt-1">Â¥{i.price}</div>}
+                      <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-3 right-3 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={16}/></button>
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-base">{currentUser?.username}</div>
-                      <div className="text-xs text-gray-500">
-                        {syncStatus === 'synced' && lastSyncTime ? (
-                          <span className="text-green-600">● 已同步 {lastSyncTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</span>
-                        ) : syncStatus === 'error' ? (
-                          <span className="text-red-600">● 同步失败</span>
-                        ) : syncStatus === 'syncing' ? (
-                          <span className="text-blue-600">● 同步中...</span>
-                        ) : (
-                          <span className="text-gray-400">● 未同步</span>
-                        )}
+                  ))}
+                </div>
+              ) : (
+                catalog.map(i => (
+                  <div key={i.id} onClick={() => { setCatalogInput({...i}); setEditingId(i.id); setShowCatalogForm(true); }} className="bg-white p-4 mb-3 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow relative">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-lg mb-0.5">{i.name}</div>
+                        <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
+                          {i.brand && <span className="text-indigo-600 font-medium">{i.brand}</span>}
+                          {i.dosageForm && <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{i.dosageForm}</span>}
+                          <span>{i.strength}{i.unit}{i.packageSize && ` ×${i.packageSize}`}</span>
+                        </div>
                       </div>
+                      {i.price && <div className="text-base font-bold text-green-600">Â¥{i.price}</div>}
                     </div>
+                    <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(i.id); }} className="absolute top-4 right-4 text-gray-300 hover:text-rose-500"><Icons.Trash2 size={18}/></button>
                   </div>
-                </div>
+                ))
+              )
+            )}
 
-                {/* 云端同步 */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b">
-                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <Icons.Cloud size={18} className="text-indigo-600"/>
-                      云端同步
-                    </h3>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => saveToCloud(currentUser.objectId, sessionToken, true)}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between border-b"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.Cloud size={18} className="text-gray-600"/>
-                      <span>手动同步到云端</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      if(confirm('确定要从云端恢复数据吗?\n本地未同步的数据可能会丢失。')) {
-                        loadFromCloud(currentUser.objectId, sessionToken);
-                      }
-                    }}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.Download size={18} className="text-gray-600"/>
-                      <span>从云端恢复</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                </div>
-
-                {/* 本地备份 */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b">
-                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <Icons.Download size={18} className="text-green-600"/>
-                      本地备份
-                    </h3>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={handleBackup}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between border-b"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.Download size={18} className="text-gray-600"/>
-                      <span>备份到本地</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowRestoreModal(true)}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.FileJson size={18} className="text-gray-600"/>
-                      <span>从本地恢复</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                </div>
-
-                {/* 系统设置 */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b">
-                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <Icons.Settings size={18} className="text-purple-600"/>
-                      系统设置
-                    </h3>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowDictionaryModal(true)}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between border-b"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.Library size={18} className="text-gray-600"/>
-                      <span>医学指标词典</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowSettingsModal(true)}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.Settings size={18} className="text-gray-600"/>
-                      <span>AI识别设置</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-gray-400"/>
-                  </button>
-                </div>
-
-                {/* 测试环境配置 - 仅测试环境显示 */}
-                {CURRENT_ENV === 'test' && (
-                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b">
-                      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                        <Icons.AlertTriangle size={18} className="text-orange-600"/>
-                        测试环境配置
-                      </h3>
-                    </div>
-                    <div className="px-4 py-3 bg-orange-50 border-b">
-                      <div className="flex items-start gap-2">
-                        <Icons.Info size={16} className="text-orange-600 mt-0.5 flex-shrink-0"/>
-                        <div className="text-xs text-orange-800">
-                          <div className="font-bold mb-1">配置存储在浏览器本地</div>
-                          <div className="text-orange-700">
-                            • 每个浏览器独立存储（Chrome/Safari/Firefox）<br/>
-                            • 换浏览器或设备需要重新配置<br/>
-                            • 清除浏览器数据会删除配置
+            {/* Labs Tab */}
+            {activeTab === 'labs' && (
+              <div className="space-y-3 pb-24">
+                {labReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div><p>暂无检测报告</p></div>}
+                {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
+                  const isExpanded = expandedReports[report.id];
+                  const abnormalCount = report.items.filter(i => i.flag !== 'Normal').length;
+                  return (
+                    <div key={report.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                      <div onClick={() => setExpandedReports(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div className="flex-1">
+                          <div className="font-bold text-base mb-0.5">{report.date}</div>
+                          <div className="text-xs text-gray-500">{report.hospital}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {abnormalCount > 0 ? (
+                            <div className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded flex items-center gap-1">
+                              <Icons.AlertTriangle size={12}/>{abnormalCount}项
+                            </div>
+                          ) : (
+                            <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
+                              <Icons.Check size={12}/>正常
+                            </div>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                            <Icons.Edit size={14}/>
+                          </button>
+                          <div className="text-gray-400">
+                            {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="px-4 py-3 border-b">
-                      <div className="text-xs text-gray-500 mb-2">当前配置状态</div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">AppID:</span>
-                          <span className="text-gray-800 font-mono">{LC_CONFIG.appId.substring(0, 20)}...</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">ServerURL:</span>
-                          <span className="text-gray-800 font-mono text-[10px]">{LC_CONFIG.serverURL}</span>
-                        </div>
+                      {isExpanded && (
+                        <div className="px-2 pb-2 border-t bg-slate-50">
+                          {report.items.map((item, idx) => {
+                            const isSelected = selectedTrendItems.includes(item.name);
+                            const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : '';
+                            return (
+                              <div key={idx} onClick={(e) => toggleTrendItem(item.name, e)} className={`flex justify-between items-center p-2.5 text-xs border-b last:border-0 cursor-pointer rounded-lg mb-0.5 ${isSelected ? 'bg-indigo-50 ring-1 ring-indigo-500' : 'hover:bg-gray-50'}`}>
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'}`}>{isSelected && <Icons.Check size={10} className="text-white"/>}</div>
+                                  <span className={`truncate text-sm ${item.flag !== 'Normal' ? flagColor + ' font-bold' : 'text-slate-700 font-normal'}`}>{item.name}</span>
+                                  {hasInfo(item.name) && <button onClick={(e) => handleInfoClick(item.name, e)} className="text-gray-400 hover:text-indigo-500 shrink-0"><Icons.Info size={12}/></button>}
+                                  <span className="text-[10px] text-gray-400 shrink-0 ml-1 font-normal">{item.refRange} {item.unit}</span>
+                                </div>
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <span className={`text-sm ${item.flag !== 'Normal' ? 'font-bold ' + flagColor : 'font-normal text-slate-700'}`}>{item.result}</span>
+                                  {item.flag === 'High' && <span className={`${flagColor} text-xs font-bold`}>↑</span>}
+                                  {item.flag === 'Low' && <span className={`${flagColor} text-xs font-bold`}>↓</span>}
+                                </div>
+                              </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        localStorage.removeItem('health_pro_test_leancloud_config');
-                        localStorage.removeItem('health_pro_test_config_skipped');
-                        if(confirm('配置已清除！\n页面将刷新以重新配置。')) {
-                          window.location.reload();
-                        }
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between text-orange-600"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icons.RefreshCw size={18}/>
-                        <span>重新配置测试环境</span>
-                      </div>
-                      <Icons.ChevronRight size={16} className="text-orange-400"/>
-                    </button>
-                  </div>
-                )}
-
-                {/* 账户 */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b">
-                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <Icons.User size={18} className="text-orange-600"/>
-                      账户
-                    </h3>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={handleLogout}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between text-red-500"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icons.LogOut size={18}/>
-                      <span>退出登录</span>
-                    </div>
-                    <Icons.ChevronRight size={16} className="text-red-400"/>
-                  </button>
-                </div>
-
-                {/* 版本信息 */}
-                <div className="text-center text-xs text-gray-400 py-4">
-                  <div>健康管家 Pro {VERSION}</div>
-                  <div className="mt-1">© 2024 All Rights Reserved</div>
-                </div>
+                    );
+                  })}
               </div>
             )}
 
-
+            {/* Imaging Tab */}
+            {activeTab === 'imaging' && (
+              <div className="space-y-3 pb-24">
+                {imagingReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileImage size={48}/></div><p>暂无检查报告</p></div>}
+                {imagingReports.map(report => {
+                  const isExpanded = expandedImaging[report.id];
+                  return (
+                    <div key={report.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                      <div onClick={() => setExpandedImaging(p => ({...p, [report.id]: !p[report.id]}))} className="bg-slate-50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2"><span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{report.modality}</span><span className="font-bold text-sm">{report.region}</span></div>
+                          <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
+                          {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="p-4 text-sm">
+                          <div className="mb-4"><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">影像所见</h4><p className="text-gray-700">{report.findings}</p></div>
+                          <div><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">诊断意见</h4><p className="bg-indigo-50 p-3 rounded-lg font-medium text-indigo-900">{report.impression}</p></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </main>
-
-          {/* Bottom Tab Bar */}
-          <div className="bg-white border-t flex p-1 shrink-0 overflow-x-auto shadow-lg">
-            {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'meds',label:'用药',Icon:Icons.Activity},{id:'exams',label:'检查',Icon:Icons.FileSpreadsheet},{id:'settings',label:'设置',Icon:Icons.Settings}].map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); }} className={`flex-1 min-w-[60px] py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === tab.id ? 'text-indigo-600' : 'text-gray-400'}`}>
-                <tab.Icon size={20}/>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
 
           {/* Vitals Form Modal - 健康指标录入 */}
           {showVitalsForm && (
