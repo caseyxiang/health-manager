@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.25</title>
+  <title>健康管家 Pro v16.27</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -246,7 +246,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.26";
+    const VERSION = "v16.27";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -3985,95 +3985,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             )}
 
 
-            {activeTab === 'labs' && (
-              <div className="space-y-3 pb-24">
-                {labReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div><p>暂无检测报告</p></div>}
-                {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
-                  const isExpanded = expandedReports[report.id];
-                  const abnormalCount = report.items.filter(i => i.flag !== 'Normal').length;
-                  return (
-                    <div key={report.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                      <div onClick={() => setExpandedReports(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors">
-                        <div className="flex-1">
-                          <div className="font-bold text-base mb-0.5">{report.date}</div>
-                          <div className="text-xs text-gray-500">{report.hospital}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {abnormalCount > 0 ? (
-                            <div className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded flex items-center gap-1">
-                              <Icons.AlertTriangle size={12}/>{abnormalCount}项
-                            </div>
-                          ) : (
-                            <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded flex items-center gap-1">
-                              <Icons.Check size={12}/>正常
-                            </div>
-                          )}
-                          <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
-                            <Icons.Edit size={14}/>
-                          </button>
-                          <div className="text-gray-400">
-                            {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
-                          </div>
-                        </div>
-                      </div>
-                      {isExpanded && (
-                        <div className="px-2 pb-2 border-t bg-slate-50">
-                          {report.items.map((item, idx) => {
-                            const isSelected = selectedTrendItems.includes(item.name);
-                            const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : '';
-                            return (
-                              <div key={idx} onClick={(e) => toggleTrendItem(item.name, e)} className={`flex justify-between items-center p-2.5 text-xs border-b last:border-0 cursor-pointer rounded-lg mb-0.5 ${isSelected ? 'bg-indigo-50 ring-1 ring-indigo-500' : 'hover:bg-gray-50'}`}>
-                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                  <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'}`}>{isSelected && <Icons.Check size={10} className="text-white"/>}</div>
-                                  <span className={`truncate text-sm ${item.flag !== 'Normal' ? flagColor + ' font-bold' : 'text-slate-700 font-normal'}`}>{item.name}</span>
-                                  {hasInfo(item.name) && <button onClick={(e) => handleInfoClick(item.name, e)} className="text-gray-400 hover:text-indigo-500 shrink-0"><Icons.Info size={12}/></button>}
-                                  <span className="text-[10px] text-gray-400 shrink-0 ml-1 font-normal">{item.refRange} {item.unit}</span>
-                                </div>
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <span className={`text-sm ${item.flag !== 'Normal' ? 'font-bold ' + flagColor : 'font-normal text-slate-700'}`}>{item.result}</span>
-                                  {item.flag === 'High' && <span className={`${flagColor} text-xs font-bold`}>↑</span>}
-                                  {item.flag === 'Low' && <span className={`${flagColor} text-xs font-bold`}>↓</span>}
-                                </div>
-                              </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-
-            {/* Imaging Tab */}
-            {activeTab === 'imaging' && (
-              <div className="space-y-3 pb-24">
-                {imagingReports.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileImage size={48}/></div><p>暂无检查报告</p></div>}
-                {imagingReports.map(report => {
-                  const isExpanded = expandedImaging[report.id];
-                  return (
-                    <div key={report.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                      <div onClick={() => setExpandedImaging(p => ({...p, [report.id]: !p[report.id]}))} className="bg-slate-50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition-colors">
-                        <div>
-                          <div className="flex items-center gap-2"><span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{report.modality}</span><span className="font-bold text-sm">{report.region}</span></div>
-                          <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setEditingId(report.id); setScanEditData(JSON.parse(JSON.stringify(report))); setShowScanModal(true); }} className="p-1 text-gray-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
-                          {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
-                        </div>
-                      </div>
-                      {isExpanded && (
-                        <div className="p-4 text-sm">
-                          <div className="mb-4"><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">影像所见</h4><p className="text-gray-700">{report.findings}</p></div>
-                          <div><h4 className="text-xs font-bold text-gray-400 uppercase mb-1">诊断意见</h4><p className="bg-indigo-50 p-3 rounded-lg font-medium text-indigo-900">{report.impression}</p></div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </main>
 
           {/* Vitals Form Modal - 健康指标录入 */}
