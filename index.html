@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.32</title>
+  <title>健康管家 Pro v16.33</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +265,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.32";
+    const VERSION = "v16.33";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -305,21 +305,69 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       }
     };
     
+    // 验证配置是否有效
+    const validateConfig = (config) => {
+      if (!config) return false;
+      
+      // 检查必需字段
+      if (!config.appId || !config.appKey || !config.serverURL) {
+        console.warn('⚠️ [配置验证] 缺少必需字段');
+        return false;
+      }
+      
+      // 检查AppID格式（应该是xxxx-gzGzoHsz格式）
+      if (!config.appId.includes('-') || config.appId.length < 20) {
+        console.warn('⚠️ [配置验证] AppID格式错误:', config.appId);
+        return false;
+      }
+      
+      // 检查AppKey不为空且长度合理
+      if (config.appKey.length < 10) {
+        console.warn('⚠️ [配置验证] AppKey格式错误');
+        return false;
+      }
+      
+      // 检查ServerURL格式
+      if (!config.serverURL.startsWith('https://') || !config.serverURL.includes('.lc-cn-')) {
+        console.warn('⚠️ [配置验证] ServerURL格式错误:', config.serverURL);
+        return false;
+      }
+      
+      return true;
+    };
+    
     // 尝试从localStorage读取临时覆盖配置（仅用于登录前的特殊配置）
     const loadOverrideConfig = () => {
       if (CURRENT_ENV !== 'test') return null;
+      
       try {
         const saved = localStorage.getItem('health_pro_test_leancloud_override');
         if (saved) {
           const config = JSON.parse(saved);
-          console.log('🔧 [配置] 使用临时覆盖配置');
+          
+          // 验证配置有效性
+          if (!validateConfig(config)) {
+            console.error('❌ [配置] 检测到无效的覆盖配置，已自动忽略');
+            console.error('   AppID:', config.appId);
+            console.error('   AppKey:', config.appKey?.substring(0, 20) + '...');
+            console.error('   ServerURL:', config.serverURL);
+            console.log('💡 [配置] 建议：在登录界面点击"清理错误配置"按钮');
+            
+            // 标记为无效配置（用于UI显示警告）
+            window._invalidOverrideConfig = config;
+            return null;
+          }
+          
+          console.log('🔧 [配置] 使用临时覆盖配置（已验证）');
           console.log('🔧 [配置] 覆盖AppID:', config.appId.substring(0, 20) + '...');
           console.log('🔧 [配置] 覆盖ServerURL:', config.serverURL);
           return config;
         }
       } catch (e) {
         console.warn('⚠️ [配置] localStorage读取失败:', e);
+        window._invalidOverrideConfig = true;
       }
+      
       console.log('📝 [配置] 未找到覆盖配置，使用默认硬编码配置');
       return null;
     };
@@ -3379,41 +3427,76 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     
                     {showTestConfigModal && (
                       <div className="mt-3 space-y-3 p-3 bg-gray-50 rounded-xl">
+                        {/* 错误配置警告 */}
+                        {window._invalidOverrideConfig && (
+                          <div className="p-3 bg-red-50 border-2 border-red-300 rounded-lg animate-pulse">
+                            <div className="flex items-start gap-2 mb-2">
+                              <Icons.AlertTriangle size={18} className="text-red-600 flex-shrink-0 mt-0.5"/>
+                              <div>
+                                <div className="text-sm font-bold text-red-800">检测到无效配置！</div>
+                                <div className="text-xs text-red-700 mt-1">
+                                  localStorage中存在错误的覆盖配置，已被系统自动忽略。<br/>
+                                  当前使用的是默认硬编码配置。
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                localStorage.removeItem('health_pro_test_leancloud_override');
+                                alert('✅ 错误配置已清理！\n\n页面将刷新。');
+                                window.location.reload();
+                              }}
+                              className="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Icons.Trash2 size={14}/>
+                              立即清理错误配置
+                            </button>
+                          </div>
+                        )}
+                        
                         {/* 诊断信息 */}
-                        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="text-xs font-bold text-blue-800 mb-2">🔍 当前配置诊断</div>
-                          <div className="space-y-1 text-[10px] text-blue-900 font-mono">
+                        <div className={`mb-3 p-3 border rounded-lg ${window._invalidOverrideConfig ? 'bg-yellow-50 border-yellow-300' : 'bg-blue-50 border-blue-200'}`}>
+                          <div className={`text-xs font-bold mb-2 ${window._invalidOverrideConfig ? 'text-yellow-800' : 'text-blue-800'}`}>
+                            🔍 当前配置诊断
+                          </div>
+                          <div className={`space-y-1 text-[10px] font-mono ${window._invalidOverrideConfig ? 'text-yellow-900' : 'text-blue-900'}`}>
                             <div className="flex justify-between">
-                              <span className="text-blue-600">环境:</span>
+                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>环境:</span>
                               <span className="font-bold">{CURRENT_ENV}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-blue-600">域名:</span>
+                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>域名:</span>
                               <span className="truncate ml-2">{window.location.hostname}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-blue-600">PWA模式:</span>
+                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>PWA模式:</span>
                               <span className="font-bold">{window.matchMedia('(display-mode: standalone)').matches ? '是' : '否'}</span>
                             </div>
-                            <div className="border-t border-blue-300 my-1 pt-1">
-                              <div className="text-blue-700 font-bold mb-1">实际使用的配置:</div>
+                            <div className={`border-t my-1 pt-1 ${window._invalidOverrideConfig ? 'border-yellow-300' : 'border-blue-300'}`}>
+                              <div className={`font-bold mb-1 ${window._invalidOverrideConfig ? 'text-yellow-700' : 'text-blue-700'}`}>
+                                实际使用的配置 {window._invalidOverrideConfig && '(默认硬编码)'}:
+                              </div>
                               <div className="flex justify-between">
-                                <span className="text-blue-600">AppID:</span>
+                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>AppID:</span>
                                 <span className="truncate ml-2">{LC_CONFIG.appId.substring(0, 20)}...</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-blue-600">AppKey:</span>
+                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>AppKey:</span>
                                 <span className="truncate ml-2">{LC_CONFIG.appKey.substring(0, 20)}...</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-blue-600">ServerURL:</span>
+                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>ServerURL:</span>
                                 <span className="truncate ml-2 text-[9px]">{LC_CONFIG.serverURL}</span>
                               </div>
                             </div>
-                            <div className="border-t border-blue-300 my-1 pt-1">
+                            <div className={`border-t my-1 pt-1 ${window._invalidOverrideConfig ? 'border-yellow-300' : 'border-blue-300'}`}>
                               <div className="flex justify-between">
-                                <span className="text-blue-600">覆盖配置:</span>
-                                <span className="font-bold">{localStorage.getItem('health_pro_test_leancloud_override') ? '已设置' : '未设置'}</span>
+                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>覆盖配置:</span>
+                                <span className={`font-bold ${window._invalidOverrideConfig ? 'text-red-600' : ''}`}>
+                                  {localStorage.getItem('health_pro_test_leancloud_override') ? 
+                                    (window._invalidOverrideConfig ? '已设置(无效)' : '已设置(有效)') : 
+                                    '未设置'}
+                                </span>
                               </div>
                             </div>
                           </div>
