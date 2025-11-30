@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.31</title>
+  <title>健康管家 Pro v16.36-数据保护版</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +265,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.31";
+    const VERSION = "v16.36-数据保护版";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -443,13 +443,38 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
             lastActiveTime: keepRecord.lastActiveTime,
           };
           
-          // 用data中提供的字段覆盖
+          // 🛡️ 数据保护：用data中提供的字段覆盖，但防止空数据覆盖非空数据
           Object.keys(data).forEach(key => {
-            updateData[key] = data[key];
+            const newValue = data[key];
+            const oldValue = updateData[key];
+            
+            // 特殊保护：members和memberData
+            if (key === 'members') {
+              // 如果新数据是空数组，且旧数据不是空数组，保留旧数据
+              if (Array.isArray(newValue) && newValue.length === 0 && 
+                  Array.isArray(oldValue) && oldValue.length > 0) {
+                console.warn('⚠️ [数据保护] 检测到空的members数组，保留云端数据');
+                return; // 不覆盖
+              }
+            }
+            
+            if (key === 'memberData') {
+              // 如果新数据是空对象，且旧数据不是空对象，保留旧数据
+              const isNewEmpty = typeof newValue === 'object' && Object.keys(newValue).length === 0;
+              const isOldEmpty = typeof oldValue === 'object' && Object.keys(oldValue).length === 0;
+              if (isNewEmpty && !isOldEmpty) {
+                console.warn('⚠️ [数据保护] 检测到空的memberData对象，保留云端数据');
+                return; // 不覆盖
+              }
+            }
+            
+            // 正常更新
+            updateData[key] = newValue;
           });
           
           console.log('🔄 [saveUserData] PUT更新 - 更新字段:', Object.keys(data).join(', '));
           console.log('🔄 [saveUserData] PUT更新 - deviceId:', updateData.deviceId);
+          console.log('🛡️ [数据保护] members数量:', updateData.members?.length || 0);
           return this.request(`/classes/UserData/${keepRecord.objectId}`, 'PUT', updateData, sessionToken);
         } else {
           // 创建新记录
