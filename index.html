@@ -64,6 +64,24 @@
       min-height: 100vh;
       min-height: 100dvh;
     }
+    
+    /* 日历样式 */
+    .calendar-wrapper {
+      position: relative;
+    }
+    .calendar-container {
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+    }
+    .calendar-container::-webkit-scrollbar {
+      display: none;
+    }
+    .calendar-week {
+      scroll-snap-align: center;
+    }
   </style>
 
   <script>
@@ -1495,6 +1513,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       // 子Tab状态
       const [medSubTab, setMedSubTab] = useState('plan'); // 'plan' | 'catalog'
       const [examSubTab, setExamSubTab] = useState('appointment'); // 'appointment' | 'reports'
+      const [calendarWeekOffset, setCalendarWeekOffset] = useState(0); // 日历周偏移
+      const calendarRef = useRef(null); // 日历容器引用
       
       // 成员管理状态（动态加载）
       const [members, setMembers] = useState([]);
@@ -2297,6 +2317,23 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           const finalStart = minDate && calculatedStart < minDate ? minDate : calculatedStart;
           setTrendRange({ start: finalStart, end: maxDate });
         }
+      };
+
+      // 日历周切换
+      const scrollToWeek = (offset) => {
+        if (calendarRef.current) {
+          const weekWidth = calendarRef.current.offsetWidth;
+          calendarRef.current.scrollTo({
+            left: (offset + 1) * weekWidth,
+            behavior: 'smooth'
+          });
+          setCalendarWeekOffset(offset);
+        }
+      };
+
+      // 点击标题定位今天
+      const scrollToToday = () => {
+        scrollToWeek(0);
       };
 
       const setAutoRangeForSelectedItems = () => {
@@ -3545,6 +3582,78 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 {/* 预约内容 */}
                 {examSubTab === 'appointment' && (
                   <>
+                    {/* 周视图日历 */}
+                    <div className="calendar-wrapper mb-4">
+                      {/* 日历左右箭头 */}
+                      <button 
+                        onClick={() => scrollToWeek(calendarWeekOffset - 1)}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 p-2 rounded-r-lg shadow hover:bg-white transition-colors"
+                      >
+                        <Icons.ChevronLeft size={20} className="text-gray-600" />
+                      </button>
+                      <button 
+                        onClick={() => scrollToWeek(calendarWeekOffset + 1)}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 p-2 rounded-l-lg shadow hover:bg-white transition-colors"
+                      >
+                        <Icons.ChevronRight size={20} className="text-gray-600" />
+                      </button>
+
+                      <div 
+                        ref={calendarRef}
+                        className="calendar-container"
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex">
+                          {[-1, 0, 1].map(offset => {
+                            const today = new Date();
+                            const weekStart = new Date(today);
+                            weekStart.setDate(today.getDate() - today.getDay() + offset * 7);
+                            
+                            return (
+                              <div key={offset} className="calendar-week flex-shrink-0 w-full bg-white rounded-2xl p-4 shadow-sm" style={{ marginRight: offset < 1 ? '16px' : '0' }}>
+                                <div 
+                                  onClick={offset === 0 ? undefined : () => scrollToToday()}
+                                  className={`text-center font-bold text-sm mb-3 text-gray-700 ${offset !== 0 ? 'cursor-pointer hover:text-indigo-600 transition-colors' : ''}`}
+                                >
+                                  {weekStart.getMonth() + 1}月 {offset === 0 ? '本周' : offset > 0 ? '下周' : '上周'}
+                                </div>
+                                <div className="grid grid-cols-7 gap-1">
+                                  {['日','一','二','三','四','五','六'].map((d, i) => (
+                                    <div key={i} className="text-center text-xs text-gray-400 mb-2">{d}</div>
+                                  ))}
+                                  {[...Array(7)].map((_, i) => {
+                                    const day = new Date(weekStart);
+                                    day.setDate(weekStart.getDate() + i);
+                                    const isToday = day.toDateString() === today.toDateString();
+                                    const dateStr = getLocalDateStr(day);
+                                    const hasAppointment = checkups.some(c => c.date === dateStr);
+                                    return (
+                                      <div
+                                        key={i}
+                                        className={`text-center py-2 rounded-lg text-sm relative ${
+                                          isToday ? 'bg-indigo-600 text-white font-bold' : 
+                                          hasAppointment ? 'bg-orange-50 text-orange-600 font-medium' : 
+                                          'text-gray-600'
+                                        }`}
+                                      >
+                                        {day.getDate()}
+                                        {hasAppointment && !isToday && (
+                                          <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-orange-500 rounded-full"></div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 预约列表 */}
                     {checkups.map(c => (
                       <div key={c.id} onClick={() => { setCheckupInput({...c}); setEditingId(c.id); setShowCheckupForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 cursor-pointer hover:shadow-md transition-shadow relative">
                         <div className="flex justify-between items-start">
