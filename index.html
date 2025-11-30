@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.31</title>
+  <title>健康管家 Pro v16.37-修复版</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +265,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.31";
+    const VERSION = "v16.37-修复版";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -299,12 +299,12 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         console.warn('⚠️ [配置] localStorage读取失败:', e);
       }
       
-      // 默认占位符配置（触发首次配置提示）
-      console.log('📝 [配置] 使用默认占位符，需要首次配置');
+      // ✅ 使用正确的硬编码测试配置
+      console.log('📝 [配置] 使用硬编码测试配置');
       return {
-        appId: 'cSvyDXnk78NGe5x4jYZLIVEo-gzGzoHsz',
-        appKey: 'JmlbndGNYJuT0jmwEw8sXU7v',
-        serverURL: 'https://csvydxnk.lc-cn-n1-shared.com'
+        appId: 'eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz',
+        appKey: 'SwfVKRpnv4ePuxQzw3aPG0pc',
+        serverURL: 'https://elcaxade.lc-cn-n1-shared.com'
       };
     };
     
