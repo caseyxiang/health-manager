@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.31</title>
+  <title>健康管家 Pro v16.32</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +265,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.31";
+    const VERSION = "v16.32";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -313,22 +313,27 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         if (saved) {
           const config = JSON.parse(saved);
           console.log('🔧 [配置] 使用临时覆盖配置');
+          console.log('🔧 [配置] 覆盖AppID:', config.appId.substring(0, 20) + '...');
+          console.log('🔧 [配置] 覆盖ServerURL:', config.serverURL);
           return config;
         }
       } catch (e) {
         console.warn('⚠️ [配置] localStorage读取失败:', e);
       }
+      console.log('📝 [配置] 未找到覆盖配置，使用默认硬编码配置');
       return null;
     };
     
     // 最终配置：优先使用覆盖配置，否则使用默认配置
     const LC_CONFIG = loadOverrideConfig() || getDefaultConfig();
     
-    if (CURRENT_ENV === 'test') {
-      console.log('✅ [配置] 测试环境配置已加载');
-    }
-    console.log('☁️ [LeanCloud] AppID:', LC_CONFIG.appId.substring(0, 10) + '...');
-    console.log('☁️ [LeanCloud] ServerURL:', LC_CONFIG.serverURL);
+    console.log('☁️ [LeanCloud] 最终配置:');
+    console.log('   环境:', CURRENT_ENV);
+    console.log('   域名:', window.location.hostname);
+    console.log('   PWA模式:', window.matchMedia('(display-mode: standalone)').matches ? '是' : '否');
+    console.log('   AppID:', LC_CONFIG.appId.substring(0, 20) + '...');
+    console.log('   AppKey:', LC_CONFIG.appKey.substring(0, 20) + '...');
+    console.log('   ServerURL:', LC_CONFIG.serverURL);
     
     
     // LeanCloud REST API 封装
@@ -3374,6 +3379,46 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     
                     {showTestConfigModal && (
                       <div className="mt-3 space-y-3 p-3 bg-gray-50 rounded-xl">
+                        {/* 诊断信息 */}
+                        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="text-xs font-bold text-blue-800 mb-2">🔍 当前配置诊断</div>
+                          <div className="space-y-1 text-[10px] text-blue-900 font-mono">
+                            <div className="flex justify-between">
+                              <span className="text-blue-600">环境:</span>
+                              <span className="font-bold">{CURRENT_ENV}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-blue-600">域名:</span>
+                              <span className="truncate ml-2">{window.location.hostname}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-blue-600">PWA模式:</span>
+                              <span className="font-bold">{window.matchMedia('(display-mode: standalone)').matches ? '是' : '否'}</span>
+                            </div>
+                            <div className="border-t border-blue-300 my-1 pt-1">
+                              <div className="text-blue-700 font-bold mb-1">实际使用的配置:</div>
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">AppID:</span>
+                                <span className="truncate ml-2">{LC_CONFIG.appId.substring(0, 20)}...</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">AppKey:</span>
+                                <span className="truncate ml-2">{LC_CONFIG.appKey.substring(0, 20)}...</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">ServerURL:</span>
+                                <span className="truncate ml-2 text-[9px]">{LC_CONFIG.serverURL}</span>
+                              </div>
+                            </div>
+                            <div className="border-t border-blue-300 my-1 pt-1">
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">覆盖配置:</span>
+                                <span className="font-bold">{localStorage.getItem('health_pro_test_leancloud_override') ? '已设置' : '未设置'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
                         <div className="text-xs text-gray-500 mb-2">
                           💡 默认已配置好测试环境，通常无需修改
                         </div>
@@ -3423,6 +3468,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                                   appId, appKey, serverURL
                                 }));
                                 alert('✅ 临时配置已保存！\n\n请刷新页面以应用新配置。');
+                                window.location.reload();
                               }
                             }}
                             className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
@@ -3432,10 +3478,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                           <button
                             onClick={() => {
                               localStorage.removeItem('health_pro_test_leancloud_override');
-                              document.getElementById('override-appid').value = 'eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz';
-                              document.getElementById('override-appkey').value = 'SwfVKRpnv4ePuxQzw3aPG0pc';
-                              document.getElementById('override-serverurl').value = 'https://elcaxade.lc-cn-n1-shared.com';
                               alert('✅ 已恢复默认配置！\n\n请刷新页面。');
+                              window.location.reload();
                             }}
                             className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-300 transition-colors"
                           >
