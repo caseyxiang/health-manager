@@ -357,6 +357,21 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         
         try {
           const response = await fetch(`${LC_CONFIG.serverURL}/1.1${path}`, options);
+          
+          // 检查HTTP状态码
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+              throw new Error(data.error || '用户名或密码错误');
+            } else if (response.status === 404) {
+              throw new Error(data.error || '请求的资源不存在');
+            } else if (response.status >= 500) {
+              throw new Error('服务器错误，请稍后重试');
+            } else {
+              throw new Error(data.error || `请求失败 (${response.status})`);
+            }
+          }
+          
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           return data;
@@ -1576,7 +1591,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         setLoginLoading(true);
         setLoginError('');
         try {
+          console.log('🔐 [登录] 开始登录...');
+          console.log('🌐 [登录] 环境:', CURRENT_ENV);
+          console.log('🌐 [登录] ServerURL:', LC_CONFIG.serverURL);
+          console.log('🌐 [登录] AppID:', LC_CONFIG.appId.substring(0, 10) + '...');
+          
           const user = await LeanCloud.login(loginForm.username.trim(), loginForm.password);
+          console.log('✅ [登录] 登录成功');
           
           // 先设置loading状态和数据加载标记，再设置用户信息
           // 这样可以避免短暂显示默认成员"我"的问题
@@ -1603,6 +1624,12 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           console.error('❌ [登录] 失败:', e);
+          console.error('❌ [登录] 错误详情:', {
+            message: e.message,
+            env: CURRENT_ENV,
+            serverURL: LC_CONFIG.serverURL,
+            appId: LC_CONFIG.appId.substring(0, 10) + '...'
+          });
           
           // 清理用户状态
           localStorage.removeItem('health_pro_user');
