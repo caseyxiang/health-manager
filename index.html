@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.33</title>
+  <title>健康管家 Pro v16.31</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +265,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
     };
 
-    const VERSION = "v16.33";
+    const VERSION = "v16.31";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -286,103 +286,51 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
     console.log('🌍 [环境检测] 当前环境:', CURRENT_ENV);
     console.log('🌍 [环境检测] 域名:', window.location.hostname);
     
-    // 📦 LeanCloud配置 - 根据环境自动选择
-    const getDefaultConfig = () => {
-      if (CURRENT_ENV === 'test') {
-        // ✅ 测试环境默认配置（硬编码）
-        return {
-          appId: 'eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz',
-          appKey: 'SwfVKRpnv4ePuxQzw3aPG0pc',
-          serverURL: 'https://elcaxade.lc-cn-n1-shared.com'
-        };
-      } else {
-        // ✅ 生产环境配置（硬编码）
-        return {
-          appId: 'CRfeDG3VSyidc5qcX3SVtibn-gzGzoHsz',
-          appKey: 'mqv2BXZT7u9GhAwVe7mAO9PL',
-          serverURL: 'https://crfedg3v.lc-cn-n1-shared.com'
-        };
-      }
-    };
-    
-    // 验证配置是否有效
-    const validateConfig = (config) => {
-      if (!config) return false;
-      
-      // 检查必需字段
-      if (!config.appId || !config.appKey || !config.serverURL) {
-        console.warn('⚠️ [配置验证] 缺少必需字段');
-        return false;
-      }
-      
-      // 检查AppID格式（应该是xxxx-gzGzoHsz格式）
-      if (!config.appId.includes('-') || config.appId.length < 20) {
-        console.warn('⚠️ [配置验证] AppID格式错误:', config.appId);
-        return false;
-      }
-      
-      // 检查AppKey不为空且长度合理
-      if (config.appKey.length < 10) {
-        console.warn('⚠️ [配置验证] AppKey格式错误');
-        return false;
-      }
-      
-      // 检查ServerURL格式
-      if (!config.serverURL.startsWith('https://') || !config.serverURL.includes('.lc-cn-')) {
-        console.warn('⚠️ [配置验证] ServerURL格式错误:', config.serverURL);
-        return false;
-      }
-      
-      return true;
-    };
-    
-    // 尝试从localStorage读取临时覆盖配置（仅用于登录前的特殊配置）
-    const loadOverrideConfig = () => {
-      if (CURRENT_ENV !== 'test') return null;
-      
+    // 📦 智能配置加载 - 优先从localStorage读取测试配置
+    const loadTestConfig = () => {
       try {
-        const saved = localStorage.getItem('health_pro_test_leancloud_override');
+        const saved = localStorage.getItem('health_pro_test_leancloud_config');
         if (saved) {
           const config = JSON.parse(saved);
-          
-          // 验证配置有效性
-          if (!validateConfig(config)) {
-            console.error('❌ [配置] 检测到无效的覆盖配置，已自动忽略');
-            console.error('   AppID:', config.appId);
-            console.error('   AppKey:', config.appKey?.substring(0, 20) + '...');
-            console.error('   ServerURL:', config.serverURL);
-            console.log('💡 [配置] 建议：在登录界面点击"清理错误配置"按钮');
-            
-            // 标记为无效配置（用于UI显示警告）
-            window._invalidOverrideConfig = config;
-            return null;
-          }
-          
-          console.log('🔧 [配置] 使用临时覆盖配置（已验证）');
-          console.log('🔧 [配置] 覆盖AppID:', config.appId.substring(0, 20) + '...');
-          console.log('🔧 [配置] 覆盖ServerURL:', config.serverURL);
+          console.log('✅ [配置] 从localStorage加载测试配置');
           return config;
         }
       } catch (e) {
         console.warn('⚠️ [配置] localStorage读取失败:', e);
-        window._invalidOverrideConfig = true;
       }
       
-      console.log('📝 [配置] 未找到覆盖配置，使用默认硬编码配置');
-      return null;
+      // 默认占位符配置（触发首次配置提示）
+      console.log('📝 [配置] 使用默认占位符，需要首次配置');
+      return {
+        appId: 'cSvyDXnk78NGe5x4jYZLIVEo-gzGzoHsz',
+        appKey: 'JmlbndGNYJuT0jmwEw8sXU7v',
+        serverURL: 'https://csvydxnk.lc-cn-n1-shared.com'
+      };
     };
     
-    // 最终配置：优先使用覆盖配置，否则使用默认配置
-    const LC_CONFIG = loadOverrideConfig() || getDefaultConfig();
+    // LeanCloud 配置 - 根据环境自动选择
+    const LC_CONFIG = CURRENT_ENV === 'test' ? loadTestConfig() : {
+      // ✅ 生产环境配置
+      appId: 'CRfeDG3VSyidc5qcX3SVtibn-gzGzoHsz',
+      appKey: 'mqv2BXZT7u9GhAwVe7mAO9PL',
+      serverURL: 'https://crfedg3v.lc-cn-n1-shared.com'
+    };
     
-    console.log('☁️ [LeanCloud] 最终配置:');
-    console.log('   环境:', CURRENT_ENV);
-    console.log('   域名:', window.location.hostname);
-    console.log('   PWA模式:', window.matchMedia('(display-mode: standalone)').matches ? '是' : '否');
-    console.log('   AppID:', LC_CONFIG.appId.substring(0, 20) + '...');
-    console.log('   AppKey:', LC_CONFIG.appKey.substring(0, 20) + '...');
-    console.log('   ServerURL:', LC_CONFIG.serverURL);
+    // 检测是否需要配置
+    const needsTestConfig = CURRENT_ENV === 'test' && (
+      !LC_CONFIG.appId || 
+      LC_CONFIG.appId === '你的测试AppID' ||
+      LC_CONFIG.appId.includes('占位符')
+    );
     
+    // 在控制台显示当前配置（脱敏）
+    console.log('☁️ [LeanCloud] 环境:', CURRENT_ENV);
+    if (needsTestConfig) {
+      console.warn('⚠️ [LeanCloud] 测试环境未配置，请在设置中配置');
+    } else {
+      console.log('☁️ [LeanCloud] AppID:', LC_CONFIG.appId.substring(0, 10) + '...');
+      console.log('☁️ [LeanCloud] ServerURL:', LC_CONFIG.serverURL);
+    }
     
     // LeanCloud REST API 封装
     const LeanCloud = {
@@ -1179,8 +1127,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         return !localStorage.getItem('health_pro_welcomed');
       });
       
-      // 测试环境配置折叠面板
+      // 测试环境配置
       const [showTestConfigModal, setShowTestConfigModal] = useState(false);
+      const [testConfigInput, setTestConfigInput] = useState({
+        appId: '',
+        appKey: '',
+        serverURL: ''
+      });
       
       // 🔥 辅助函数：更新指定成员的指定类型数据
       const updateMemberData = (memberId, dataType, newData) => {
@@ -1423,6 +1376,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       // ===== useEffect 区域开始 =====
       
+      // 检测是否需要首次配置测试环境
+      useEffect(() => {
+        if (needsTestConfig && !localStorage.getItem('health_pro_test_config_skipped')) {
+          // 延迟显示，避免与登录界面冲突
+          const timer = setTimeout(() => {
+            if (!currentUser) { // 只在未登录时显示
+              setShowTestConfigModal(true);
+            }
+          }, 1000);
+          return () => clearTimeout(timer);
+        }
+      }, []);
+      
       // 版本号比较函数
       const compareVersions = (v1, v2) => {
         // 解析版本号 "v16.10" -> [16, 10]
@@ -1515,6 +1481,29 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         checkVersionAndNetwork();
       }, []);
       
+      // 保存测试环境配置
+      const saveTestConfig = () => {
+        if (!testConfigInput.appId || !testConfigInput.appKey || !testConfigInput.serverURL) {
+          alert('请填写完整的配置信息');
+          return;
+        }
+        
+        // 保存到localStorage
+        localStorage.setItem('health_pro_test_leancloud_config', JSON.stringify(testConfigInput));
+        setShowTestConfigModal(false);
+        alert('✅ 测试环境配置已保存！\n\n请刷新页面以应用新配置。');
+        
+        // 自动刷新页面
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      };
+      
+      // 跳过配置（使用占位符）
+      const skipTestConfig = () => {
+        localStorage.setItem('health_pro_test_config_skipped', 'true');
+        setShowTestConfigModal(false);
+      };
       
       // 密码强度计算
       const getPasswordStrength = (pwd) => {
@@ -3410,169 +3399,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     )}
                   </button>
                 </div>
-                
-                {/* 测试环境配置 - 仅测试环境显示 */}
-                {CURRENT_ENV === 'test' && (
-                  <div className="mt-4 border-t pt-4">
-                    <button
-                      onClick={() => setShowTestConfigModal(!showTestConfigModal)}
-                      className="w-full text-sm text-gray-600 hover:text-indigo-600 flex items-center justify-between py-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icons.Settings size={16}/>
-                        <span>高级：测试环境配置</span>
-                      </div>
-                      <Icons.ChevronDown size={16} className={`transition-transform ${showTestConfigModal ? 'rotate-180' : ''}`}/>
-                    </button>
-                    
-                    {showTestConfigModal && (
-                      <div className="mt-3 space-y-3 p-3 bg-gray-50 rounded-xl">
-                        {/* 错误配置警告 */}
-                        {window._invalidOverrideConfig && (
-                          <div className="p-3 bg-red-50 border-2 border-red-300 rounded-lg animate-pulse">
-                            <div className="flex items-start gap-2 mb-2">
-                              <Icons.AlertTriangle size={18} className="text-red-600 flex-shrink-0 mt-0.5"/>
-                              <div>
-                                <div className="text-sm font-bold text-red-800">检测到无效配置！</div>
-                                <div className="text-xs text-red-700 mt-1">
-                                  localStorage中存在错误的覆盖配置，已被系统自动忽略。<br/>
-                                  当前使用的是默认硬编码配置。
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                localStorage.removeItem('health_pro_test_leancloud_override');
-                                alert('✅ 错误配置已清理！\n\n页面将刷新。');
-                                window.location.reload();
-                              }}
-                              className="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                            >
-                              <Icons.Trash2 size={14}/>
-                              立即清理错误配置
-                            </button>
-                          </div>
-                        )}
-                        
-                        {/* 诊断信息 */}
-                        <div className={`mb-3 p-3 border rounded-lg ${window._invalidOverrideConfig ? 'bg-yellow-50 border-yellow-300' : 'bg-blue-50 border-blue-200'}`}>
-                          <div className={`text-xs font-bold mb-2 ${window._invalidOverrideConfig ? 'text-yellow-800' : 'text-blue-800'}`}>
-                            🔍 当前配置诊断
-                          </div>
-                          <div className={`space-y-1 text-[10px] font-mono ${window._invalidOverrideConfig ? 'text-yellow-900' : 'text-blue-900'}`}>
-                            <div className="flex justify-between">
-                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>环境:</span>
-                              <span className="font-bold">{CURRENT_ENV}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>域名:</span>
-                              <span className="truncate ml-2">{window.location.hostname}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>PWA模式:</span>
-                              <span className="font-bold">{window.matchMedia('(display-mode: standalone)').matches ? '是' : '否'}</span>
-                            </div>
-                            <div className={`border-t my-1 pt-1 ${window._invalidOverrideConfig ? 'border-yellow-300' : 'border-blue-300'}`}>
-                              <div className={`font-bold mb-1 ${window._invalidOverrideConfig ? 'text-yellow-700' : 'text-blue-700'}`}>
-                                实际使用的配置 {window._invalidOverrideConfig && '(默认硬编码)'}:
-                              </div>
-                              <div className="flex justify-between">
-                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>AppID:</span>
-                                <span className="truncate ml-2">{LC_CONFIG.appId.substring(0, 20)}...</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>AppKey:</span>
-                                <span className="truncate ml-2">{LC_CONFIG.appKey.substring(0, 20)}...</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>ServerURL:</span>
-                                <span className="truncate ml-2 text-[9px]">{LC_CONFIG.serverURL}</span>
-                              </div>
-                            </div>
-                            <div className={`border-t my-1 pt-1 ${window._invalidOverrideConfig ? 'border-yellow-300' : 'border-blue-300'}`}>
-                              <div className="flex justify-between">
-                                <span className={window._invalidOverrideConfig ? 'text-yellow-600' : 'text-blue-600'}>覆盖配置:</span>
-                                <span className={`font-bold ${window._invalidOverrideConfig ? 'text-red-600' : ''}`}>
-                                  {localStorage.getItem('health_pro_test_leancloud_override') ? 
-                                    (window._invalidOverrideConfig ? '已设置(无效)' : '已设置(有效)') : 
-                                    '未设置'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-500 mb-2">
-                          💡 默认已配置好测试环境，通常无需修改
-                        </div>
-                        
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">AppID</label>
-                          <input 
-                            type="text" 
-                            defaultValue="eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz"
-                            id="override-appid"
-                            placeholder="eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz"
-                            className="w-full p-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">AppKey</label>
-                          <input 
-                            type="text" 
-                            defaultValue="SwfVKRpnv4ePuxQzw3aPG0pc"
-                            id="override-appkey"
-                            placeholder="SwfVKRpnv4ePuxQzw3aPG0pc"
-                            className="w-full p-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">ServerURL</label>
-                          <input 
-                            type="text" 
-                            defaultValue="https://elcaxade.lc-cn-n1-shared.com"
-                            id="override-serverurl"
-                            placeholder="https://elcaxade.lc-cn-n1-shared.com"
-                            className="w-full p-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              const appId = document.getElementById('override-appid').value;
-                              const appKey = document.getElementById('override-appkey').value;
-                              const serverURL = document.getElementById('override-serverurl').value;
-                              
-                              if (appId && appKey && serverURL) {
-                                localStorage.setItem('health_pro_test_leancloud_override', JSON.stringify({
-                                  appId, appKey, serverURL
-                                }));
-                                alert('✅ 临时配置已保存！\n\n请刷新页面以应用新配置。');
-                                window.location.reload();
-                              }
-                            }}
-                            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
-                          >
-                            保存并刷新
-                          </button>
-                          <button
-                            onClick={() => {
-                              localStorage.removeItem('health_pro_test_leancloud_override');
-                              alert('✅ 已恢复默认配置！\n\n请刷新页面。');
-                              window.location.reload();
-                            }}
-                            className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-300 transition-colors"
-                          >
-                            恢复默认
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
               
               {/* 功能亮点 */}
@@ -4381,6 +4207,61 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     <Icons.ChevronRight size={16} className="text-gray-400"/>
                   </button>
                 </div>
+
+                {/* 测试环境配置 - 仅测试环境显示 */}
+                {CURRENT_ENV === 'test' && (
+                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b">
+                      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <Icons.AlertTriangle size={18} className="text-orange-600"/>
+                        测试环境配置
+                      </h3>
+                    </div>
+                    <div className="px-4 py-3 bg-orange-50 border-b">
+                      <div className="flex items-start gap-2">
+                        <Icons.Info size={16} className="text-orange-600 mt-0.5 flex-shrink-0"/>
+                        <div className="text-xs text-orange-800">
+                          <div className="font-bold mb-1">配置存储在浏览器本地</div>
+                          <div className="text-orange-700">
+                            • 每个浏览器独立存储（Chrome/Safari/Firefox）<br/>
+                            • 换浏览器或设备需要重新配置<br/>
+                            • 清除浏览器数据会删除配置
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 border-b">
+                      <div className="text-xs text-gray-500 mb-2">当前配置状态</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">AppID:</span>
+                          <span className="text-gray-800 font-mono">{LC_CONFIG.appId.substring(0, 20)}...</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">ServerURL:</span>
+                          <span className="text-gray-800 font-mono text-[10px]">{LC_CONFIG.serverURL}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        localStorage.removeItem('health_pro_test_leancloud_config');
+                        localStorage.removeItem('health_pro_test_config_skipped');
+                        if(confirm('配置已清除！\n页面将刷新以重新配置。')) {
+                          window.location.reload();
+                        }
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between text-orange-600"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icons.RefreshCw size={18}/>
+                        <span>重新配置测试环境</span>
+                      </div>
+                      <Icons.ChevronRight size={16} className="text-orange-400"/>
+                    </button>
+                  </div>
+                )}
 
                 {/* 账户 */}
                 <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -5257,6 +5138,29 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   </div>
                 </div>
 
+                {/* 测试环境配置 */}
+                {CURRENT_ENV === 'test' && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 flex items-center gap-2">
+                      🧪 测试环境配置
+                    </h4>
+                    <button 
+                      onClick={() => {
+                        // 读取当前配置
+                        const currentConfig = loadTestConfig();
+                        setTestConfigInput(currentConfig);
+                        setShowTestConfigModal(true);
+                      }} 
+                      className="w-full py-3 bg-orange-50 text-orange-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-orange-200 hover:bg-orange-100"
+                    >
+                      <Icons.Settings size={16}/> 配置测试环境LeanCloud
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      {needsTestConfig ? '⚠️ 尚未配置' : '✅ 已配置'}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">数据管理</h4>
                   <button onClick={() => setShowResetConfirm(true)} className="w-full py-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-rose-100 hover:bg-rose-100">
@@ -5470,6 +5374,99 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 >
                   立即返回登录
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* 测试环境配置模态框 */}
+          {showTestConfigModal && (
+            <div className="absolute inset-0 z-[170] bg-black/70 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      🧪
+                    </div>
+                    <h3 className="text-lg font-bold">测试环境配置</h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowTestConfigModal(false)} 
+                    className="p-1 bg-gray-100 rounded-full hover:bg-gray-200"
+                  >
+                    <Icons.X size={16}/>
+                  </button>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    <strong>首次配置</strong>：配置后将保存到浏览器，以后所有新版本都会自动使用此配置。
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 AppID *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.appId}
+                      onChange={e => setTestConfigInput({...testConfigInput, appId: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="xxxxx-gzGzoHsz"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 AppKey *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.appKey}
+                      onChange={e => setTestConfigInput({...testConfigInput, appKey: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="xxxxxxxxxxxxx"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-2">
+                      测试 API 域名 *
+                    </label>
+                    <input 
+                      type="text"
+                      value={testConfigInput.serverURL}
+                      onChange={e => setTestConfigInput({...testConfigInput, serverURL: e.target.value})}
+                      className="w-full p-3 border rounded-xl text-sm font-mono"
+                      placeholder="https://xxxxx.lc-cn-n1-shared.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-blue-800">
+                    <strong>📖 如何获取：</strong><br/>
+                    1. 登录 <a href="https://console.leancloud.cn" target="_blank" className="underline">console.leancloud.cn</a><br/>
+                    2. 创建应用：「健康管家Pro-测试」<br/>
+                    3. 设置 → 应用凭证 → 复制配置
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={skipTestConfig}
+                    className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200"
+                  >
+                    稍后配置
+                  </button>
+                  <button 
+                    onClick={saveTestConfig}
+                    className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 shadow-lg"
+                  >
+                    保存配置
+                  </button>
+                </div>
               </div>
             </div>
           )}
