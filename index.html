@@ -29,13 +29,11 @@
       margin: 0; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
       background: #f1f5f9;
-      /* 支持 iPhone 刘海屏安全区域 */
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
     }
-    /* 防止 iOS 橡皮筋效果 - Safari兼容 */
     html {
       height: 100%;
       overflow: hidden;
@@ -43,9 +41,9 @@
     body { 
       margin: 0;
       height: 100vh;
-      height: 100dvh; /* 动态视口高度,更现代的方式 */
+      height: 100dvh;
       overflow: hidden;
-      overscroll-behavior: none; /* 防止橡皮筋效果 */
+      overscroll-behavior: none;
     }
     #root {
       height: 100%;
@@ -54,18 +52,16 @@
       flex-direction: column;
     }
     
-    /* Safari 特定修复 */
     .is-safari #root > div {
       min-height: -webkit-fill-available;
     }
     
-    /* 确保在所有浏览器中正确填充 */
     #root > div {
       min-height: 100vh;
       min-height: 100dvh;
     }
     
-    /* Gemini动画效果 */
+    /* Gemini UI动画 */
     @keyframes fade-in {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -84,11 +80,9 @@
     }
     .animate-modal-up { animation: modal-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
-    /* 无滚动条 */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* 日历样式 */
     .calendar-wrapper {
       position: relative;
     }
@@ -3485,11 +3479,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           )}
           
           {/* Header */}
-          <header className="bg-white px-4 pt-6 pb-2 shadow-sm shrink-0 z-10 flex justify-between items-center relative">
-            <div className="flex flex-col">
-              <p className="text-xs text-slate-400 font-medium">{new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}</p>
-              <h1 className="text-xl font-bold text-slate-800 flex items-center gap-1.5">
-                早安, {currentMember?.name || '用户'}
+          <header className="bg-white text-slate-800 px-4 pt-6 pb-4 shadow-sm shrink-0 z-10 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold flex items-center gap-1.5">
+                <Icons.Activity size={18} className="text-teal-600"/> 健康管家 
                 <span className="text-xs font-normal text-slate-400">{VERSION}</span>
                 {CURRENT_ENV === 'test' && <span className="text-[10px] bg-orange-400 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">测试</span>}
               </h1>
@@ -3497,7 +3490,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
               {currentUser && (
                 <button 
                   onClick={() => saveToCloud(currentUser.objectId, sessionToken, true)} 
-                  className={`absolute top-2 right-16 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
+                  className={`ml-1 p-1 rounded-full transition-all ${syncStatus === 'syncing' ? 'animate-pulse' : ''}`}
                   title={
                     !isOnline ? '⚠️ 离线中 - 数据仅保存在本地' : 
                     syncStatus === 'synced' ? `✅ 已同步 ${lastSyncTime ? '\n上次同步: ' + lastSyncTime.toLocaleTimeString('zh-CN') : ''}` : 
@@ -3510,13 +3503,13 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </button>
               )}
             </div>
-            <div className="relative">
+            <div className="flex items-center gap-2">
               {/* 成员切换按钮 */}
               {currentMember ? (
                 <button 
                   type="button" 
                   onClick={(e) => { e.stopPropagation(); setShowMemberMenu(!showMemberMenu); }} 
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-transform ${showMemberMenu ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${showMemberMenu ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
                   style={{ backgroundColor: currentMemberColor.hex, color: 'white' }}
                 >
                   {currentMember.name.charAt(0)}
@@ -3531,8 +3524,11 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
 
           {/* 成员切换下拉菜单 */}
           {showMemberMenu && (
-            <div className="absolute right-4 top-20 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in" onClick={e => e.stopPropagation()}>
-              <p className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">切换成员</p>
+            <div className="absolute right-4 top-20 w-56 bg-white rounded-xl shadow-xl border z-50" onClick={e => e.stopPropagation()}>
+              <div className="px-4 py-2 text-xs font-bold text-gray-400 bg-gray-50 rounded-t-xl flex justify-between items-center">
+                <span>切换成员</span>
+                <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded">{members.length}人</span>
+              </div>
               <div className="max-h-60 overflow-y-auto">
                 {members.map(member => {
                   const memberColor = MEMBER_COLORS.find(c => c.id === member.color) || MEMBER_COLORS[0];
@@ -3542,28 +3538,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       key={member.id}
                       type="button" 
                       onClick={() => switchMember(member.id)}
-                      className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3"
+                      className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-3 ${isActive ? 'bg-indigo-50' : ''}`}
                     >
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: memberColor.hex }}>
+                      <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: memberColor.hex }}>
                         {member.name.charAt(0)}
-                      </div>
-                      <span className={`text-sm ${isActive ? 'font-bold text-teal-600' : 'text-slate-600'}`}>{member.name}</span>
-                      {isActive && <Icons.Check size={14} className="ml-auto text-teal-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="border-t border-slate-100 mt-2 pt-2 px-4">
-                <button 
-                  type="button"
-                  onClick={() => { setShowMemberMenu(false); setShowAddMemberForm(true); }} 
-                  className="w-full py-2 text-sm text-teal-600 font-medium hover:bg-slate-50 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <Icons.Plus size={16}/> 添加成员
-                </button>
-              </div>
-            </div>
-          )}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{member.name}</div>
@@ -3707,7 +3685,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   <div className="space-y-4">
                     {/* 检测报告组 */}
                     {labReports.length > 0 && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                         <div onClick={() => setIsLabReportsGroupExpanded(!isLabReportsGroupExpanded)} className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b cursor-pointer hover:bg-gray-100 transition-colors">
                           <h3 className="font-bold text-gray-700 flex items-center gap-2">
                             <Icons.FileSpreadsheet size={18} className="text-teal-600"/>
@@ -3782,7 +3760,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     
                     {/* 检查报告组 */}
                     {imagingReports.length > 0 && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                         <div onClick={() => setIsImagingReportsGroupExpanded(!isImagingReportsGroupExpanded)} className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b cursor-pointer hover:bg-gray-100 transition-colors">
                           <h3 className="font-bold text-gray-700 flex items-center gap-2">
                             <Icons.FileImage size={18} className="text-blue-600"/>
@@ -4131,7 +4109,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             {activeTab === 'settings' && (
               <div className="space-y-4">
                 {/* 用户信息卡片 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border p-4">
+                <div className="bg-white rounded-xl shadow-sm border p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
                       <Icons.User size={24} className="text-teal-600"/>
@@ -4154,7 +4132,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
 
                 {/* 云端同步 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b">
                     <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Icons.Cloud size={18} className="text-teal-600"/>
@@ -4190,7 +4168,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
 
                 {/* 本地备份 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b">
                     <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Icons.Download size={18} className="text-green-600"/>
@@ -4222,7 +4200,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
 
                 {/* 系统设置 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b">
                     <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Icons.Settings size={18} className="text-purple-600"/>
@@ -4254,7 +4232,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
 
                 {/* 成员管理 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b">
                     <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Icons.Users size={18} className="text-blue-600"/>
@@ -4288,7 +4266,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                 </div>
 
                 {/* 账户 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b">
                     <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Icons.User size={18} className="text-orange-600"/>
@@ -4322,7 +4300,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           {/* Bottom Tab Bar */}
           <div className="bg-white border-t border-slate-100 pb-6 pt-2 px-6 flex justify-between items-center shrink-0 z-30">
             {[{id:'vitals',label:'指标',Icon:Icons.Heart},{id:'meds',label:'用药',Icon:Icons.Activity},{id:'exams',label:'检查',Icon:Icons.FileSpreadsheet},{id:'settings',label:'设置',Icon:Icons.Settings}].map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); }} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === tab.id ? 'text-teal-600' : 'text-slate-400 hover:text-slate-500'}`}>
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrendItems([]); }} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === tab.id ? 'text-teal-600' : 'text-slate-400'}`}>
                 <tab.Icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2}/>
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </button>
@@ -4914,7 +4892,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   }
 
                   return filtered.map(entry => (
-                    <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-slate-100-sm border mb-3 overflow-hidden hover:shadow-md transition-all">
+                    <div key={entry.id} className="bg-white rounded-xl shadow-sm border mb-3 overflow-hidden hover:shadow-md transition-all">
                       <div onClick={() => { 
                         setEditingDictEntry(entry); 
                         setDictEntryInput({
