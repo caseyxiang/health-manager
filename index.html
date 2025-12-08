@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.45</title>
+  <title>健康管家 Pro v16.46</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3719,7 +3719,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                                         <Icons.Check size={12}/>正常
                                       </div>
                                     )}
-                                    <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setScanEditData(report); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
+                                    <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
                                       <Icons.Edit size={14}/>
                                     </button>
                                     <div className="text-gray-400">
@@ -3787,7 +3787,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                                     <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setScanEditData(report); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
+                                    <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
                                       <Icons.Edit size={14}/>
                                     </button>
                                     <div className="text-gray-400">
@@ -4647,8 +4647,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                         medicalDictionary
                       );
                       
-                      if (editingId) setLabReports(labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r));
-                      else setLabReports([...labReports, {...standardizedReport, id: Date.now().toString()}]);
+                      // 使用函数式更新确保获取最新state
+                      if (editingId) {
+                        const updatedReports = currentMemberData.labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r);
+                        setLabReports(updatedReports);
+                      } else {
+                        const updatedReports = [...currentMemberData.labReports, {...standardizedReport, id: Date.now().toString()}];
+                        setLabReports(updatedReports);
+                      }
                     } else {
                       // 验证影像报告数据
                       if (!scanEditData.date) {
@@ -4660,8 +4666,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                         return;
                       }
                       
-                      if (editingId) setImagingReports(imagingReports.map(r => r.id === editingId ? {...scanEditData, id: editingId} : r));
-                      else setImagingReports([...imagingReports, {...scanEditData, id: Date.now().toString()}]);
+                      // 使用函数式更新确保获取最新state
+                      if (editingId) {
+                        const updatedReports = currentMemberData.imagingReports.map(r => r.id === editingId ? {...scanEditData, id: editingId} : r);
+                        setImagingReports(updatedReports);
+                      } else {
+                        const updatedReports = [...currentMemberData.imagingReports, {...scanEditData, id: Date.now().toString()}];
+                        setImagingReports(updatedReports);
+                      }
                     }
                     setShowScanModal(false); setEditingId(null); setScanEditData(null); setUploadedFiles([]); setDebugInfo('');
                   }} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button>
