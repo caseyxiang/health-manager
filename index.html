@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -2292,7 +2292,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [isEndedExpanded, setIsEndedExpanded] = useState(false);
       
       const [selectedTrendItems, setSelectedTrendItems] = useState([]);
-      const [trendRange, setTrendRange] = useState({ start: '', end: '' });
+      const [trendRange, setTrendRange] = useState(() => {
+        const today = new Date();
+        const end = today.toISOString().split('T')[0];
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 30);
+        const start = startDate.toISOString().split('T')[0];
+        return { start, end };
+      });
       const [trendDatasets, setTrendDatasets] = useState([]);
       const [selectedMeds, setSelectedMeds] = useState([]);
       const [isMedSelectorExpanded, setIsMedSelectorExpanded] = useState(false);
