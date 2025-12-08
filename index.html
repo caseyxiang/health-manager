@@ -1,9 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.37-修复版</title>
+  <title>健康管家 Pro v16.46</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -263,9 +263,10 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       Cloud: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>,
       CloudOff: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 8 5.07"/></svg>,
       Smartphone: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
+      TrendingUp: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
     };
 
-    const VERSION = "v16.37-修复版";
+    const VERSION = "v16.45";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -293,17 +294,18 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
         if (saved) {
           const config = JSON.parse(saved);
           console.log('✅ [配置] 从localStorage加载测试配置');
+          console.log('   AppKey类型:', config.appKey.length > 30 ? 'Master Key' : 'App Key');
           return config;
         }
       } catch (e) {
         console.warn('⚠️ [配置] localStorage读取失败:', e);
       }
       
-      // ✅ 使用正确的硬编码测试配置
-      console.log('📝 [配置] 使用硬编码测试配置');
+      // ✅ 使用硬编码的AppKey（和生产环境一样的模式）
+      console.log('📝 [配置] 使用硬编码测试配置（AppKey）');
       return {
         appId: 'eLCaXADeu03uzVV5jPhaoZdx-gzGzoHsz',
-        appKey: 'SwfVKRpnv4ePuxQzw3aPG0pc',
+        appKey: 'SwfVKRpnv4ePuxQzw3aPGOpc',  // ✅ 正确的AppKey（注意是字母O不是数字0）
         serverURL: 'https://elcaxade.lc-cn-n1-shared.com'
       };
     };
@@ -1621,6 +1623,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           
           setIsLoadingUserData(false);
           
+          // 切换到第一个Tab（指标）
+          setActiveTab('vitals');
+          
           setLoginForm({ username: '', password: '', confirmPassword: '' });
         } catch (e) {
           console.error('❌ [登录] 失败:', e);
@@ -1718,6 +1723,10 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
             
             setIsLoadingUserData(false);
             setIsRegistering(false);
+            
+            // 切换到第一个Tab（指标）
+            setActiveTab('vitals');
+            
             setLoginForm({ username: '', password: '', confirmPassword: '' });
           } catch (cloudError) {
             // 云端操作失败，清理状态并退回登录
@@ -2278,10 +2287,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       
       const [expandedReports, setExpandedReports] = useState({});
       const [expandedImaging, setExpandedImaging] = useState({});
+      const [isLabReportsGroupExpanded, setIsLabReportsGroupExpanded] = useState(true);
+      const [isImagingReportsGroupExpanded, setIsImagingReportsGroupExpanded] = useState(true);
       const [isEndedExpanded, setIsEndedExpanded] = useState(false);
       
       const [selectedTrendItems, setSelectedTrendItems] = useState([]);
-      const [trendRange, setTrendRange] = useState({ start: '', end: '' });
+      const [trendRange, setTrendRange] = useState(() => {
+        const today = new Date();
+        const end = today.toISOString().split('T')[0];
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 30);
+        const start = startDate.toISOString().split('T')[0];
+        return { start, end };
+      });
       const [trendDatasets, setTrendDatasets] = useState([]);
       const [selectedMeds, setSelectedMeds] = useState([]);
       const [isMedSelectorExpanded, setIsMedSelectorExpanded] = useState(false);
@@ -3525,24 +3543,6 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   );
                 })}
               </div>
-              <div className="border-t">
-                <button 
-                  type="button" 
-                  onClick={() => { setEditingMember(null); setMemberInput({ name: '', relation: '', color: 'indigo' }); setShowMemberForm(true); setShowMemberMenu(false); }}
-                  className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-indigo-600 font-medium"
-                >
-                  <Icons.UserPlus size={16}/> 添加成员
-                </button>
-                {currentMember && (
-                  <button 
-                    type="button" 
-                    onClick={() => { setEditingMember(currentMember); setMemberInput({ name: currentMember.name, relation: currentMember.relation, color: currentMember.color }); setShowMemberForm(true); setShowMemberMenu(false); }}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 text-gray-600 rounded-b-xl"
-                  >
-                    <Icons.Edit size={16}/> 编辑当前成员
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
@@ -3677,16 +3677,28 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     {/* 检测报告组 */}
                     {labReports.length > 0 && (
                       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                        <div className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b">
+                        <div onClick={() => setIsLabReportsGroupExpanded(!isLabReportsGroupExpanded)} className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b cursor-pointer hover:bg-gray-100 transition-colors">
                           <h3 className="font-bold text-gray-700 flex items-center gap-2">
                             <Icons.FileSpreadsheet size={18} className="text-indigo-600"/>
                             检测报告 ({labReports.length})
                           </h3>
-                          <button onClick={() => { setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors">
-                            <Icons.ScanLine size={18}/>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="AI扫描">
+                              <Icons.ScanLine size={18}/>
+                            </button>
+                            {selectedTrendItems.length > 0 && (
+                              <button onClick={(e) => { e.stopPropagation(); setShowTrendModal(true); }} className="text-teal-600 hover:bg-teal-50 p-1.5 rounded-lg transition-colors flex items-center gap-1" title="趋势分析">
+                                <Icons.TrendingUp size={18}/>
+                                <span className="text-xs font-bold bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded-full">{selectedTrendItems.length}</span>
+                              </button>
+                            )}
+                            <div className="text-gray-400">
+                              {isLabReportsGroupExpanded ? <Icons.ChevronUp size={18}/> : <Icons.ChevronDown size={18}/>}
+                            </div>
+                          </div>
                         </div>
-                        <div className="divide-y">
+                        {isLabReportsGroupExpanded && (
+                          <div className="divide-y">
                           {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
                             const isExpanded = expandedReports[report.id];
                             const abnormalCount = report.items.filter(i => i.flag !== 'Normal').length;
@@ -3707,6 +3719,9 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                                         <Icons.Check size={12}/>正常
                                       </div>
                                     )}
+                                    <button onClick={(e) => { e.stopPropagation(); setScanType('lab'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
+                                      <Icons.Edit size={14}/>
+                                    </button>
                                     <div className="text-gray-400">
                                       {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
                                     </div>
@@ -3739,33 +3754,45 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                             );
                           })}
                         </div>
+                        )}
                       </div>
                     )}
                     
                     {/* 检查报告组 */}
                     {imagingReports.length > 0 && (
                       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                        <div className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b">
+                        <div onClick={() => setIsImagingReportsGroupExpanded(!isImagingReportsGroupExpanded)} className="px-4 py-3 bg-gray-50 flex justify-between items-center border-b cursor-pointer hover:bg-gray-100 transition-colors">
                           <h3 className="font-bold text-gray-700 flex items-center gap-2">
                             <Icons.FileImage size={18} className="text-blue-600"/>
                             检查报告 ({imagingReports.length})
                           </h3>
-                          <button onClick={() => { setScanType('imaging'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors">
-                            <Icons.ScanLine size={18}/>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setShowScanModal(true); setScanEditData(null); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors">
+                              <Icons.ScanLine size={18}/>
+                            </button>
+                            <div className="text-gray-400">
+                              {isImagingReportsGroupExpanded ? <Icons.ChevronUp size={18}/> : <Icons.ChevronDown size={18}/>}
+                            </div>
+                          </div>
                         </div>
-                        <div className="divide-y">
+                        {isImagingReportsGroupExpanded && (
+                          <div className="divide-y">
                           {imagingReports.map(report => {
                             const isExpanded = expandedImaging[report.id];
                             return (
                               <div key={report.id}>
                                 <div onClick={() => setExpandedImaging(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                  <div>
+                                  <div className="flex-1">
                                     <div className="flex items-center gap-2"><span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">{report.modality}</span><span className="font-bold text-sm">{report.region}</span></div>
                                     <div className="text-xs text-gray-500 mt-1">{report.date} • {report.hospital}</div>
                                   </div>
-                                  <div className="text-gray-400">
-                                    {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
+                                  <div className="flex items-center gap-2">
+                                    <button onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); setUploadedFiles([]); setDebugInfo(''); }} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors" title="编辑报告">
+                                      <Icons.Edit size={14}/>
+                                    </button>
+                                    <div className="text-gray-400">
+                                      {isExpanded ? <Icons.ChevronUp size={16}/> : <Icons.ChevronDown size={16}/>}
+                                    </div>
                                   </div>
                                 </div>
                                 {isExpanded && (
@@ -3778,6 +3805,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                             );
                           })}
                         </div>
+                        )}
                       </div>
                     )}
                     
@@ -3785,6 +3813,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       <div className="text-center text-gray-400 mt-16">
                         <div className="opacity-20 mx-auto mb-2 w-12"><Icons.FileSpreadsheet size={48}/></div>
                         <p>暂无报告</p>
+                      </div>
+                    )}
+                    
+                    {/* 趋势分析浮动按钮 */}
+                    {selectedTrendItems.length > 0 && (
+                      <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
+                        <button onClick={() => setShowTrendModal(true)} className="bg-gradient-to-r from-teal-500 to-teal-600 text-white px-6 py-3 rounded-full shadow-2xl hover:shadow-teal-500/50 transition-all flex items-center gap-2 font-bold">
+                          <Icons.TrendingUp size={20}/>
+                          <span>查看趋势分析</span>
+                          <span className="bg-white text-teal-600 text-xs px-2 py-0.5 rounded-full">{selectedTrendItems.length}</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -3852,8 +3891,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                       })}
                     </div>
                     
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
+                    {/* 右下角圆形添加按钮 */}
+                    <div className="fixed bottom-20 right-4 z-10">
                       <button onClick={() => { setEditingId(null); setVitalsInput({ type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()), value1: '', value2: '', note: '' }); setShowVitalsForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
                         <Icons.Plus size={24}/>
                       </button>
@@ -4045,8 +4084,8 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                     )}
                     {meds.length === 0 && <div className="text-center text-gray-400 mt-16"><div className="opacity-20 mx-auto mb-2 w-12"><Icons.Clock size={48}/></div><p>暂无服药计划</p></div>}
                     
-                    {/* 底部居中圆形添加按钮 */}
-                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
+                    {/* 右下角圆形添加按钮 */}
+                    <div className="fixed bottom-20 right-4 z-10">
                       <button onClick={() => { setEditingId(null); setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''}); setShowMedForm(true); }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all flex items-center justify-center">
                         <Icons.Plus size={24}/>
                       </button>
@@ -4208,60 +4247,39 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                   </button>
                 </div>
 
-                {/* 测试环境配置 - 仅测试环境显示 */}
-                {CURRENT_ENV === 'test' && (
-                  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b">
-                      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                        <Icons.AlertTriangle size={18} className="text-orange-600"/>
-                        测试环境配置
-                      </h3>
+                {/* 成员管理 */}
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b">
+                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                      <Icons.Users size={18} className="text-blue-600"/>
+                      成员管理
+                    </h3>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => { setEditingMember(null); setMemberInput({ name: '', relation: '', color: 'indigo' }); setShowMemberForm(true); }}
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between border-b"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icons.UserPlus size={18} className="text-gray-600"/>
+                      <span>添加成员</span>
                     </div>
-                    <div className="px-4 py-3 bg-orange-50 border-b">
-                      <div className="flex items-start gap-2">
-                        <Icons.Info size={16} className="text-orange-600 mt-0.5 flex-shrink-0"/>
-                        <div className="text-xs text-orange-800">
-                          <div className="font-bold mb-1">配置存储在浏览器本地</div>
-                          <div className="text-orange-700">
-                            • 每个浏览器独立存储（Chrome/Safari/Firefox）<br/>
-                            • 换浏览器或设备需要重新配置<br/>
-                            • 清除浏览器数据会删除配置
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 border-b">
-                      <div className="text-xs text-gray-500 mb-2">当前配置状态</div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">AppID:</span>
-                          <span className="text-gray-800 font-mono">{LC_CONFIG.appId.substring(0, 20)}...</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">ServerURL:</span>
-                          <span className="text-gray-800 font-mono text-[10px]">{LC_CONFIG.serverURL}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <Icons.ChevronRight size={16} className="text-gray-400"/>
+                  </button>
+                  {currentMember && (
                     <button 
                       type="button" 
-                      onClick={() => {
-                        localStorage.removeItem('health_pro_test_leancloud_config');
-                        localStorage.removeItem('health_pro_test_config_skipped');
-                        if(confirm('配置已清除！\n页面将刷新以重新配置。')) {
-                          window.location.reload();
-                        }
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between text-orange-600"
+                      onClick={() => { setEditingMember(currentMember); setMemberInput({ name: currentMember.name, relation: currentMember.relation, color: currentMember.color }); setShowMemberForm(true); }}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
-                        <Icons.RefreshCw size={18}/>
-                        <span>重新配置测试环境</span>
+                        <Icons.Edit size={18} className="text-gray-600"/>
+                        <span>编辑当前成员</span>
                       </div>
-                      <Icons.ChevronRight size={16} className="text-orange-400"/>
+                      <Icons.ChevronRight size={16} className="text-gray-400"/>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* 账户 */}
                 <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -4629,8 +4647,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                         medicalDictionary
                       );
                       
-                      if (editingId) setLabReports(labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r));
-                      else setLabReports([...labReports, {...standardizedReport, id: Date.now().toString()}]);
+                      // 使用函数式更新确保获取最新state
+                      if (editingId) {
+                        const updatedReports = currentMemberData.labReports.map(r => r.id === editingId ? {...standardizedReport, id: editingId} : r);
+                        setLabReports(updatedReports);
+                      } else {
+                        const updatedReports = [...currentMemberData.labReports, {...standardizedReport, id: Date.now().toString()}];
+                        setLabReports(updatedReports);
+                      }
                     } else {
                       // 验证影像报告数据
                       if (!scanEditData.date) {
@@ -4642,8 +4666,14 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
                         return;
                       }
                       
-                      if (editingId) setImagingReports(imagingReports.map(r => r.id === editingId ? {...scanEditData, id: editingId} : r));
-                      else setImagingReports([...imagingReports, {...scanEditData, id: Date.now().toString()}]);
+                      // 使用函数式更新确保获取最新state
+                      if (editingId) {
+                        const updatedReports = currentMemberData.imagingReports.map(r => r.id === editingId ? {...scanEditData, id: editingId} : r);
+                        setImagingReports(updatedReports);
+                      } else {
+                        const updatedReports = [...currentMemberData.imagingReports, {...scanEditData, id: Date.now().toString()}];
+                        setImagingReports(updatedReports);
+                      }
                     }
                     setShowScanModal(false); setEditingId(null); setScanEditData(null); setUploadedFiles([]); setDebugInfo('');
                   }} className="p-2 bg-indigo-600 text-white rounded-full"><Icons.Save size={20}/></button>
