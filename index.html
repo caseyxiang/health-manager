@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>健康管家 Pro v16.46</title>
+  <title>健康管家 Pro v16.47</title>
   
   <!-- PWA 支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -266,7 +266,7 @@ Babel: ${loadStatus.Babel ? '✓' : '✗'}
       TrendingUp: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||20} height={p.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
     };
 
-    const VERSION = "v16.45";
+    const VERSION = "v16.47";
     
     // 🌍 环境自动检测
     const detectEnvironment = () => {
@@ -1809,15 +1809,19 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         }
       };
       
-      // 检测本地是否有修改（简化版：检查数据量变化）
+      // 检测本地是否有修改（检查内存数据）
       const checkLocalChanges = (userId) => {
         try {
-          // 获取本地数据快照
-          const localMembers = loadData('members', [], userId);
-          const localMeds = loadMemberData('default', 'meds', [], userId);
+          // 检查内存中是否有数据
+          const hasMembers = members.length > 1; // 默认只有一个成员
+          const hasData = Object.values(allMembersData).some(data => 
+            (data.meds?.length || 0) > 0 || 
+            (data.catalog?.length || 0) > 0 ||
+            (data.labReports?.length || 0) > 0 ||
+            (data.vitals?.length || 0) > 0
+          );
           
-          // 简单判断：如果有数据就认为有修改（更精确的方式需要记录每次操作的时间戳）
-          return localMembers.length > 1 || localMeds.length > 0;
+          return hasMembers || hasData;
         } catch (e) {
           return false;
         }
@@ -2488,16 +2492,17 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
       const [backupStats, setBackupStats] = useState({ size: 0, meds: 0, catalog: 0, labs: 0 });
       
       const handleBackup = () => {
-        // 收集所有成员的数据
-        const allMembersData = {};
+        // 收集所有成员的数据（从内存读取）
+        const allMembersDataForBackup = {};
         members.forEach(member => {
-          allMembersData[member.id] = {
-            meds: loadMemberData(member.id, 'meds', []),
-            catalog: loadMemberData(member.id, 'catalog', []),
-            checkups: loadMemberData(member.id, 'checkups', []),
-            labReports: loadMemberData(member.id, 'labReports', []),
-            imagingReports: loadMemberData(member.id, 'imagingReports', []),
-            vitals: loadMemberData(member.id, 'vitals', [])
+          const memberData = allMembersData[member.id] || {};
+          allMembersDataForBackup[member.id] = {
+            meds: memberData.meds || [],
+            catalog: memberData.catalog || [],
+            checkups: memberData.checkups || [],
+            labReports: memberData.labReports || [],
+            imagingReports: memberData.imagingReports || [],
+            vitals: memberData.vitals || []
           };
         });
         
@@ -2526,7 +2531,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
           members: members,
           currentMemberId: currentMemberId,
           // 所有成员的完整数据
-          membersData: allMembersData,
+          membersData: allMembersDataForBackup,
           // 医学指标词典
           medicalDictionary: medicalDictionary
         };
@@ -2536,7 +2541,7 @@ const MedicationGantt = ({ meds, dateRange, selectedMeds }) => {
         
         // 统计所有成员的数据量
         let totalMeds = 0, totalCatalog = 0, totalLabs = 0, totalImaging = 0, totalVitals = 0;
-        Object.values(allMembersData).forEach(data => {
+        Object.values(allMembersDataForBackup).forEach(data => {
           totalMeds += data.meds?.length || 0;
           totalCatalog += data.catalog?.length || 0;
           totalLabs += data.labReports?.length || 0;
