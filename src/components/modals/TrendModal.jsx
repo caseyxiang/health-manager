@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icons from '../icons/Icons';
-import { TrendChart } from '../charts';
+import { TrendChart, MedicationGantt } from '../charts';
 import { CHART_COLORS } from '../../constants';
 import { getLocalDateStr } from '../../utils';
 
@@ -9,6 +9,7 @@ const TrendModal = ({
   onClose,
   selectedItems,
   labReports,
+  meds,
   dateRange,
   setDateRange,
   onClearSelection
@@ -157,6 +158,11 @@ const TrendModal = ({
             <TrendChart datasets={datasets} dateRange={dateRange} />
           </div>
 
+          {/* 同期用药甘特图 */}
+          {meds && meds.length > 0 && (
+            <MedicationGantt meds={meds} dateRange={dateRange} />
+          )}
+
           {/* 数据明细 */}
           {datasets.length > 0 && (
             <div>
@@ -194,6 +200,60 @@ const TrendModal = ({
               </div>
             </div>
           )}
+
+          {/* 用药计划明细 */}
+          {meds && meds.length > 0 && (() => {
+            const startTs = new Date(dateRange.start).getTime();
+            const endTs = new Date(dateRange.end).getTime();
+            const visibleMeds = meds.filter(m => {
+              const mStart = new Date(m.startTime).getTime();
+              const mEnd = m.endTime ? new Date(m.endTime).getTime() : endTs;
+              return mStart <= endTs && mEnd >= startTs;
+            });
+            if (visibleMeds.length === 0) return null;
+            return (
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">用药计划明细</div>
+                <div className="bg-white border rounded-xl overflow-hidden">
+                  <div className="divide-y">
+                    {visibleMeds.map(m => {
+                      const isActive = !m.endTime || new Date(m.endTime) >= new Date();
+                      return (
+                        <div key={m.id} className="px-4 py-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                <span className="font-medium text-gray-800">{m.name}</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1 ml-4">
+                                {m.startTime} {m.endTime ? `至 ${m.endTime}` : '起 (长期)'}
+                              </div>
+                              {m.dosagePerTime && (
+                                <div className="text-xs text-indigo-600 mt-1 ml-4">
+                                  每次{m.dosagePerTime} · 每日{m.frequency}次 · {m.relation}
+                                  {(m.timePeriods && m.timePeriods.length > 0) && ` · ${m.timePeriods.join('/')}`}
+                                </div>
+                              )}
+                              {m.cycleEnabled && m.cycleDays && m.cycleRestDays && (
+                                <div className="text-xs text-green-600 mt-1 ml-4 flex items-center gap-1">
+                                  <Icons.Repeat size={10} />
+                                  循环: 服{m.cycleDays}天停{m.cycleRestDays}天
+                                </div>
+                              )}
+                            </div>
+                            <span className={`text-xs px-2 py-0.5 rounded ${isActive ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                              {isActive ? '进行中' : '已结束'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 关闭按钮 */}
           <div className="pt-4">

@@ -1298,6 +1298,7 @@ function App() {
         onClose={() => setShowTrendModal(false)}
         selectedItems={selectedTrendItems}
         labReports={labReports}
+        meds={meds}
         dateRange={trendDateRange}
         setDateRange={setTrendDateRange}
         onClearSelection={() => setSelectedTrendItems([])}
