@@ -1621,6 +1621,7 @@ function App() {
         dateRange={trendDateRange}
         setDateRange={setTrendDateRange}
         onClearSelection={() => setSelectedTrendItems([])}
+        memberName={currentMember?.name || ''}
       />
     </div>
   );

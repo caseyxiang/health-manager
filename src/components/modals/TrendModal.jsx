@@ -3,6 +3,7 @@ import Icons from '../icons/Icons';
 import { TrendChart, MedicationGantt } from '../charts';
 import { CHART_COLORS } from '../../constants';
 import { getLocalDateStr } from '../../utils';
+import { exportTrendToPDF } from '../../utils/pdfExport';
 
 const TrendModal = ({
   show,
@@ -12,7 +13,8 @@ const TrendModal = ({
   meds,
   dateRange,
   setDateRange,
-  onClearSelection
+  onClearSelection,
+  memberName = ''
 }) => {
   if (!show) return null;
 
@@ -96,7 +98,18 @@ const TrendModal = ({
             <Icons.TrendingUp size={20} className="text-indigo-600" />
             趋势分析
           </h3>
-          <button onClick={onClose}><Icons.X size={24} className="text-gray-400" /></button>
+          <div className="flex items-center gap-2">
+            {datasets.length > 0 && (
+              <button
+                onClick={() => exportTrendToPDF({ datasets, dateRange, meds, memberName })}
+                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-200"
+              >
+                <Icons.Download size={16} />
+                导出PDF
+              </button>
+            )}
+            <button onClick={onClose}><Icons.X size={24} className="text-gray-400" /></button>
+          </div>
         </div>
 
         <div className="p-6 space-y-4">
