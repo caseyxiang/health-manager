@@ -1,9 +1,9 @@
-// PDF导出工具函数 - 支持保存和分享
+// 导出工具函数 - 生成图片并支持保存和分享
 
 import { CHART_COLORS } from '../constants';
 
 /**
- * 导出趋势分析结果
+ * 导出趋势分析结果为图片
  * @param {Object} options - 导出选项
  * @param {Array} options.datasets - 趋势数据集
  * @param {Object} options.dateRange - 日期范围 {start, end}
@@ -20,16 +20,16 @@ export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName =
     return mStart <= endTs && mEnd >= startTs;
   }) : [];
 
-  // 生成HTML内容
-  const html = generatePDFContent({ datasets, dateRange, visibleMeds, memberName });
+  // 生成图片
+  const canvas = await generateReportImage({ datasets, dateRange, visibleMeds, memberName });
+
+  // 转换为Blob
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
   // 生成文件名
   const now = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  const fileName = `趋势分析报告${memberName ? `-${memberName}` : ''}-${dateStr}.html`;
-
-  // 创建Blob
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const fileName = `趋势分析报告${memberName ? `-${memberName}` : ''}-${dateStr}.png`;
 
   // 检测是否支持Web Share API（主要用于移动设备）
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -37,7 +37,7 @@ export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName =
   if (isMobile && navigator.share && navigator.canShare) {
     // 移动设备：使用Web Share API分享文件
     try {
-      const file = new File([blob], fileName, { type: 'text/html' });
+      const file = new File([blob], fileName, { type: 'image/png' });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -48,11 +48,10 @@ export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName =
       }
     } catch (err) {
       // 如果分享被取消或失败，继续使用下载方式
-      if (err.name !== 'AbortError') {
-        console.log('Share failed, falling back to download:', err);
-      } else {
+      if (err.name === 'AbortError') {
         return; // 用户取消分享
       }
+      console.log('Share failed, falling back to download:', err);
     }
   }
 
@@ -68,11 +67,296 @@ export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName =
 };
 
 /**
- * 生成趋势图SVG
+ * 生成报告图片
  */
-const generateTrendChartSVG = (datasets, dateRange) => {
-  if (!datasets?.length) return '';
+const generateReportImage = async ({ datasets, dateRange, visibleMeds, memberName }) => {
+  const now = new Date();
+  const exportTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+  // 计算画布尺寸
+  const WIDTH = 750; // 适合手机屏幕的宽度
+  const PADDING = 30;
+  const LINE_HEIGHT = 28;
+  const SECTION_GAP = 25;
+
+  // 预计算高度
+  let totalHeight = PADDING * 2; // 顶部和底部边距
+  totalHeight += 60; // 标题
+  totalHeight += 30; // 导出时间
+  totalHeight += SECTION_GAP + 50; // 时间范围区块
+  totalHeight += SECTION_GAP + 40 + Math.ceil(datasets.length / 3) * 35; // 指标标签
+
+  // 趋势图高度
+  if (datasets.length > 0) {
+    totalHeight += SECTION_GAP + 30 + 250; // 趋势图标题 + 图表
+  }
+
+  // 数据明细高度
+  datasets.forEach(ds => {
+    const filteredPoints = ds.points.filter(p => p.dateStr >= dateRange.start && p.dateStr <= dateRange.end);
+    if (filteredPoints.length > 0) {
+      totalHeight += SECTION_GAP + 35 + 35 + filteredPoints.length * 32; // 标题 + 表头 + 数据行
+    }
+  });
+
+  // 用药计划高度
+  if (visibleMeds.length > 0) {
+    totalHeight += SECTION_GAP + 35;
+    visibleMeds.forEach(m => {
+      totalHeight += 75; // 每个药品卡片
+    });
+  }
+
+  totalHeight += SECTION_GAP + 50; // 底部说明
+
+  // 创建画布
+  const canvas = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 2;
+  canvas.width = WIDTH * dpr;
+  canvas.height = totalHeight * dpr;
+  canvas.style.width = WIDTH + 'px';
+  canvas.style.height = totalHeight + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // 绘制背景
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, WIDTH, totalHeight);
+
+  let y = PADDING;
+
+  // 绘制标题
+  ctx.fillStyle = '#6366f1';
+  ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`📊 趋势分析报告${memberName ? ` - ${memberName}` : ''}`, WIDTH / 2, y + 30);
+  y += 45;
+
+  // 导出时间
+  ctx.fillStyle = '#666666';
+  ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(`导出时间: ${exportTime}`, WIDTH / 2, y + 15);
+  y += 30;
+
+  // 分隔线
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PADDING, y);
+  ctx.lineTo(WIDTH - PADDING, y);
+  ctx.stroke();
+  y += SECTION_GAP;
+
+  // 时间范围
+  ctx.textAlign = 'left';
+  drawSectionTitle(ctx, '分析时间范围', PADDING, y);
+  y += 30;
+
+  ctx.fillStyle = '#f3f4f6';
+  roundRect(ctx, PADDING, y, WIDTH - PADDING * 2, 35, 8);
+  ctx.fill();
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(`📅 ${dateRange.start} 至 ${dateRange.end}`, PADDING + 15, y + 23);
+  y += 50;
+
+  // 分析指标
+  if (datasets.length > 0) {
+    y += SECTION_GAP;
+    drawSectionTitle(ctx, `分析指标 (${datasets.length}项)`, PADDING, y);
+    y += 30;
+
+    // 绘制指标标签
+    let tagX = PADDING;
+    let tagY = y;
+    datasets.forEach((ds, idx) => {
+      const tagText = `${ds.name}${ds.unit ? ` (${ds.unit})` : ''}`;
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+      const tagWidth = ctx.measureText(tagText).width + 24;
+
+      if (tagX + tagWidth > WIDTH - PADDING) {
+        tagX = PADDING;
+        tagY += 35;
+      }
+
+      ctx.fillStyle = CHART_COLORS[idx % CHART_COLORS.length];
+      roundRect(ctx, tagX, tagY, tagWidth, 28, 14);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(tagText, tagX + 12, tagY + 19);
+      tagX += tagWidth + 10;
+    });
+    y = tagY + 40;
+
+    // 趋势图
+    y += SECTION_GAP;
+    drawSectionTitle(ctx, '趋势图', PADDING, y);
+    y += 30;
+
+    drawTrendChart(ctx, datasets, dateRange, PADDING, y, WIDTH - PADDING * 2, 220);
+    y += 230;
+  }
+
+  // 数据明细
+  datasets.forEach((ds, idx) => {
+    const filteredPoints = ds.points
+      .filter(p => p.dateStr >= dateRange.start && p.dateStr <= dateRange.end)
+      .sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+
+    if (filteredPoints.length === 0) return;
+
+    y += SECTION_GAP;
+    drawSectionTitle(ctx, `${ds.name}${ds.unit ? ` (${ds.unit})` : ''} - 数据明细`, PADDING, y, CHART_COLORS[idx % CHART_COLORS.length]);
+    y += 30;
+
+    // 表头
+    ctx.fillStyle = '#f9fafb';
+    ctx.fillRect(PADDING, y, WIDTH - PADDING * 2, 32);
+    ctx.fillStyle = '#374151';
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('日期', PADDING + 15, y + 21);
+    ctx.fillText('结果', PADDING + 200, y + 21);
+    ctx.fillText('参考范围', PADDING + 420, y + 21);
+    y += 35;
+
+    // 数据行
+    filteredPoints.forEach((p, pIdx) => {
+      if (pIdx % 2 === 1) {
+        ctx.fillStyle = '#f9fafb';
+        ctx.fillRect(PADDING, y, WIDTH - PADDING * 2, 30);
+      }
+
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText(p.dateStr, PADDING + 15, y + 20);
+
+      // 结果值（根据flag显示颜色）
+      ctx.fillStyle = p.original.flag === 'High' ? '#dc2626' : p.original.flag === 'Low' ? '#f97316' : '#374151';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, sans-serif';
+      const flagSymbol = p.original.flag === 'High' ? ' ↑' : p.original.flag === 'Low' ? ' ↓' : '';
+      ctx.fillText(`${p.val} ${p.original.unit || ''}${flagSymbol}`, PADDING + 200, y + 20);
+
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(p.original.refRange || '-', PADDING + 420, y + 20);
+      y += 32;
+    });
+  });
+
+  // 用药计划
+  if (visibleMeds.length > 0) {
+    y += SECTION_GAP;
+    drawSectionTitle(ctx, `同期用药计划 (${visibleMeds.length}项)`, PADDING, y);
+    y += 35;
+
+    visibleMeds.forEach(m => {
+      const isActive = !m.endTime || new Date(m.endTime) >= new Date();
+
+      // 卡片背景
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      roundRect(ctx, PADDING, y, WIDTH - PADDING * 2, 65, 8);
+      ctx.stroke();
+
+      // 药品名称
+      ctx.fillStyle = '#374151';
+      ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(m.name, PADDING + 15, y + 22);
+
+      // 状态标签
+      const statusText = isActive ? '进行中' : '已结束';
+      const statusWidth = ctx.measureText(statusText).width + 16;
+      ctx.fillStyle = isActive ? '#dcfce7' : '#f3f4f6';
+      roundRect(ctx, PADDING + 15 + ctx.measureText(m.name).width + 10, y + 8, statusWidth, 20, 4);
+      ctx.fill();
+      ctx.fillStyle = isActive ? '#16a34a' : '#6b7280';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(statusText, PADDING + 15 + ctx.measureText(m.name).width + 18, y + 21);
+
+      // 日期
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText(`📅 ${m.startTime} ${m.endTime ? `至 ${m.endTime}` : '起 (长期)'}`, PADDING + 15, y + 42);
+
+      // 用药详情
+      if (m.dosagePerTime) {
+        ctx.fillStyle = '#6366f1';
+        let dosageText = `💊 每次${m.dosagePerTime} · 每日${m.frequency}次 · ${m.relation}`;
+        if (m.timePeriods && m.timePeriods.length > 0) {
+          dosageText += ` · ${m.timePeriods.join('/')}`;
+        }
+        ctx.fillText(dosageText, PADDING + 15, y + 58);
+      }
+
+      y += 75;
+    });
+  }
+
+  // 底部说明
+  y += SECTION_GAP;
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PADDING, y);
+  ctx.lineTo(WIDTH - PADDING, y);
+  ctx.stroke();
+  y += 15;
+
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('本报告由健康管理系统自动生成，仅供参考', WIDTH / 2, y + 15);
+  ctx.fillText('如有疑问请咨询专业医生', WIDTH / 2, y + 32);
+
+  return canvas;
+};
+
+/**
+ * 绘制章节标题
+ */
+const drawSectionTitle = (ctx, text, x, y, color = '#6366f1') => {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 4, 20);
+  ctx.fillStyle = '#374151';
+  ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(text, x + 12, y + 16);
+};
+
+/**
+ * 绘制圆角矩形
+ */
+const roundRect = (ctx, x, y, width, height, radius) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+};
+
+/**
+ * 绘制趋势图
+ */
+const drawTrendChart = (ctx, datasets, dateRange, x, y, width, height) => {
+  // 背景
+  ctx.fillStyle = '#fafafa';
+  roundRect(ctx, x, y, width, height, 8);
+  ctx.fill();
+
+  const PL = 50, PR = 20, PT = 25, PB = 35;
+  const chartX = x + PL;
+  const chartY = y + PT;
+  const chartW = width - PL - PR;
+  const chartH = height - PT - PB;
+
+  // 收集所有数据点
   let allPoints = [];
   datasets.forEach((ds, i) => {
     ds.points.forEach(p => {
@@ -82,57 +366,54 @@ const generateTrendChartSVG = (datasets, dateRange) => {
     });
   });
 
-  if (!allPoints.length) return '';
+  if (!allPoints.length) return;
 
   const uniqueDates = [...new Set(allPoints.map(p => p.dateStr))].sort();
   const minVal = Math.min(...allPoints.map(p => p.val));
   const maxVal = Math.max(...allPoints.map(p => p.val));
-  let valSpan = maxVal - minVal || 1;
+  const valSpan = maxVal - minVal || 1;
   const yPad = valSpan * 0.2;
   const yMin = minVal - yPad, yMax = maxVal + yPad;
-  const W = 600, H = 300, PL = 60, PR = 30, PT = 40, PB = 50;
 
-  const getX = (d) => {
+  const getPointX = (d) => {
     const idx = uniqueDates.indexOf(d);
-    if (uniqueDates.length === 1) return (W - PL - PR) / 2 + PL;
-    return PL + (idx / (uniqueDates.length - 1)) * (W - PL - PR);
+    if (uniqueDates.length === 1) return chartX + chartW / 2;
+    return chartX + (idx / (uniqueDates.length - 1)) * chartW;
   };
 
-  const getY = (v) => H - PB - ((v - yMin) / (yMax - yMin)) * (H - PT - PB);
+  const getPointY = (v) => chartY + chartH - ((v - yMin) / (yMax - yMin)) * chartH;
 
-  const getVisibleDateLabels = () => {
-    const totalDates = uniqueDates.length;
-    if (totalDates <= 8) return uniqueDates;
-    const step = Math.ceil(totalDates / 8);
-    const result = [];
-    for (let i = 0; i < totalDates; i += step) {
-      result.push(uniqueDates[i]);
-    }
-    if (result[result.length - 1] !== uniqueDates[totalDates - 1]) {
-      result.push(uniqueDates[totalDates - 1]);
-    }
-    return result;
-  };
-
-  const visibleDateLabels = getVisibleDateLabels();
-
-  // 生成Y轴网格线和标签
-  let gridLines = '';
+  // 绘制网格线和Y轴标签
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
   for (let i = 0; i <= 4; i++) {
-    const y = PT + i * (H - PT - PB) / 4;
+    const gridY = chartY + i * chartH / 4;
     const val = yMax - (i / 4) * (yMax - yMin);
-    gridLines += `<line x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="3"/>`;
-    gridLines += `<text x="${PL - 8}" y="${y + 4}" text-anchor="end" font-size="12" fill="#9ca3af">${val.toFixed(1)}</text>`;
-  }
+    ctx.beginPath();
+    ctx.moveTo(chartX, gridY);
+    ctx.lineTo(chartX + chartW, gridY);
+    ctx.stroke();
 
-  // 生成X轴日期标签
-  let dateLabels = '';
-  visibleDateLabels.forEach(d => {
-    dateLabels += `<text x="${getX(d)}" y="${H - 20}" text-anchor="middle" font-size="11" fill="#6b7280">${d.slice(5)}</text>`;
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(1), chartX - 8, gridY + 4);
+  }
+  ctx.setLineDash([]);
+
+  // 绘制X轴日期标签
+  const visibleDates = uniqueDates.length <= 6 ? uniqueDates :
+    uniqueDates.filter((_, i) => i === 0 || i === uniqueDates.length - 1 || i % Math.ceil(uniqueDates.length / 6) === 0);
+
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'center';
+  visibleDates.forEach(d => {
+    ctx.fillText(d.slice(5), getPointX(d), y + height - 10);
   });
 
-  // 生成数据线和点
-  let dataLines = '';
+  // 绘制数据线和点
   datasets.forEach((ds, i) => {
     const color = CHART_COLORS[i % CHART_COLORS.length];
     const sorted = ds.points
@@ -143,340 +424,55 @@ const generateTrendChartSVG = (datasets, dateRange) => {
 
     // 绘制连线
     if (sorted.length > 1) {
-      const pathD = sorted.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${getX(p.dateStr)} ${getY(p.val)}`).join(' ');
-      dataLines += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      sorted.forEach((p, idx) => {
+        const px = getPointX(p.dateStr);
+        const py = getPointY(p.val);
+        if (idx === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
     }
 
     // 绘制数据点和标签
     sorted.forEach(p => {
+      const px = getPointX(p.dateStr);
+      const py = getPointY(p.val);
       const isAbnormal = p.original.flag === 'High' || p.original.flag === 'Low';
       const dotColor = isAbnormal ? (p.original.flag === 'High' ? '#dc2626' : '#f97316') : color;
-      const flagSymbol = p.original.flag === 'High' ? '↑' : p.original.flag === 'Low' ? '↓' : '';
 
-      dataLines += `<circle cx="${getX(p.dateStr)}" cy="${getY(p.val)}" r="5" fill="${dotColor}"/>`;
-      dataLines += `<text x="${getX(p.dateStr)}" y="${getY(p.val) - 12}" text-anchor="middle" font-size="12" font-weight="bold" fill="${dotColor}">${p.val}${flagSymbol}</text>`;
+      ctx.fillStyle = dotColor;
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 数值标签
+      ctx.fillStyle = dotColor;
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'center';
+      const flagSymbol = p.original.flag === 'High' ? '↑' : p.original.flag === 'Low' ? '↓' : '';
+      ctx.fillText(`${p.val}${flagSymbol}`, px, py - 10);
     });
   });
 
-  // 生成图例
-  let legend = '';
+  // 绘制图例
+  ctx.textAlign = 'left';
+  let legendX = chartX;
   datasets.forEach((ds, i) => {
-    const x = PL + i * 120;
-    legend += `<circle cx="${x}" cy="${H - 5}" r="5" fill="${CHART_COLORS[i % CHART_COLORS.length]}"/>`;
-    legend += `<text x="${x + 10}" y="${H}" font-size="12" fill="#4b5563">${ds.name}${ds.unit ? ` (${ds.unit})` : ''}</text>`;
+    ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.beginPath();
+    ctx.arc(legendX + 5, y + height - 8, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+    const legendText = `${ds.name}${ds.unit ? ` (${ds.unit})` : ''}`;
+    ctx.fillText(legendText, legendX + 14, y + height - 4);
+    legendX += ctx.measureText(legendText).width + 30;
   });
-
-  return `
-    <svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width: 100%; height: auto;">
-      <!-- 背景 -->
-      <rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="8"/>
-
-      <!-- 网格线和Y轴标签 -->
-      ${gridLines}
-
-      <!-- X轴日期标签 -->
-      ${dateLabels}
-
-      <!-- 数据线和点 -->
-      ${dataLines}
-
-      <!-- 图例 -->
-      ${legend}
-    </svg>
-  `;
-};
-
-/**
- * 生成PDF内容的HTML
- */
-const generatePDFContent = ({ datasets, dateRange, visibleMeds, memberName }) => {
-  const now = new Date();
-  const exportTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  const trendChartSVG = generateTrendChartSVG(datasets, dateRange);
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>趋势分析报告${memberName ? ` - ${memberName}` : ''}</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      color: #333;
-      line-height: 1.6;
-      padding: 20px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    .header {
-      text-align: center;
-      border-bottom: 2px solid #6366f1;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    .header h1 {
-      color: #6366f1;
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    .header .meta {
-      color: #666;
-      font-size: 14px;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .section-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #374151;
-      margin-bottom: 15px;
-      padding-left: 10px;
-      border-left: 4px solid #6366f1;
-    }
-    .date-range {
-      background: #f3f4f6;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #4b5563;
-    }
-    .chart-container {
-      background: #fafafa;
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 10px;
-    }
-    .indicator-tag {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      color: white;
-      margin: 4px;
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-    .data-table th {
-      background: #f9fafb;
-      padding: 10px;
-      text-align: left;
-      border-bottom: 2px solid #e5e7eb;
-      font-weight: 600;
-    }
-    .data-table td {
-      padding: 10px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .data-table tr:nth-child(even) {
-      background: #f9fafb;
-    }
-    .value-high {
-      color: #dc2626;
-      font-weight: bold;
-    }
-    .value-low {
-      color: #f97316;
-      font-weight: bold;
-    }
-    .value-normal {
-      color: #374151;
-      font-weight: bold;
-    }
-    .arrow-up::after {
-      content: " ↑";
-      color: #dc2626;
-    }
-    .arrow-down::after {
-      content: " ↓";
-      color: #f97316;
-    }
-    .med-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 10px;
-    }
-    .med-name {
-      font-weight: 600;
-      color: #374151;
-    }
-    .med-status {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin-left: 8px;
-    }
-    .med-active {
-      background: #dcfce7;
-      color: #16a34a;
-    }
-    .med-ended {
-      background: #f3f4f6;
-      color: #6b7280;
-    }
-    .med-detail {
-      font-size: 12px;
-      color: #6b7280;
-      margin-top: 6px;
-    }
-    .med-dosage {
-      font-size: 12px;
-      color: #6366f1;
-      margin-top: 4px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-    .no-data {
-      text-align: center;
-      color: #9ca3af;
-      padding: 20px;
-    }
-    @media print {
-      body {
-        padding: 0;
-      }
-      .section {
-        page-break-inside: avoid;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>📊 趋势分析报告${memberName ? ` - ${memberName}` : ''}</h1>
-    <div class="meta">导出时间: ${exportTime}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">分析时间范围</div>
-    <div class="date-range">
-      📅 ${dateRange.start} 至 ${dateRange.end}
-    </div>
-  </div>
-
-  ${datasets.length > 0 ? `
-  <div class="section">
-    <div class="section-title">分析指标 (${datasets.length}项)</div>
-    <div>
-      ${datasets.map((ds, idx) => `
-        <span class="indicator-tag" style="background-color: ${CHART_COLORS[idx % CHART_COLORS.length]}">
-          ${ds.name}${ds.unit ? ` (${ds.unit})` : ''}
-        </span>
-      `).join('')}
-    </div>
-  </div>
-
-  ${trendChartSVG ? `
-  <div class="section">
-    <div class="section-title">趋势图</div>
-    <div class="chart-container">
-      ${trendChartSVG}
-    </div>
-  </div>
-  ` : ''}
-
-  ${datasets.map((ds, idx) => {
-    const filteredPoints = ds.points
-      .filter(p => p.dateStr >= dateRange.start && p.dateStr <= dateRange.end)
-      .sort((a, b) => b.dateStr.localeCompare(a.dateStr));
-
-    if (filteredPoints.length === 0) return '';
-
-    return `
-    <div class="section">
-      <div class="section-title" style="border-color: ${CHART_COLORS[idx % CHART_COLORS.length]}">
-        ${ds.name}${ds.unit ? ` (${ds.unit})` : ''} - 数据明细
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width: 40%">日期</th>
-            <th style="width: 30%">结果</th>
-            <th style="width: 30%">参考范围</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filteredPoints.map(p => {
-            const flagClass = p.original.flag === 'High' ? 'value-high arrow-up' :
-                             p.original.flag === 'Low' ? 'value-low arrow-down' : 'value-normal';
-            return `
-              <tr>
-                <td>${p.dateStr}</td>
-                <td class="${flagClass}">${p.val} ${p.original.unit || ''}</td>
-                <td>${p.original.refRange || '-'}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-    `;
-  }).join('')}
-  ` : `
-  <div class="section">
-    <div class="no-data">暂无指标数据</div>
-  </div>
-  `}
-
-  ${visibleMeds.length > 0 ? `
-  <div class="section">
-    <div class="section-title">同期用药计划 (${visibleMeds.length}项)</div>
-    ${visibleMeds.map(m => {
-      const isActive = !m.endTime || new Date(m.endTime) >= new Date();
-      return `
-        <div class="med-card">
-          <div>
-            <span class="med-name">${m.name}</span>
-            <span class="med-status ${isActive ? 'med-active' : 'med-ended'}">
-              ${isActive ? '进行中' : '已结束'}
-            </span>
-          </div>
-          <div class="med-detail">
-            📅 ${m.startTime} ${m.endTime ? `至 ${m.endTime}` : '起 (长期)'}
-          </div>
-          ${m.dosagePerTime ? `
-            <div class="med-dosage">
-              💊 每次${m.dosagePerTime} · 每日${m.frequency}次 · ${m.relation}
-              ${m.timePeriods && m.timePeriods.length > 0 ? ` · ${m.timePeriods.join('/')}` : ''}
-            </div>
-          ` : ''}
-          ${m.cycleEnabled && m.cycleDays && m.cycleRestDays ? `
-            <div class="med-dosage">
-              🔄 循环: 服${m.cycleDays}天停${m.cycleRestDays}天
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('')}
-  </div>
-  ` : ''}
-
-  <div class="footer">
-    <p>本报告由健康管理系统自动生成，仅供参考</p>
-    <p>如有疑问请咨询专业医生</p>
-  </div>
-</body>
-</html>
-  `;
 };
 
 export default exportTrendToPDF;
