@@ -997,7 +997,9 @@ function App() {
                           )}
                           {(report.items || []).map((item, idx) => {
                             const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : 'text-gray-700';
-                            const isSelected = selectedTrendItems.includes(item.name);
+                            // 使用名称+单位(小写)作为唯一标识，确保同名不同单位的指标分开选择，忽略大小写
+                            const itemKey = `${item.name}||${(item.unit || '').toLowerCase()}`;
+                            const isSelected = selectedTrendItems.includes(itemKey);
                             return (
                               <div key={idx} className="flex justify-between items-center py-2 text-sm border-b last:border-0">
                                 <div className="flex items-center gap-2">
@@ -1006,9 +1008,9 @@ function App() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isSelected) {
-                                        setSelectedTrendItems(selectedTrendItems.filter(i => i !== item.name));
+                                        setSelectedTrendItems(selectedTrendItems.filter(i => i !== itemKey));
                                       } else {
-                                        setSelectedTrendItems([...selectedTrendItems, item.name]);
+                                        setSelectedTrendItems([...selectedTrendItems, itemKey]);
                                       }
                                     }}
                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${isSelected ? 'bg-teal-500 border-teal-500 text-white' : 'border-gray-300 hover:border-teal-400'}`}

@@ -40,18 +40,25 @@ const TrendModal = ({
     setDateRange({ start: getLocalDateStr(start), end: getLocalDateStr(end) });
   };
 
+  // 解析选中项的key，格式为 "名称||单位"
+  const parseItemKey = (key) => {
+    const parts = key.split('||');
+    return { name: parts[0], unit: parts[1] || '' };
+  };
+
   // 构建趋势数据
   const buildTrendDatasets = () => {
     const datasets = [];
 
-    selectedItems.forEach((itemName, index) => {
+    selectedItems.forEach((itemKey, index) => {
       const points = [];
+      const { name: itemName, unit: itemUnit } = parseItemKey(itemKey);
 
-      // 遍历所有检验报告找这个指标
+      // 遍历所有检验报告找这个指标（名称和单位都要匹配，单位忽略大小写）
       labReports.forEach(report => {
         if (!report.items) return;
 
-        const item = report.items.find(i => i.name === itemName);
+        const item = report.items.find(i => i.name === itemName && (i.unit || '').toLowerCase() === itemUnit);
         if (item && item.result) {
           // 解析数值
           const numVal = parseFloat(item.result);
@@ -67,7 +74,9 @@ const TrendModal = ({
 
       if (points.length > 0) {
         datasets.push({
+          key: itemKey,
           name: itemName,
+          unit: itemUnit,
           points: points.sort((a, b) => a.dateStr.localeCompare(b.dateStr))
         });
       }
@@ -102,15 +111,18 @@ const TrendModal = ({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {selectedItems.map((item, idx) => (
-                <div
-                  key={item}
-                  className="px-3 py-1 rounded-full text-sm font-medium text-white flex items-center gap-1"
-                  style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                >
-                  {item}
-                </div>
-              ))}
+              {selectedItems.map((itemKey, idx) => {
+                const { name, unit } = parseItemKey(itemKey);
+                return (
+                  <div
+                    key={itemKey}
+                    className="px-3 py-1 rounded-full text-sm font-medium text-white flex items-center gap-1"
+                    style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                  >
+                    {name}{unit && <span className="opacity-75 text-xs">({unit})</span>}
+                  </div>
+                );
+              })}
               {selectedItems.length === 0 && (
                 <div className="text-gray-400 text-sm">请在检验报告中选择要查看趋势的指标</div>
               )}
@@ -169,12 +181,12 @@ const TrendModal = ({
               <div className="text-sm font-medium text-gray-700 mb-2">数据明细</div>
               <div className="space-y-3">
                 {datasets.map((ds, idx) => (
-                  <div key={ds.name} className="bg-white border rounded-xl overflow-hidden">
+                  <div key={ds.key} className="bg-white border rounded-xl overflow-hidden">
                     <div
                       className="px-4 py-2 text-sm font-medium text-white flex items-center gap-2"
                       style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
                     >
-                      {ds.name}
+                      {ds.name}{ds.unit && <span className="opacity-75 text-xs">({ds.unit})</span>}
                     </div>
                     <div className="divide-y">
                       {ds.points
