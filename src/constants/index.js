@@ -1,5 +1,5 @@
 // 应用版本
-export const VERSION = "v16.53";
+export const VERSION = "v16.58";
 
 // 单位选项
 export const UNITS = ['mg', 'g', 'mcg', 'ml', 'L', 'IU', '片', '粒', '支', '瓶', '盒', '包'];
@@ -38,6 +38,19 @@ export const VITAL_TYPES = [
   { id: 'blood_sugar', name: '血糖', icon: 'Droplet', unit: 'mmol/L', hasTwo: false, normalRange: '3.9-6.1(空腹)', color: '#10b981' },
   { id: 'temperature', name: '体温', icon: 'Thermometer', unit: '°C', hasTwo: false, normalRange: '36.1-37.2', color: '#06b6d4' },
   { id: 'oxygen', name: '血氧', icon: 'Wind', unit: '%', hasTwo: false, normalRange: '95-100', color: '#3b82f6' },
+];
+
+// 检验报告分类
+export const LAB_CATEGORIES = [
+  '血常规', '尿常规', '便常规', '生化全套', '肝功能', '肾功能',
+  '血脂', '血糖', '甲状腺功能', '肿瘤标志物', '凝血功能',
+  '电解质', '心肌酶谱', '免疫检查', '感染指标', '激素检查',
+  '维生素检查', '微量元素', '过敏原检测', '综合检验', '其他'
+];
+
+// 影像报告检查类型
+export const IMAGING_MODALITIES = [
+  'CT', 'MRI', 'X光', 'B超', 'PET-CT', '内镜', '心电图', '脑电图', '其他'
 ];
 
 // AI API 配置

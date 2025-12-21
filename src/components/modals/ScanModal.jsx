@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Icons from '../icons/Icons';
-import { analyzeMedicalImage, getApiKeyFor, getCurrentApi, setCurrentApi } from '../../services/ai';
-import { getLocalDateStr } from '../../utils';
-import { API_PROVIDERS } from '../../constants';
+import { analyzeMedicalImage, getApiKeyFor, getCurrentApi } from '../../services/ai';
+import { getLocalDateStr, compressImages } from '../../utils';
+import { API_PROVIDERS, LAB_CATEGORIES, IMAGING_MODALITIES } from '../../constants';
 
 const ScanModal = ({
   show,
@@ -16,7 +16,8 @@ const ScanModal = ({
   const [scanLoading, setScanLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [debugInfo, setDebugInfo] = useState('');
-  const [apiProvider, setApiProvider] = useState(getCurrentApi());
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const scanFileRef = useRef(null);
 
   // 报告数据
@@ -26,7 +27,42 @@ const ScanModal = ({
       : { date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' }
   ));
 
+  // 每次弹窗打开时重置状态
+  useEffect(() => {
+    if (show) {
+      // 重置上传和调试状态
+      setUploadedFiles([]);
+      setDebugInfo('');
+      setScanLoading(false);
+      setShowImagePreview(false);
+      setPreviewImageIndex(0);
+
+      // 重置报告数据
+      if (scanEditData) {
+        setReportData(scanEditData);
+      } else {
+        setReportData(
+          scanType === 'lab'
+            ? { date: getLocalDateStr(new Date()), hospital: '', items: [{ name: '', result: '', unit: '', refRange: '', flag: 'Normal' }] }
+            : { date: getLocalDateStr(new Date()), hospital: '', modality: '', region: '', findings: '', impression: '' }
+        );
+      }
+    }
+  }, [show, scanType, scanEditData]);
+
   if (!show) return null;
+
+  // 匹配类别到预定义列表
+  const matchCategory = (aiCategory, categoryList) => {
+    if (!aiCategory) return '';
+    // 精确匹配
+    if (categoryList.includes(aiCategory)) return aiCategory;
+    // 模糊匹配（包含关系）
+    const matched = categoryList.find(c =>
+      aiCategory.includes(c) || c.includes(aiCategory)
+    );
+    return matched || '其他';
+  };
 
   // 添加检测项
   const addLabItem = () => {
@@ -74,7 +110,10 @@ const ScanModal = ({
       setDebugInfo(prev => prev + `\n已加载 ${fileData.length} 个文件`);
 
       // 调用AI识别
-      const apiKey = getApiKeyFor(apiProvider);
+      const currentApi = getCurrentApi();
+      const apiKey = getApiKeyFor(currentApi);
+      const providerName = API_PROVIDERS.find(p => p.id === currentApi)?.name || currentApi;
+
       if (!apiKey) {
         setDebugInfo(prev => prev + '\n❌ 未配置API密钥');
         alert('请先在设置中配置AI API密钥');
@@ -82,27 +121,45 @@ const ScanModal = ({
         return;
       }
 
-      setDebugInfo(prev => prev + `\n使用 ${apiProvider} API 进行识别...`);
+      setDebugInfo(prev => prev + `\n使用 ${providerName} 进行识别...`);
 
-      const result = await analyzeMedicalImage(fileData, scanType, apiProvider, apiKey);
+      const result = await analyzeMedicalImage(fileData, scanType, currentApi);
 
       if (result && result.success) {
         setDebugInfo(prev => prev + '\n✅ 识别成功');
+
+        // 压缩图片用于保存
+        setDebugInfo(prev => prev + '\n正在压缩图片...');
+        const compressedFiles = await compressImages(fileData, 800, 0.7);
+        const images = compressedFiles.map(f => f.data);
+        setDebugInfo(prev => prev + `\n✅ 已压缩 ${images.length} 张图片`);
+
         if (scanType === 'lab') {
+          const matchedCategory = matchCategory(result.category, LAB_CATEGORIES);
           setReportData({
             date: result.date || getLocalDateStr(new Date()),
             hospital: result.hospital || '',
-            items: result.items || []
+            category: matchedCategory, // 匹配到预定义列表
+            items: result.items || [],
+            images // 保存压缩后的图片
           });
+          if (result.category) {
+            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.category}${matchedCategory !== result.category ? ` → 匹配为: ${matchedCategory}` : ''}`);
+          }
         } else {
+          const matchedModality = matchCategory(result.modality, IMAGING_MODALITIES);
           setReportData({
             date: result.date || getLocalDateStr(new Date()),
             hospital: result.hospital || '',
-            modality: result.modality || '',
+            modality: matchedModality, // 匹配到预定义列表
             region: result.region || '',
             findings: result.findings || '',
-            impression: result.impression || ''
+            impression: result.impression || '',
+            images // 保存压缩后的图片
           });
+          if (result.modality) {
+            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.modality}${matchedModality !== result.modality ? ` → 匹配为: ${matchedModality}` : ''}`);
+          }
         }
       } else {
         setDebugInfo(prev => prev + `\n❌ 识别失败: ${result?.error || '未知错误'}`);
@@ -150,24 +207,14 @@ const ScanModal = ({
           {/* AI扫描区域 */}
           {!editingId && (
             <div className="bg-indigo-50 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <Icons.ScanLine size={20} className="text-indigo-600" />
-                <span className="font-medium text-indigo-900">AI智能识别</span>
-              </div>
-
-              {/* API选择 */}
-              <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
-                {API_PROVIDERS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => { setApiProvider(p.id); setCurrentApi(p.id); }}
-                    className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-                      apiProvider === p.id ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600'
-                    }`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Icons.ScanLine size={20} className="text-indigo-600" />
+                  <span className="font-medium text-indigo-900">AI智能识别</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {API_PROVIDERS.find(p => p.id === getCurrentApi())?.name || '未配置'}
+                </span>
               </div>
 
               {/* 上传按钮 */}
@@ -191,15 +238,21 @@ const ScanModal = ({
                 )}
               </button>
 
-              {/* 已上传文件 */}
+              {/* 已上传文件预览 */}
               {uploadedFiles.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {uploadedFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 bg-white px-2 py-1 rounded text-xs text-gray-600">
-                      <Icons.FileImage size={14} />
-                      {f.name}
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {uploadedFiles.map((f, i) => (
+                      <img
+                        key={i}
+                        src={f.data}
+                        alt={f.name}
+                        className="h-16 w-auto rounded-lg border cursor-pointer hover:opacity-80"
+                        onClick={() => { setPreviewImageIndex(i); setShowImagePreview(true); }}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">点击图片可放大查看</div>
                 </div>
               )}
 
@@ -209,6 +262,28 @@ const ScanModal = ({
                   {debugInfo}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 已保存的图片（编辑模式显示） */}
+          {reportData.images && reportData.images.length > 0 && (
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Icons.FileImage size={16} className="text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">原始报告图片 ({reportData.images.length})</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {reportData.images.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img}
+                    alt={`报告图片 ${i + 1}`}
+                    className="h-20 w-auto rounded-lg border cursor-pointer hover:opacity-80"
+                    onClick={() => { setPreviewImageIndex(i); setShowImagePreview(true); }}
+                  />
+                ))}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">点击图片可放大查看</div>
             </div>
           )}
 
@@ -239,7 +314,23 @@ const ScanModal = ({
 
             {/* 检验报告特有字段 */}
             {scanType === 'lab' && (
-              <div>
+              <div className="space-y-4">
+                {/* 报告分类 */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">报告分类</label>
+                  <select
+                    value={reportData.category || ''}
+                    onChange={e => setReportData({ ...reportData, category: e.target.value })}
+                    className="w-full mt-1 px-4 py-3 border rounded-xl"
+                  >
+                    <option value="">选择分类</option>
+                    {LAB_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium text-gray-700">检测项目</label>
                   <button onClick={addLabItem} className="text-indigo-600 text-sm flex items-center gap-1">
@@ -296,6 +387,7 @@ const ScanModal = ({
                     </div>
                   ))}
                 </div>
+                </div>
               </div>
             )}
 
@@ -311,12 +403,9 @@ const ScanModal = ({
                       className="w-full mt-1 px-4 py-3 border rounded-xl"
                     >
                       <option value="">选择类型</option>
-                      <option value="CT">CT</option>
-                      <option value="MRI">MRI</option>
-                      <option value="X光">X光</option>
-                      <option value="B超">B超</option>
-                      <option value="PET-CT">PET-CT</option>
-                      <option value="其他">其他</option>
+                      {IMAGING_MODALITIES.map(mod => (
+                        <option key={mod} value={mod}>{mod}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -373,6 +462,60 @@ const ScanModal = ({
           </div>
         </div>
       </div>
+
+      {/* 图片预览弹窗 */}
+      {showImagePreview && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center"
+          onClick={() => setShowImagePreview(false)}
+        >
+          <button
+            onClick={() => setShowImagePreview(false)}
+            className="absolute top-4 right-4 text-white p-2"
+          >
+            <Icons.X size={28} />
+          </button>
+
+          {/* 图片导航 */}
+          {(() => {
+            const images = reportData.images || uploadedFiles.map(f => f.data);
+            if (images.length === 0) return null;
+            return (
+              <>
+                <img
+                  src={images[previewImageIndex]}
+                  alt={`预览 ${previewImageIndex + 1}`}
+                  className="max-w-full max-h-[80vh] object-contain"
+                  onClick={e => e.stopPropagation()}
+                />
+
+                {/* 图片计数 */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+                  {previewImageIndex + 1} / {images.length}
+                </div>
+
+                {/* 左右切换按钮 */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewImageIndex(i => i > 0 ? i - 1 : images.length - 1); }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 bg-black/50 rounded-full"
+                    >
+                      <Icons.ChevronLeft size={24} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewImageIndex(i => i < images.length - 1 ? i + 1 : 0); }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 bg-black/50 rounded-full"
+                    >
+                      <Icons.ChevronRight size={24} />
+                    </button>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 };

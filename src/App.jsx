@@ -143,6 +143,11 @@ function App() {
     return { start: getLocalDateStr(start), end: getLocalDateStr(end) };
   });
 
+  // AI 配置相关
+  const [showAiConfig, setShowAiConfig] = useState(false);
+  const [currentApiProvider, setCurrentApiProvider] = useState(() => getCurrentApi());
+  const [apiKeyInput, setApiKeyInput] = useState('');
+
   // 辅助函数
   const updateMemberData = (memberId, dataType, newData) => {
     setAllMembersData(prev => ({
@@ -945,7 +950,12 @@ function App() {
                     <div key={report.id}>
                       <div onClick={() => setExpandedReports(p => ({...p, [report.id]: !p[report.id]}))} className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-50">
                         <div className="flex-1">
-                          <div className="font-bold text-sm mb-0.5">{report.date}</div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-bold text-sm">{report.date}</span>
+                            {report.category && (
+                              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{report.category}</span>
+                            )}
+                          </div>
                           <div className="text-xs text-gray-500">{report.hospital || '未知医院'}</div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -968,6 +978,23 @@ function App() {
                       </div>
                       {isExpanded && (
                         <div className="px-4 pb-3 border-t bg-slate-50">
+                          {/* 原始报告图片 */}
+                          {report.images && report.images.length > 0 && (
+                            <div className="py-2 border-b">
+                              <div className="flex gap-2 overflow-x-auto pb-1">
+                                {report.images.map((img, imgIdx) => (
+                                  <img
+                                    key={imgIdx}
+                                    src={img}
+                                    alt={`报告图片 ${imgIdx + 1}`}
+                                    className="h-12 w-auto rounded border cursor-pointer hover:opacity-80"
+                                    onClick={(e) => { e.stopPropagation(); setScanType('lab'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">点击图片查看原始报告</div>
+                            </div>
+                          )}
                           {(report.items || []).map((item, idx) => {
                             const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : 'text-gray-700';
                             const isSelected = selectedTrendItems.includes(item.name);
@@ -1049,6 +1076,23 @@ function App() {
                       </div>
                       {isExpanded && (
                         <div className="px-4 pb-3 border-t bg-slate-50 text-sm">
+                          {/* 原始报告图片 */}
+                          {report.images && report.images.length > 0 && (
+                            <div className="py-2 border-b mb-2">
+                              <div className="flex gap-2 overflow-x-auto pb-1">
+                                {report.images.map((img, imgIdx) => (
+                                  <img
+                                    key={imgIdx}
+                                    src={img}
+                                    alt={`报告图片 ${imgIdx + 1}`}
+                                    className="h-12 w-auto rounded border cursor-pointer hover:opacity-80"
+                                    onClick={(e) => { e.stopPropagation(); setScanType('imaging'); setScanEditData(report); setEditingId(report.id); setShowScanModal(true); }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">点击图片查看原始报告</div>
+                            </div>
+                          )}
                           {report.findings && (
                             <div className="mb-2">
                               <div className="text-xs text-gray-500 mb-1">影像所见:</div>
@@ -1134,6 +1178,79 @@ function App() {
                 </div>
                 <Icons.ChevronRight size={16} className="text-gray-400"/>
               </button>
+            </div>
+
+            {/* AI 配置 */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase">AI 识别配置</div>
+              <button
+                onClick={() => {
+                  setApiKeyInput(getApiKeyFor(currentApiProvider) || '');
+                  setShowAiConfig(!showAiConfig);
+                }}
+                className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <Icons.ScanLine size={18} className="text-gray-600"/>
+                  <span>配置AI识别服务</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">
+                    {API_PROVIDERS.find(p => p.id === currentApiProvider)?.name || '未选择'}
+                  </span>
+                  <Icons.ChevronDown size={16} className={`text-gray-400 transition-transform ${showAiConfig ? 'rotate-180' : ''}`}/>
+                </div>
+              </button>
+
+              {showAiConfig && (
+                <div className="px-4 py-3 border-t bg-gray-50 space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">AI 服务提供商</label>
+                    <select
+                      value={currentApiProvider}
+                      onChange={e => {
+                        const newProvider = e.target.value;
+                        setCurrentApiProvider(newProvider);
+                        setCurrentApi(newProvider);
+                        setApiKeyInput(getApiKeyFor(newProvider) || '');
+                      }}
+                      className="w-full px-3 py-2 border rounded-xl text-sm"
+                    >
+                      {API_PROVIDERS.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">API Key</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={e => setApiKeyInput(e.target.value)}
+                        placeholder={API_PROVIDERS.find(p => p.id === currentApiProvider)?.placeholder || '输入API Key'}
+                        className="flex-1 px-3 py-2 border rounded-xl text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          saveApiKeyFor(currentApiProvider, apiKeyInput);
+                          alert('API Key 已保存');
+                        }}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium"
+                      >
+                        保存
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {currentApiProvider === 'qwen' && '通义千问提供免费额度，可直接使用'}
+                      {currentApiProvider === 'gemini' && '可在 Google AI Studio 获取免费 API Key'}
+                      {currentApiProvider === 'openai' && '需要 OpenAI 付费账户'}
+                      {currentApiProvider === 'claude' && '需要 Anthropic 付费账户'}
+                      {currentApiProvider === 'siliconflow' && '硅基流动提供多种模型选择'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 数据统计 */}
@@ -1251,7 +1368,31 @@ function App() {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700">药品名称</label>
-                <input type="text" value={medInput.name} onChange={e => setMedInput({...medInput, name: e.target.value})} className="w-full mt-1 px-4 py-3 border rounded-xl" placeholder="输入药品名称"/>
+                {catalog.length > 0 ? (
+                  <div className="mt-1 relative">
+                    <select
+                      value={medInput.name}
+                      onChange={e => setMedInput({...medInput, name: e.target.value})}
+                      className="w-full px-4 py-3 border rounded-xl appearance-none bg-white pr-10"
+                    >
+                      <option value="">选择药品</option>
+                      {catalog.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}{c.strength ? ` (${c.strength}${c.unit || ''})` : ''}</option>
+                      ))}
+                    </select>
+                    <Icons.ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                ) : (
+                  <div className="mt-1 p-4 bg-gray-50 rounded-xl text-center">
+                    <p className="text-sm text-gray-500 mb-2">暂无药品，请先添加药品到目录</p>
+                    <button
+                      onClick={() => { setShowMedForm(false); setMedSubTab('catalog'); }}
+                      className="text-indigo-600 text-sm font-medium"
+                    >
+                      前往药品目录 →
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
