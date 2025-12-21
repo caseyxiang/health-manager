@@ -1,16 +1,16 @@
-// PDF导出工具函数 - 使用浏览器打印功能生成PDF
+// PDF导出工具函数 - 支持保存和分享
 
 import { CHART_COLORS } from '../constants';
 
 /**
- * 导出趋势分析结果为PDF
+ * 导出趋势分析结果
  * @param {Object} options - 导出选项
  * @param {Array} options.datasets - 趋势数据集
  * @param {Object} options.dateRange - 日期范围 {start, end}
  * @param {Array} options.meds - 用药计划列表
  * @param {string} options.memberName - 成员姓名
  */
-export const exportTrendToPDF = ({ datasets, dateRange, meds, memberName = '' }) => {
+export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName = '' }) => {
   // 过滤在日期范围内的用药
   const startTs = new Date(dateRange.start).getTime();
   const endTs = new Date(dateRange.end).getTime();
@@ -23,22 +23,48 @@ export const exportTrendToPDF = ({ datasets, dateRange, meds, memberName = '' })
   // 生成HTML内容
   const html = generatePDFContent({ datasets, dateRange, visibleMeds, memberName });
 
-  // 创建新窗口进行打印
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('请允许弹出窗口以导出PDF');
-    return;
+  // 生成文件名
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const fileName = `趋势分析报告${memberName ? `-${memberName}` : ''}-${dateStr}.html`;
+
+  // 创建Blob
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+
+  // 检测是否支持Web Share API（主要用于移动设备）
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (isMobile && navigator.share && navigator.canShare) {
+    // 移动设备：使用Web Share API分享文件
+    try {
+      const file = new File([blob], fileName, { type: 'text/html' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `趋势分析报告${memberName ? ` - ${memberName}` : ''}`,
+          text: '健康管理系统趋势分析报告'
+        });
+        return;
+      }
+    } catch (err) {
+      // 如果分享被取消或失败，继续使用下载方式
+      if (err.name !== 'AbortError') {
+        console.log('Share failed, falling back to download:', err);
+      } else {
+        return; // 用户取消分享
+      }
+    }
   }
 
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  // 等待内容加载完成后打印
-  printWindow.onload = () => {
-    setTimeout(() => {
-      printWindow.print();
-    }, 300);
-  };
+  // 桌面设备或不支持分享：直接下载文件
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 /**

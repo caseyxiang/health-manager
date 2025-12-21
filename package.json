@@ -1,7 +1,7 @@
 {
   "name": "health-manager-pro",
   "private": true,
-  "version": "16.62.0",
+  "version": "16.63.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
