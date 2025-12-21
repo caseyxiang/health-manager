@@ -109,6 +109,10 @@ function App() {
     dosagePerTime: '1', relation: '无关', timePeriods: [], isLongTerm: true,
     cycleEnabled: false, cycleDays: '', cycleRestDays: ''
   });
+  const [showCatalogForm, setShowCatalogForm] = useState(false);
+  const [catalogInput, setCatalogInput] = useState({
+    name: '', brand: '', dosageForm: '片剂', strength: '', unit: 'mg'
+  });
   const [vitalsInput, setVitalsInput] = useState({
     type: 'blood_pressure', date: getLocalDateStr(new Date()), time: getLocalTimeStr(new Date()),
     value1: '', value2: '', note: ''
@@ -600,7 +604,7 @@ function App() {
 
   // 主界面
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col max-w-lg mx-auto relative overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="min-h-screen bg-gray-100 flex flex-col w-full max-w-lg mx-auto relative overflow-hidden" style={{ height: '100dvh' }}>
       {/* 顶部导航栏 */}
       <div className={`${currentMemberColor.bg} text-white px-4 py-3 flex items-center justify-between shrink-0`}>
         <div className="flex items-center gap-3">
@@ -734,21 +738,8 @@ function App() {
               </div>
             )}
 
-            {/* 添加按钮 */}
-            <div className="fixed bottom-20 right-4 z-10">
-              <button onClick={() => {
-                setEditingId(null);
-                setVitalsInput({
-                  type: selectedVitalType || 'blood_pressure',
-                  date: getLocalDateStr(new Date()),
-                  time: getLocalTimeStr(new Date()),
-                  value1: '', value2: '', note: ''
-                });
-                setShowVitalsForm(true);
-              }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center">
-                <Icons.Plus size={24}/>
-              </button>
-            </div>
+            {/* 底部占位 */}
+            <div className="h-20"></div>
           </div>
         )}
 
@@ -767,42 +758,111 @@ function App() {
 
             {medSubTab === 'plan' && (
               <>
-                {activeMeds.map(m => (
-                  <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 cursor-pointer hover:shadow-md">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-bold text-lg mb-1">{m.name}</div>
-                        <div className="text-sm text-gray-500">{m.startTime} 开始 | {m.relation}</div>
-                        {/* 显示服用方法 */}
-                        <div className="text-xs text-indigo-600 mt-1">
-                          {getMedicationMethodString(m)}
-                        </div>
-                        {/* 显示循环用药 */}
-                        {m.cycleEnabled && m.cycleDays && m.cycleRestDays && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <Icons.Repeat size={12} className="text-green-600" />
-                            <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                              循环: 服{m.cycleDays}天停{m.cycleRestDays}天
-                            </span>
+                {activeMeds.map(m => {
+                  // 计算进度信息
+                  const now = new Date();
+                  const startDate = new Date(m.startTime);
+                  const daysSinceStart = Math.floor((now - startDate) / 86400000);
+
+                  let progressInfo = null;
+
+                  // 循环用药进度
+                  if (m.cycleEnabled && m.cycleDays && m.cycleRestDays) {
+                    const cycleDays = parseInt(m.cycleDays);
+                    const restDays = parseInt(m.cycleRestDays);
+                    const totalCycleDays = cycleDays + restDays;
+                    const currentCycleDay = daysSinceStart % totalCycleDays;
+                    const cycleNumber = Math.floor(daysSinceStart / totalCycleDays) + 1;
+                    const isInMedicationPhase = currentCycleDay < cycleDays;
+
+                    if (isInMedicationPhase) {
+                      progressInfo = {
+                        type: 'cycle-med',
+                        progress: ((currentCycleDay + 1) / cycleDays) * 100,
+                        label: `第${cycleNumber}周期 服药第${currentCycleDay + 1}/${cycleDays}天`,
+                        color: 'bg-green-500'
+                      };
+                    } else {
+                      const restDay = currentCycleDay - cycleDays + 1;
+                      progressInfo = {
+                        type: 'cycle-rest',
+                        progress: (restDay / restDays) * 100,
+                        label: `第${cycleNumber}周期 停药第${restDay}/${restDays}天`,
+                        color: 'bg-amber-500'
+                      };
+                    }
+                  }
+                  // 短期用药进度（有结束日期）
+                  else if (m.endTime) {
+                    const endDate = new Date(m.endTime);
+                    const totalDays = Math.ceil((endDate - startDate) / 86400000);
+                    const elapsedDays = Math.min(daysSinceStart, totalDays);
+                    const remainingDays = Math.max(0, Math.ceil((endDate - now) / 86400000));
+
+                    progressInfo = {
+                      type: 'short-term',
+                      progress: Math.min(100, (elapsedDays / totalDays) * 100),
+                      label: `已服${elapsedDays}天 / 共${totalDays}天`,
+                      color: 'bg-indigo-500'
+                    };
+                  }
+
+                  return (
+                    <div key={m.id} onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }} className="bg-white p-4 rounded-xl shadow-sm border mb-3 cursor-pointer hover:shadow-md">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-1">{m.name}</div>
+                          <div className="text-sm text-gray-500">{m.startTime} 开始 | {m.relation}</div>
+                          {/* 显示服用方法 */}
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {getMedicationMethodString(m)}
                           </div>
-                        )}
+                          {/* 显示循环用药标签 */}
+                          {m.cycleEnabled && m.cycleDays && m.cycleRestDays && (
+                            <div className="flex items-center gap-1 mt-2">
+                              <Icons.Repeat size={12} className="text-green-600" />
+                              <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                循环: 服{m.cycleDays}天停{m.cycleRestDays}天
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                            {m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}
+                            {m.endTime ? `剩${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${m.endTime ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                          {m.endTime ? <Icons.Clock size={12}/> : <Icons.Infinity size={12}/>}
-                          {m.endTime ? `${Math.max(0, Math.ceil((new Date(m.endTime)-new Date())/86400000))}天` : '长期'}
-                        </span>
-                      </div>
+                      {/* 进度条 */}
+                      {progressInfo && (
+                        <div className="mt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs text-gray-500">{progressInfo.label}</span>
+                            <span className="text-xs font-medium text-gray-600">{Math.round(progressInfo.progress)}%</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${progressInfo.color} rounded-full transition-all duration-300`}
+                              style={{ width: `${progressInfo.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {endedMeds.length > 0 && (
                   <div className="mt-6">
                     <div onClick={() => setIsEndedExpanded(!isEndedExpanded)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase mb-3 cursor-pointer">
                       {isEndedExpanded ? <Icons.ChevronDown size={14}/> : <Icons.ChevronRight size={14}/>} 已结束 ({endedMeds.length})
                     </div>
                     {isEndedExpanded && endedMeds.map(m => (
-                      <div key={m.id} className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70">
+                      <div
+                        key={m.id}
+                        onClick={() => { setMedInput({...m}); setEditingId(m.id); setShowMedForm(true); }}
+                        className="bg-gray-50 p-3 rounded-xl border mb-2 opacity-70 cursor-pointer hover:opacity-100 hover:shadow-sm transition-all"
+                      >
                         <div className="font-medium text-gray-700">{m.name}</div>
                         <div className="text-xs text-gray-500 mt-1">{m.startTime} - {m.endTime}</div>
                       </div>
@@ -821,7 +881,11 @@ function App() {
             {medSubTab === 'catalog' && (
               <div className="grid grid-cols-2 gap-3">
                 {catalog.map(i => (
-                  <div key={i.id} className="bg-white p-4 rounded-xl shadow-sm border">
+                  <div
+                    key={i.id}
+                    onClick={() => { setCatalogInput({...i}); setEditingId(i.id); setShowCatalogForm(true); }}
+                    className="bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+                  >
                     <div className="font-bold text-base mb-1">{i.name}</div>
                     {i.brand && <div className="text-xs text-indigo-600 mb-1">{i.brand}</div>}
                     <div className="text-sm text-gray-500">{i.dosageForm} {i.strength}{i.unit}</div>
@@ -836,16 +900,8 @@ function App() {
               </div>
             )}
 
-            {/* 添加按钮 */}
-            <div className="fixed bottom-20 right-4 z-10">
-              <button onClick={() => {
-                setEditingId(null);
-                setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''});
-                setShowMedForm(true);
-              }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center">
-                <Icons.Plus size={24}/>
-              </button>
-            </div>
+            {/* 底部占位 */}
+            <div className="h-20"></div>
           </div>
         )}
 
@@ -1019,6 +1075,9 @@ function App() {
                 )}
               </div>
             </div>
+
+            {/* 底部占位 */}
+            <div className="h-4"></div>
           </div>
         )}
 
@@ -1107,9 +1166,36 @@ function App() {
                 <Icons.ChevronRight size={16} className="text-gray-400"/>
               </button>
             </div>
+
+            {/* 底部占位 */}
+            <div className="h-4"></div>
           </div>
         )}
       </div>
+
+      {/* 浮动添加按钮 - 仅在指标和用药页面显示 */}
+      {(activeTab === 'vitals' || activeTab === 'meds') && (
+        <div className="absolute bottom-16 right-4 z-10">
+          <button onClick={() => {
+            if (activeTab === 'vitals') {
+              setEditingId(null);
+              setVitalsInput({
+                type: selectedVitalType || 'blood_pressure',
+                date: getLocalDateStr(new Date()),
+                time: getLocalTimeStr(new Date()),
+                value1: '', value2: '', note: ''
+              });
+              setShowVitalsForm(true);
+            } else {
+              setEditingId(null);
+              setMedInput({name:'',startTime:getLocalDateStr(new Date()),endTime:'',frequency:'1',dosagePerTime:'1',relation:'无关',timePeriods:[],isLongTerm:true,cycleEnabled:false,cycleDays:'',cycleRestDays:''});
+              setShowMedForm(true);
+            }
+          }} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center">
+            <Icons.Plus size={24}/>
+          </button>
+        </div>
+      )}
 
       {/* 底部导航栏 */}
       <div className="bg-white border-t flex justify-around py-2 shrink-0">
@@ -1232,7 +1318,22 @@ function App() {
                 )}
               </div>
 
-              <div className="flex gap-3 pt-4">
+              {/* 删除按钮 - 仅编辑模式显示 */}
+              {editingId && (
+                <button
+                  onClick={() => {
+                    if (confirm('确定要删除这个用药计划吗？')) {
+                      setMeds(meds.filter(m => m.id !== editingId));
+                      setShowMedForm(false);
+                    }
+                  }}
+                  className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-red-100"
+                >
+                  <Icons.Trash2 size={18} /> 删除此用药计划
+                </button>
+              )}
+
+              <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowMedForm(false)} className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold">取消</button>
                 <button onClick={() => {
                   if (!medInput.name.trim()) { alert('请输入药品名称'); return; }
@@ -1243,6 +1344,81 @@ function App() {
                     setMeds([...meds, newMed]);
                   }
                   setShowMedForm(false);
+                }} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 药品目录表单弹窗 */}
+      {showCatalogForm && (
+        <div className="absolute inset-0 z-50 bg-black/50 flex items-end">
+          <div className="bg-white rounded-t-2xl w-full max-h-[85vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold">{editingId ? '编辑药品' : '添加药品'}</h3>
+              <button onClick={() => setShowCatalogForm(false)}><Icons.X size={24} className="text-gray-400"/></button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">药品名称</label>
+                <input type="text" value={catalogInput.name} onChange={e => setCatalogInput({...catalogInput, name: e.target.value})} className="w-full mt-1 px-4 py-3 border rounded-xl" placeholder="输入药品名称"/>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">品牌 (可选)</label>
+                <input type="text" value={catalogInput.brand || ''} onChange={e => setCatalogInput({...catalogInput, brand: e.target.value})} className="w-full mt-1 px-4 py-3 border rounded-xl" placeholder="如：辉瑞、拜耳"/>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">剂型</label>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {DOSAGE_FORMS.map(f => (
+                    <button key={f} onClick={() => setCatalogInput({...catalogInput, dosageForm: f})} className={`px-3 py-1.5 rounded-lg text-sm ${catalogInput.dosageForm === f ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{f}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">规格</label>
+                  <input type="text" value={catalogInput.strength || ''} onChange={e => setCatalogInput({...catalogInput, strength: e.target.value})} className="w-full mt-1 px-4 py-3 border rounded-xl" placeholder="如：500"/>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">单位</label>
+                  <select value={catalogInput.unit || 'mg'} onChange={e => setCatalogInput({...catalogInput, unit: e.target.value})} className="w-full mt-1 px-4 py-3 border rounded-xl">
+                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* 删除按钮 - 仅编辑模式显示 */}
+              {editingId && (
+                <button
+                  onClick={() => {
+                    if (confirm('确定要删除这个药品吗？')) {
+                      setCatalog(catalog.filter(c => c.id !== editingId));
+                      setShowCatalogForm(false);
+                    }
+                  }}
+                  className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-red-100"
+                >
+                  <Icons.Trash2 size={18} /> 删除此药品
+                </button>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowCatalogForm(false)} className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold">取消</button>
+                <button onClick={() => {
+                  if (!catalogInput.name.trim()) { alert('请输入药品名称'); return; }
+                  const newItem = { ...catalogInput, id: editingId || Date.now().toString() };
+                  if (editingId) {
+                    setCatalog(catalog.map(c => c.id === editingId ? newItem : c));
+                  } else {
+                    setCatalog([...catalog, newItem]);
+                  }
+                  setShowCatalogForm(false);
                 }} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">保存</button>
               </div>
             </div>

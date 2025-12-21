@@ -28,9 +28,10 @@ body {
 
 #root {
   height: 100%;
+  width: 100%;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
 /* Safari 特定修复 */
@@ -39,6 +40,8 @@ body {
 }
 
 #root > div {
+  width: 100%;
+  max-width: 32rem; /* 512px = max-w-lg */
   min-height: 100vh;
   min-height: 100dvh;
 }
