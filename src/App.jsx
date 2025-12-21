@@ -5,6 +5,7 @@ import VitalsFormModal from './components/modals/VitalsFormModal';
 import MemberFormModal from './components/modals/MemberFormModal';
 import BackupModal from './components/modals/BackupModal';
 import ScanModal from './components/modals/ScanModal';
+import TrendModal from './components/modals/TrendModal';
 import LeanCloud from './services/leancloud';
 import { analyzeMedicalImage, getApiKeyFor, saveApiKeyFor, getCurrentApi, setCurrentApi } from './services/ai';
 import { getLocalDateStr, getLocalTimeStr, getTimestamp, compareVersions } from './utils';
@@ -127,6 +128,16 @@ function App() {
   const [scanEditData, setScanEditData] = useState(null);
   const [expandedReports, setExpandedReports] = useState({});
   const [expandedImaging, setExpandedImaging] = useState({});
+
+  // 趋势分析相关
+  const [selectedTrendItems, setSelectedTrendItems] = useState([]);
+  const [showTrendModal, setShowTrendModal] = useState(false);
+  const [trendDateRange, setTrendDateRange] = useState(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 6);
+    return { start: getLocalDateStr(start), end: getLocalDateStr(end) };
+  });
 
   // 辅助函数
   const updateMemberData = (memberId, dataType, newData) => {
@@ -852,9 +863,23 @@ function App() {
                   <Icons.FileSpreadsheet size={18} className="text-indigo-600"/>
                   检验报告 ({labReports.length})
                 </h3>
-                <button onClick={() => { setScanType('lab'); setScanEditData(null); setEditingId(null); setShowScanModal(true); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg flex items-center gap-1">
-                  <Icons.ScanLine size={18}/> <span className="text-sm">AI扫描</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* 趋势分析按钮 */}
+                  <button
+                    onClick={() => setShowTrendModal(true)}
+                    className={`relative p-1.5 rounded-lg flex items-center gap-1 ${selectedTrendItems.length > 0 ? 'text-teal-600 bg-teal-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                  >
+                    <Icons.TrendingUp size={18}/>
+                    {selectedTrendItems.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        {selectedTrendItems.length}
+                      </span>
+                    )}
+                  </button>
+                  <button onClick={() => { setScanType('lab'); setScanEditData(null); setEditingId(null); setShowScanModal(true); }} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg flex items-center gap-1">
+                    <Icons.ScanLine size={18}/> <span className="text-sm">AI扫描</span>
+                  </button>
+                </div>
               </div>
               <div className="divide-y">
                 {[...labReports].sort((a, b) => b.date.localeCompare(a.date)).map(report => {
@@ -889,9 +914,24 @@ function App() {
                         <div className="px-4 pb-3 border-t bg-slate-50">
                           {(report.items || []).map((item, idx) => {
                             const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-orange-500' : 'text-gray-700';
+                            const isSelected = selectedTrendItems.includes(item.name);
                             return (
                               <div key={idx} className="flex justify-between items-center py-2 text-sm border-b last:border-0">
                                 <div className="flex items-center gap-2">
+                                  {/* 趋势选择复选框 */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (isSelected) {
+                                        setSelectedTrendItems(selectedTrendItems.filter(i => i !== item.name));
+                                      } else {
+                                        setSelectedTrendItems([...selectedTrendItems, item.name]);
+                                      }
+                                    }}
+                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${isSelected ? 'bg-teal-500 border-teal-500 text-white' : 'border-gray-300 hover:border-teal-400'}`}
+                                  >
+                                    {isSelected && <Icons.Check size={12} />}
+                                  </button>
                                   <span className={`font-medium ${item.flag !== 'Normal' ? flagColor : ''}`}>{item.name}</span>
                                   <span className="text-xs text-gray-400">{item.refRange} {item.unit}</span>
                                 </div>
@@ -1250,6 +1290,17 @@ function App() {
         scanEditData={scanEditData}
         onSave={scanType === 'lab' ? saveLabReport : saveImagingReport}
         onDelete={deleteReport}
+      />
+
+      {/* 趋势分析弹窗 */}
+      <TrendModal
+        show={showTrendModal}
+        onClose={() => setShowTrendModal(false)}
+        selectedItems={selectedTrendItems}
+        labReports={labReports}
+        dateRange={trendDateRange}
+        setDateRange={setTrendDateRange}
+        onClearSelection={() => setSelectedTrendItems([])}
       />
     </div>
   );
