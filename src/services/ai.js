@@ -61,6 +61,22 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
   "items": [ { "name": "中文指标名称", "result": "数值结果", "unit": "单位", "refRange": "参考范围" } ]
 }
 请根据检验项目内容判断报告类别。如果包含多种类型的指标，选择最主要的类别或填写"综合检验"。请提取所有能找到的检验指标。只返回JSON,不要其他内容。`;
+  } else if (mode === 'medical_record') {
+    prompt = `分析这份病历文书（如出院小结、诊断书、病历等）。提取关键信息,返回JSON格式:
+{
+  "date": "YYYY-MM-DD格式的日期（出院日期或文书日期）",
+  "recordType": "文书类型，如：出院小结、出院诊断书、入院记录、门诊病历、诊断证明书、手术记录、病理报告、会诊记录、病程记录等",
+  "hospital": "医院名称",
+  "department": "科室名称",
+  "admissionDate": "入院日期（如有）YYYY-MM-DD",
+  "dischargeDate": "出院日期（如有）YYYY-MM-DD",
+  "diagnosis": "诊断内容，包括主要诊断和其他诊断",
+  "treatmentSummary": "治疗经过或病情摘要",
+  "dischargeMeds": "出院用药（如有）",
+  "followupAdvice": "随访建议或注意事项",
+  "notes": "其他重要信息"
+}
+请尽量完整提取所有能找到的信息。只返回JSON,不要其他内容。`;
   } else {
     prompt = `分析这份医学影像/检查报告。请仔细查找以下内容并提取为JSON格式: 1. reportDate: 检查日期,格式YYYY-MM-DD 2. hospital: 医院名称 3. modality: 检查类型 4. region: 检查部位 5. findings: 影像所见完整内容 6. impression: 诊断意见完整内容 返回格式: { "reportDate": "YYYY-MM-DD", "hospital": "医院名称", "modality": "检查类型", "region": "检查部位", "findings": "影像所见完整内容", "impression": "诊断意见完整内容" } 只返回JSON,不要其他内容。`;
   }
@@ -183,7 +199,17 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
         modality: parsed.modality, // 影像报告
         region: parsed.region,
         findings: parsed.findings,
-        impression: parsed.impression
+        impression: parsed.impression,
+        // 病历文书字段
+        recordType: parsed.recordType,
+        department: parsed.department,
+        admissionDate: parsed.admissionDate,
+        dischargeDate: parsed.dischargeDate,
+        diagnosis: parsed.diagnosis,
+        treatmentSummary: parsed.treatmentSummary,
+        dischargeMeds: parsed.dischargeMeds,
+        followupAdvice: parsed.followupAdvice,
+        notes: parsed.notes
       };
     } catch (parseErr) {
       return { error: 'JSON_PARSE_ERROR', detail: jsonStr, success: false };

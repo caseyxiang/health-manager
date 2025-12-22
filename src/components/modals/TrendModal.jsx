@@ -105,7 +105,7 @@ const TrendModal = ({
                 className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-200"
               >
                 <Icons.Download size={16} />
-                导出PDF
+                导出报告
               </button>
             )}
             <button onClick={onClose}><Icons.X size={24} className="text-gray-400" /></button>

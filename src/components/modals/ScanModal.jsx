@@ -11,7 +11,10 @@ const ScanModal = ({
   editingId,
   scanEditData,
   onSave,
-  onDelete
+  onDelete,
+  customLabCategories = [],
+  customImagingModalities = [],
+  onAddCustomCategory
 }) => {
   const [scanLoading, setScanLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -52,8 +55,74 @@ const ScanModal = ({
 
   if (!show) return null;
 
-  // 匹配类别到预定义列表
-  const matchCategory = (aiCategory, categoryList) => {
+  // 合并预定义列表和自定义列表
+  const allLabCategories = [...LAB_CATEGORIES, ...customLabCategories.filter(c => !LAB_CATEGORIES.includes(c))];
+  const allImagingModalities = [...IMAGING_MODALITIES, ...customImagingModalities.filter(c => !IMAGING_MODALITIES.includes(c))];
+
+  // 根据结果和参考范围自动判断异常标记
+  const detectFlag = (result, refRange) => {
+    if (!result || !refRange) return 'Normal';
+
+    // 提取数值结果
+    const numResult = parseFloat(result.replace(/[^\d.-]/g, ''));
+    if (isNaN(numResult)) return 'Normal';
+
+    // 解析参考范围 - 支持多种格式
+    // 格式1: "3.5-5.5" 或 "3.5~5.5"
+    // 格式2: "<10" 或 ">1.0"
+    // 格式3: "男4.0-5.5,女3.5-5.0" (取较宽范围)
+
+    let minVal = null, maxVal = null;
+
+    // 先尝试提取简单范围
+    const rangeMatch = refRange.match(/([\d.]+)\s*[-~]\s*([\d.]+)/);
+    if (rangeMatch) {
+      minVal = parseFloat(rangeMatch[1]);
+      maxVal = parseFloat(rangeMatch[2]);
+    } else {
+      // 尝试提取 <X 格式
+      const ltMatch = refRange.match(/<\s*([\d.]+)/);
+      if (ltMatch) {
+        maxVal = parseFloat(ltMatch[1]);
+        minVal = 0;
+      }
+      // 尝试提取 >X 格式
+      const gtMatch = refRange.match(/>\s*([\d.]+)/);
+      if (gtMatch) {
+        minVal = parseFloat(gtMatch[1]);
+        maxVal = Infinity;
+      }
+    }
+
+    // 如果是 男/女 分开的格式，提取所有数值取最宽范围
+    if (minVal === null && maxVal === null) {
+      const allNumbers = refRange.match(/[\d.]+/g);
+      if (allNumbers && allNumbers.length >= 2) {
+        const nums = allNumbers.map(n => parseFloat(n)).filter(n => !isNaN(n));
+        minVal = Math.min(...nums);
+        maxVal = Math.max(...nums);
+      }
+    }
+
+    if (minVal !== null && maxVal !== null) {
+      if (numResult > maxVal) return 'High';
+      if (numResult < minVal) return 'Low';
+    }
+
+    return 'Normal';
+  };
+
+  // 为识别结果添加异常标记
+  const addFlagsToItems = (items) => {
+    if (!items || !Array.isArray(items)) return [];
+    return items.map(item => ({
+      ...item,
+      flag: detectFlag(item.result, item.refRange)
+    }));
+  };
+
+  // 匹配类别到预定义列表，如果匹配失败则添加为自定义类型
+  const matchCategory = (aiCategory, categoryList, type) => {
     if (!aiCategory) return '';
     // 精确匹配
     if (categoryList.includes(aiCategory)) return aiCategory;
@@ -61,7 +130,13 @@ const ScanModal = ({
     const matched = categoryList.find(c =>
       aiCategory.includes(c) || c.includes(aiCategory)
     );
-    return matched || '其他';
+    if (matched) return matched;
+
+    // 无法匹配，添加为自定义类型
+    if (onAddCustomCategory && aiCategory.trim()) {
+      onAddCustomCategory(type, aiCategory.trim());
+    }
+    return aiCategory.trim() || '其他';
   };
 
   // 添加检测项
@@ -135,30 +210,39 @@ const ScanModal = ({
         setDebugInfo(prev => prev + `\n✅ 已压缩 ${images.length} 张图片`);
 
         if (scanType === 'lab') {
-          const matchedCategory = matchCategory(result.category, LAB_CATEGORIES);
+          const matchedCategory = matchCategory(result.category, allLabCategories, 'lab');
+          // 自动检测异常值
+          const itemsWithFlags = addFlagsToItems(result.items || []);
+          const abnormalCount = itemsWithFlags.filter(i => i.flag !== 'Normal').length;
+
           setReportData({
             date: result.date || getLocalDateStr(new Date()),
             hospital: result.hospital || '',
-            category: matchedCategory, // 匹配到预定义列表
-            items: result.items || [],
+            category: matchedCategory, // 匹配到预定义列表或添加为自定义
+            items: itemsWithFlags,
             images // 保存压缩后的图片
           });
           if (result.category) {
-            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.category}${matchedCategory !== result.category ? ` → 匹配为: ${matchedCategory}` : ''}`);
+            const isNewType = !allLabCategories.includes(result.category) && !allLabCategories.find(c => result.category.includes(c) || c.includes(result.category));
+            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.category}${matchedCategory !== result.category ? ` → 匹配为: ${matchedCategory}` : ''}${isNewType ? ' (已添加为新类型)' : ''}`);
+          }
+          if (abnormalCount > 0) {
+            setDebugInfo(prev => prev + `\n⚠️ 检测到 ${abnormalCount} 项异常指标`);
           }
         } else {
-          const matchedModality = matchCategory(result.modality, IMAGING_MODALITIES);
+          const matchedModality = matchCategory(result.modality, allImagingModalities, 'imaging');
           setReportData({
             date: result.date || getLocalDateStr(new Date()),
             hospital: result.hospital || '',
-            modality: matchedModality, // 匹配到预定义列表
+            modality: matchedModality, // 匹配到预定义列表或添加为自定义
             region: result.region || '',
             findings: result.findings || '',
             impression: result.impression || '',
             images // 保存压缩后的图片
           });
           if (result.modality) {
-            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.modality}${matchedModality !== result.modality ? ` → 匹配为: ${matchedModality}` : ''}`);
+            const isNewType = !allImagingModalities.includes(result.modality) && !allImagingModalities.find(c => result.modality.includes(c) || c.includes(result.modality));
+            setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.modality}${matchedModality !== result.modality ? ` → 匹配为: ${matchedModality}` : ''}${isNewType ? ' (已添加为新类型)' : ''}`);
           }
         }
       } else {
@@ -324,68 +408,98 @@ const ScanModal = ({
                     className="w-full mt-1 px-4 py-3 border rounded-xl"
                   >
                     <option value="">选择分类</option>
-                    {LAB_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {allLabCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}{!LAB_CATEGORIES.includes(cat) ? ' (自定义)' : ''}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-700">检测项目</label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">检测项目</label>
+                    {(() => {
+                      const abnormalCount = (reportData.items || []).filter(i => i.flag === 'High' || i.flag === 'Low').length;
+                      if (abnormalCount > 0) {
+                        return (
+                          <span className="bg-rose-100 text-rose-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                            {abnormalCount} 项异常
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                   <button onClick={addLabItem} className="text-indigo-600 text-sm flex items-center gap-1">
                     <Icons.Plus size={14} /> 添加项目
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {(reportData.items || []).map((item, index) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded-xl">
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          value={item.name}
-                          onChange={e => updateLabItem(index, 'name', e.target.value)}
-                          placeholder="项目名称"
-                          className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                        />
-                        <button onClick={() => removeLabItem(index)} className="text-red-500 p-2">
-                          <Icons.Trash2 size={16} />
-                        </button>
+                  {(reportData.items || []).map((item, index) => {
+                    const isAbnormal = item.flag === 'High' || item.flag === 'Low';
+                    const bgColor = item.flag === 'High' ? 'bg-rose-50 border-rose-200' : item.flag === 'Low' ? 'bg-amber-50 border-amber-200' : 'bg-gray-50';
+                    const flagColor = item.flag === 'High' ? 'text-rose-600' : item.flag === 'Low' ? 'text-amber-600' : 'text-gray-600';
+
+                    return (
+                      <div key={index} className={`p-3 rounded-xl border ${bgColor}`}>
+                        <div className="flex gap-2 mb-2">
+                          <div className="flex-1 flex items-center gap-2">
+                            {isAbnormal && (
+                              <span className={`shrink-0 ${flagColor} font-bold text-sm`}>
+                                {item.flag === 'High' ? '↑' : '↓'}
+                              </span>
+                            )}
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={e => updateLabItem(index, 'name', e.target.value)}
+                              placeholder="项目名称"
+                              className={`flex-1 px-3 py-2 border rounded-lg text-sm ${isAbnormal ? 'font-medium ' + flagColor : ''}`}
+                            />
+                          </div>
+                          <button onClick={() => removeLabItem(index)} className="text-red-500 p-2">
+                            <Icons.Trash2 size={16} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          <input
+                            type="text"
+                            value={item.result}
+                            onChange={e => updateLabItem(index, 'result', e.target.value)}
+                            placeholder="结果"
+                            className={`px-3 py-2 border rounded-lg text-sm ${isAbnormal ? 'font-bold ' + flagColor : ''}`}
+                          />
+                          <input
+                            type="text"
+                            value={item.unit}
+                            onChange={e => updateLabItem(index, 'unit', e.target.value)}
+                            placeholder="单位"
+                            className="px-3 py-2 border rounded-lg text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={item.refRange}
+                            onChange={e => updateLabItem(index, 'refRange', e.target.value)}
+                            placeholder="参考范围"
+                            className="px-3 py-2 border rounded-lg text-sm"
+                          />
+                          <select
+                            value={item.flag}
+                            onChange={e => updateLabItem(index, 'flag', e.target.value)}
+                            className={`px-2 py-2 border rounded-lg text-sm font-medium ${
+                              item.flag === 'High' ? 'bg-rose-100 text-rose-700 border-rose-300' :
+                              item.flag === 'Low' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                              'bg-green-50 text-green-700 border-green-200'
+                            }`}
+                          >
+                            <option value="Normal">正常</option>
+                            <option value="High">偏高↑</option>
+                            <option value="Low">偏低↓</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
-                        <input
-                          type="text"
-                          value={item.result}
-                          onChange={e => updateLabItem(index, 'result', e.target.value)}
-                          placeholder="结果"
-                          className="px-3 py-2 border rounded-lg text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={item.unit}
-                          onChange={e => updateLabItem(index, 'unit', e.target.value)}
-                          placeholder="单位"
-                          className="px-3 py-2 border rounded-lg text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={item.refRange}
-                          onChange={e => updateLabItem(index, 'refRange', e.target.value)}
-                          placeholder="参考范围"
-                          className="px-3 py-2 border rounded-lg text-sm"
-                        />
-                        <select
-                          value={item.flag}
-                          onChange={e => updateLabItem(index, 'flag', e.target.value)}
-                          className="px-2 py-2 border rounded-lg text-sm"
-                        >
-                          <option value="Normal">正常</option>
-                          <option value="High">偏高↑</option>
-                          <option value="Low">偏低↓</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 </div>
               </div>
@@ -403,8 +517,8 @@ const ScanModal = ({
                       className="w-full mt-1 px-4 py-3 border rounded-xl"
                     >
                       <option value="">选择类型</option>
-                      {IMAGING_MODALITIES.map(mod => (
-                        <option key={mod} value={mod}>{mod}</option>
+                      {allImagingModalities.map(mod => (
+                        <option key={mod} value={mod}>{mod}{!IMAGING_MODALITIES.includes(mod) ? ' (自定义)' : ''}</option>
                       ))}
                     </select>
                   </div>

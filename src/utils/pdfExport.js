@@ -67,6 +67,114 @@ export const exportTrendToPDF = async ({ datasets, dateRange, meds, memberName =
 };
 
 /**
+ * 绘制填充风格图标
+ */
+const drawIcon = (ctx, type, x, y, size, color) => {
+  ctx.save();
+  ctx.fillStyle = color;
+
+  const s = size / 24; // 缩放比例
+
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+
+  switch (type) {
+    case 'trendingUp':
+      // TrendingUp 填充图标 - 使用粗线条模拟填充
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(22, 7);
+      ctx.lineTo(13.5, 15.5);
+      ctx.lineTo(8.5, 10.5);
+      ctx.lineTo(2, 17);
+      ctx.stroke();
+      // 箭头填充
+      ctx.beginPath();
+      ctx.moveTo(22, 7);
+      ctx.lineTo(15, 7);
+      ctx.lineTo(22, 7);
+      ctx.lineTo(22, 14);
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      break;
+
+    case 'calendar':
+      // Calendar 填充图标
+      ctx.beginPath();
+      // 日历主体
+      roundRect(ctx, 3, 5, 18, 17, 2);
+      ctx.fill();
+      // 顶部两个挂钩
+      ctx.fillRect(7, 2, 3, 5);
+      ctx.fillRect(14, 2, 3, 5);
+      // 镂空日期区域（白色）
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(5, 10, 14, 10);
+      // 日期点
+      ctx.fillStyle = color;
+      ctx.fillRect(7, 12, 3, 3);
+      ctx.fillRect(12, 12, 3, 3);
+      ctx.fillRect(7, 16, 3, 3);
+      ctx.fillRect(12, 16, 3, 3);
+      break;
+
+    case 'pill':
+      // 药丸填充图标 - 使用胶囊形状
+      ctx.beginPath();
+      // 胶囊形状
+      ctx.ellipse(8, 8, 5, 5, -Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(16, 16, 5, 5, -Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+      // 中间连接部分
+      ctx.beginPath();
+      ctx.moveTo(4.5, 11.5);
+      ctx.lineTo(12.5, 19.5);
+      ctx.lineTo(19.5, 12.5);
+      ctx.lineTo(11.5, 4.5);
+      ctx.closePath();
+      ctx.fill();
+      // 分隔线（白色）
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(9, 15);
+      ctx.lineTo(15, 9);
+      ctx.stroke();
+      break;
+
+    case 'barChart':
+      // BarChart2 填充图标
+      ctx.fillRect(16, 8, 4, 14);
+      ctx.fillRect(10, 4, 4, 18);
+      ctx.fillRect(4, 12, 4, 10);
+      break;
+
+    case 'info':
+      // Info 填充图标
+      ctx.beginPath();
+      ctx.arc(12, 12, 10, 0, Math.PI * 2);
+      ctx.fill();
+      // i 字母（白色）
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(12, 8, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(10.5, 11, 3, 6);
+      break;
+
+    default:
+      break;
+  }
+
+  ctx.restore();
+};
+
+/**
  * 生成报告图片
  */
 const generateReportImage = async ({ datasets, dateRange, visibleMeds, memberName }) => {
@@ -126,11 +234,16 @@ const generateReportImage = async ({ datasets, dateRange, visibleMeds, memberNam
 
   let y = PADDING;
 
-  // 绘制标题
-  ctx.fillStyle = '#6366f1';
-  ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, sans-serif';
+  // 绘制标题（带图标）
   ctx.textAlign = 'center';
-  ctx.fillText(`📊 趋势分析报告${memberName ? ` - ${memberName}` : ''}`, WIDTH / 2, y + 30);
+  const titleText = `趋势分析报告${memberName ? ` - ${memberName}` : ''}`;
+  ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, sans-serif';
+  const titleWidth = ctx.measureText(titleText).width;
+  const titleStartX = (WIDTH - titleWidth - 30) / 2; // 30是图标宽度+间距
+
+  drawIcon(ctx, 'trendingUp', titleStartX, y + 10, 24, '#6366f1');
+  ctx.fillStyle = '#6366f1';
+  ctx.fillText(titleText, WIDTH / 2 + 15, y + 30);
   y += 45;
 
   // 导出时间
@@ -156,9 +269,12 @@ const generateReportImage = async ({ datasets, dateRange, visibleMeds, memberNam
   ctx.fillStyle = '#f3f4f6';
   roundRect(ctx, PADDING, y, WIDTH - PADDING * 2, 35, 8);
   ctx.fill();
+
+  // 日历图标 + 日期文字
+  drawIcon(ctx, 'calendar', PADDING + 12, y + 8, 18, '#4b5563');
   ctx.fillStyle = '#4b5563';
   ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText(`📅 ${dateRange.start} 至 ${dateRange.end}`, PADDING + 15, y + 23);
+  ctx.fillText(`${dateRange.start} 至 ${dateRange.end}`, PADDING + 38, y + 23);
   y += 50;
 
   // 分析指标
@@ -260,34 +376,37 @@ const generateReportImage = async ({ datasets, dateRange, visibleMeds, memberNam
       roundRect(ctx, PADDING, y, WIDTH - PADDING * 2, 65, 8);
       ctx.stroke();
 
-      // 药品名称
+      // 药品名称（左侧）
       ctx.fillStyle = '#374151';
       ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.fillText(m.name, PADDING + 15, y + 22);
 
-      // 状态标签
+      // 状态标签（右侧）
       const statusText = isActive ? '进行中' : '已结束';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
       const statusWidth = ctx.measureText(statusText).width + 16;
+      const statusX = WIDTH - PADDING - 15 - statusWidth;
       ctx.fillStyle = isActive ? '#dcfce7' : '#f3f4f6';
-      roundRect(ctx, PADDING + 15 + ctx.measureText(m.name).width + 10, y + 8, statusWidth, 20, 4);
+      roundRect(ctx, statusX, y + 8, statusWidth, 20, 4);
       ctx.fill();
       ctx.fillStyle = isActive ? '#16a34a' : '#6b7280';
-      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText(statusText, PADDING + 15 + ctx.measureText(m.name).width + 18, y + 21);
+      ctx.fillText(statusText, statusX + 8, y + 21);
 
-      // 日期
+      // 日期（带日历图标）
+      drawIcon(ctx, 'calendar', PADDING + 12, y + 31, 14, '#6b7280');
       ctx.fillStyle = '#6b7280';
       ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.fillText(`📅 ${m.startTime} ${m.endTime ? `至 ${m.endTime}` : '起 (长期)'}`, PADDING + 15, y + 42);
+      ctx.fillText(`${m.startTime} ${m.endTime ? `至 ${m.endTime}` : '起 (长期)'}`, PADDING + 32, y + 42);
 
-      // 用药详情
+      // 用药详情（带药丸图标）
       if (m.dosagePerTime) {
+        drawIcon(ctx, 'pill', PADDING + 12, y + 47, 14, '#6366f1');
         ctx.fillStyle = '#6366f1';
-        let dosageText = `💊 每次${m.dosagePerTime} · 每日${m.frequency}次 · ${m.relation}`;
+        let dosageText = `每次${m.dosagePerTime} · 每日${m.frequency}次 · ${m.relation}`;
         if (m.timePeriods && m.timePeriods.length > 0) {
           dosageText += ` · ${m.timePeriods.join('/')}`;
         }
-        ctx.fillText(dosageText, PADDING + 15, y + 58);
+        ctx.fillText(dosageText, PADDING + 32, y + 58);
       }
 
       y += 75;

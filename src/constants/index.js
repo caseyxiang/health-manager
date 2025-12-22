@@ -1,5 +1,5 @@
 // 应用版本
-export const VERSION = "v16.64";
+export const VERSION = "v16.74";
 
 // 单位选项
 export const UNITS = ['mg', 'g', 'mcg', 'ml', 'L', 'IU', '片', '粒', '支', '瓶', '盒', '包'];
@@ -53,6 +53,22 @@ export const IMAGING_MODALITIES = [
   'CT', 'MRI', 'X光', 'B超', 'PET-CT', '内镜', '心电图', '脑电图', '其他'
 ];
 
+// 病历文书类型
+export const MEDICAL_RECORD_TYPES = [
+  '出院小结', '出院诊断书', '入院记录', '门诊病历', '诊断证明书',
+  '手术记录', '病理报告', '会诊记录', '病程记录', '其他'
+];
+
+// 检查预约类型
+export const CHECKUP_TYPES = [
+  { id: 'lab', name: '检验检查', icon: 'FileSpreadsheet', color: '#6366f1' },
+  { id: 'imaging', name: '影像检查', icon: 'FileImage', color: '#3b82f6' },
+  { id: 'specialist', name: '专科门诊', icon: 'Stethoscope', color: '#10b981' },
+  { id: 'followup', name: '复诊随访', icon: 'Calendar', color: '#f59e0b' },
+  { id: 'treatment', name: '治疗操作', icon: 'Syringe', color: '#ef4444' },
+  { id: 'other', name: '其他', icon: 'ClipboardList', color: '#6b7280' },
+];
+
 // AI API 配置
 export const API_PROVIDERS = [
   { id: 'gemini', name: 'Google Gemini', placeholder: 'AIzaSy...' },
@@ -68,6 +84,7 @@ export const DEFAULT_CATALOG = [];
 export const DEFAULT_CHECKUPS = [];
 export const DEFAULT_LAB_REPORTS = [];
 export const DEFAULT_IMAGING_REPORTS = [];
+export const DEFAULT_MEDICAL_RECORDS = [];
 export const DEFAULT_VITALS = [];
 
 // 医学术语解释
