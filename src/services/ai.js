@@ -62,7 +62,7 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
 }
 请根据检验项目内容判断报告类别。如果包含多种类型的指标，选择最主要的类别或填写"综合检验"。请提取所有能找到的检验指标。只返回JSON,不要其他内容。`;
   } else if (mode === 'medical_record') {
-    prompt = `分析这份病历文书（如出院小结、诊断书、病历等）。提取关键信息,返回JSON格式:
+    prompt = `分析这份病历文书（如出院小结、诊断书、病历等）。请完整提取所有信息，特别是病情摘要和治疗经过部分必须完整保留原文，不要省略或缩写。返回JSON格式:
 {
   "date": "YYYY-MM-DD格式的日期（出院日期或文书日期）",
   "recordType": "文书类型，如：出院小结、出院诊断书、入院记录、门诊病历、诊断证明书、手术记录、病理报告、会诊记录、病程记录等",
@@ -70,13 +70,13 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
   "department": "科室名称",
   "admissionDate": "入院日期（如有）YYYY-MM-DD",
   "dischargeDate": "出院日期（如有）YYYY-MM-DD",
-  "diagnosis": "诊断内容，包括主要诊断和其他诊断",
-  "treatmentSummary": "治疗经过或病情摘要",
-  "dischargeMeds": "出院用药（如有）",
-  "followupAdvice": "随访建议或注意事项",
+  "diagnosis": "诊断内容，包括主要诊断和其他诊断，完整列出所有诊断",
+  "treatmentSummary": "【重要】完整保留病情摘要、入院情况、诊疗经过、治疗过程的全部内容，包括主诉、现病史、检查结果、治疗方案、手术情况等所有细节，不要省略任何信息",
+  "dischargeMeds": "出院用药（如有），包括药名、剂量、用法",
+  "followupAdvice": "随访建议或注意事项，完整保留",
   "notes": "其他重要信息"
 }
-请尽量完整提取所有能找到的信息。只返回JSON,不要其他内容。`;
+请务必完整提取treatmentSummary字段，这是最重要的部分，必须包含完整的病情描述和治疗经过。只返回JSON,不要其他内容。`;
   } else {
     prompt = `分析这份医学影像/检查报告。请仔细查找以下内容并提取为JSON格式: 1. reportDate: 检查日期,格式YYYY-MM-DD 2. hospital: 医院名称 3. modality: 检查类型 4. region: 检查部位 5. findings: 影像所见完整内容 6. impression: 诊断意见完整内容 返回格式: { "reportDate": "YYYY-MM-DD", "hospital": "医院名称", "modality": "检查类型", "region": "检查部位", "findings": "影像所见完整内容", "impression": "诊断意见完整内容" } 只返回JSON,不要其他内容。`;
   }

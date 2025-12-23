@@ -1,5 +1,5 @@
 // 应用版本
-export const VERSION = "v16.74";
+export const VERSION = "v16.75";
 
 // 单位选项
 export const UNITS = ['mg', 'g', 'mcg', 'ml', 'L', 'IU', '片', '粒', '支', '瓶', '盒', '包'];

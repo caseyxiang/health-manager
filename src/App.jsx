@@ -1965,7 +1965,7 @@ function App() {
       )}
 
       {/* 底部导航栏 */}
-      <div className="bg-white border-t flex justify-around py-2 shrink-0">
+      <div className="bg-white border-t flex justify-around pt-2 shrink-0" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
         {[
           { id: 'vitals', icon: 'Activity', label: '指标' },
           { id: 'meds', icon: 'Clock', label: '用药' },

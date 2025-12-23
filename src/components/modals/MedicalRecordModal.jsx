@@ -152,8 +152,14 @@ const MedicalRecordModal = ({
           setDebugInfo(prev => prev + `\n📋 AI识别类型: ${result.recordType}${matchedType !== result.recordType ? ` → 匹配为: ${matchedType}` : ''}${isNewType ? ' (已添加为新类型)' : ''}`);
         }
       } else {
-        setDebugInfo(prev => prev + `\n❌ 识别失败: ${result?.error || '未知错误'}`);
-        alert('AI识别失败，请手动填写数据');
+        const errorDetail = result?.detail ? `\n详情: ${result.detail}` : '';
+        setDebugInfo(prev => prev + `\n❌ 识别失败: ${result?.error || '未知错误'}${errorDetail}`);
+        const errorMsg = result?.error === 'FETCH_ERROR'
+          ? `AI识别失败: ${result?.detail || '网络请求错误'}\n\n可能原因:\n1. API Key无效或过期\n2. 网络连接问题\n3. API服务商限制`
+          : result?.error === 'NO_API_KEY'
+          ? 'AI识别失败: 未配置API Key，请在设置中配置'
+          : `AI识别失败: ${result?.error || '未知错误'}`;
+        alert(errorMsg);
       }
     } catch (error) {
       console.error('处理文件失败:', error);
