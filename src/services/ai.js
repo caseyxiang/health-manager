@@ -37,30 +37,41 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
 
   const providerName = API_PROVIDERS.find(p => p.id === apiToUse)?.name || apiToUse;
 
-  // 处理文件数据 - 提取第一张图片用于识别
-  const firstFile = files[0];
-  if (!firstFile) {
+  // 处理文件数据 - 支持多张图片识别
+  if (!files || files.length === 0) {
     return { error: 'NO_FILE', success: false };
   }
 
-  // 从 dataURL 中提取 base64 数据和 mimeType
-  const dataUrlMatch = firstFile.data.match(/^data:([^;]+);base64,(.+)$/);
-  if (!dataUrlMatch) {
+  // 解析所有图片的 base64 数据和 mimeType
+  const imageDataList = [];
+  for (const file of files) {
+    const dataUrlMatch = file.data.match(/^data:([^;]+);base64,(.+)$/);
+    if (!dataUrlMatch) {
+      continue; // 跳过无效的文件
+    }
+    imageDataList.push({
+      mimeType: dataUrlMatch[1],
+      base64Data: dataUrlMatch[2]
+    });
+  }
+
+  if (imageDataList.length === 0) {
     return { error: 'INVALID_DATA_URL', success: false };
   }
-  const mimeType = dataUrlMatch[1];
-  const base64Data = dataUrlMatch[2];
+
+  // 构建多图提示语
+  const imageCountHint = imageDataList.length > 1 ? `这里有${imageDataList.length}张检验报告图片，请综合分析所有图片中的内容。` : '';
 
   let prompt = "";
   if (mode === 'lab') {
-    prompt = `分析这份医学检验报告。提取所有检验指标数据,返回JSON格式:
+    prompt = `${imageCountHint}分析这份医学检验报告。提取所有检验指标数据,返回JSON格式:
 {
   "reportDate": "YYYY-MM-DD格式的检查日期",
   "hospital": "医院名称",
   "category": "报告类别，如：血常规、尿常规、生化全套、肝功能、肾功能、血脂、血糖、甲状腺功能、肿瘤标志物、凝血功能、电解质、心肌酶谱、免疫检查、感染指标等",
   "items": [ { "name": "中文指标名称", "result": "数值结果", "unit": "单位", "refRange": "参考范围" } ]
 }
-请根据检验项目内容判断报告类别。如果包含多种类型的指标，选择最主要的类别或填写"综合检验"。请提取所有能找到的检验指标。只返回JSON,不要其他内容。`;
+请根据检验项目内容判断报告类别。如果包含多种类型的指标，选择最主要的类别或填写"综合检验"。请提取所有图片中能找到的全部检验指标，合并到一个items数组中。只返回JSON,不要其他内容。`;
   } else if (mode === 'medical_record') {
     prompt = `分析这份病历文书（如出院小结、诊断书、病历等）。请完整提取所有信息，特别是病情摘要和治疗经过部分必须完整保留原文，不要省略或缩写。返回JSON格式:
 {
@@ -86,22 +97,27 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
 
     if (apiToUse === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${currentKey}`;
+      // 构建多图片的 parts 数组
+      const parts = [
+        ...imageDataList.map(img => ({ inline_data: { mime_type: img.mimeType, data: img.base64Data } })),
+        { text: prompt }
+      ];
       response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mimeType, data: base64Data } },
-              { text: prompt }
-            ]
-          }]
+          contents: [{ parts }]
         })
       });
       data = await response.json();
       if (data.error) throw new Error(JSON.stringify(data.error).substring(0, 200));
       text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     } else if (apiToUse === 'openai') {
+      // 构建多图片的 content 数组
+      const content = [
+        ...imageDataList.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.base64Data}` } })),
+        { type: 'text', text: prompt }
+      ];
       response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentKey}` },
@@ -109,10 +125,7 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
           model: 'gpt-4o',
           messages: [{
             role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
-              { type: 'text', text: prompt }
-            ]
+            content
           }],
           max_tokens: 4096
         })
@@ -121,6 +134,11 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error).substring(0, 200));
       text = data.choices?.[0]?.message?.content;
     } else if (apiToUse === 'claude') {
+      // 构建多图片的 content 数组
+      const content = [
+        ...imageDataList.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mimeType, data: img.base64Data } })),
+        { type: 'text', text: prompt }
+      ];
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -134,10 +152,7 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
           max_tokens: 4096,
           messages: [{
             role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
-              { type: 'text', text: prompt }
-            ]
+            content
           }]
         })
       });
@@ -145,6 +160,11 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error).substring(0, 200));
       text = data.content?.[0]?.text;
     } else if (apiToUse === 'qwen') {
+      // 构建多图片的 content 数组
+      const content = [
+        ...imageDataList.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.base64Data}` } })),
+        { type: 'text', text: prompt }
+      ];
       response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentKey}` },
@@ -152,10 +172,7 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
           model: 'qwen-vl-max',
           messages: [{
             role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
-              { type: 'text', text: prompt }
-            ]
+            content
           }]
         })
       });
@@ -163,6 +180,11 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error).substring(0, 200));
       text = data.choices?.[0]?.message?.content;
     } else if (apiToUse === 'siliconflow') {
+      // 构建多图片的 content 数组
+      const content = [
+        ...imageDataList.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.base64Data}` } })),
+        { type: 'text', text: prompt }
+      ];
       response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentKey}` },
@@ -170,10 +192,7 @@ export async function analyzeMedicalImage(files, mode, providerId, setDebug) {
           model: 'Qwen/Qwen2-VL-72B-Instruct',
           messages: [{
             role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } },
-              { type: 'text', text: prompt }
-            ]
+            content
           }]
         })
       });
